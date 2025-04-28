@@ -39,7 +39,9 @@ jobs:
 
       # 4) Install & Build
       - name: Install dependencies
-        run: npm ci
+        run: |
+          npm ci
+          npm run build
 
       - name: Determine version
         id: set_version
