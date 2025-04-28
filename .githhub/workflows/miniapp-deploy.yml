@@ -115,3 +115,7 @@ jobs:
             cd /docker
             docker compose -f docker-compose-frontend.yml up -d --pull always
             docker image prune -f
+
+
+
+            
