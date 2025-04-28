@@ -2,7 +2,7 @@ name: Frontend CI/CD Pipeline
 
 on:
   push:
-    branches: ["test"]
+    branches: ["main"]
     tags: ["v*"]
   workflow_dispatch:
 
