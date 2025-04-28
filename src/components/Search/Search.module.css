@@ -1,0 +1,133 @@
+.searchContainer {
+    position: fixed;
+    top: -100%;
+    left: 0;
+    width: 100%;
+    background: #000;
+    padding: 1rem;
+    transition: all 0.3s;
+    z-index: 999;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .searchContainer.active {
+    top: 80px;
+  }
+  
+  .searchInput {
+    width: 100%;
+    max-width: 600px;
+    margin: 0 auto;
+    display: block;
+    padding: 0.8rem 1rem;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    font-size: 1rem;
+    outline: none;
+    background-image: linear-gradient(rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1)), 
+                      linear-gradient(90deg, #00c2ff, #7000ff, #ff00ff);
+    background-origin: border-box;
+    background-clip: content-box, border-box;
+  }
+  
+  .searchInput::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+  }
+  
+  .searchBtn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    margin-right: 1rem;
+  }
+  
+  .searchIcon {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, #00c2ff, #7000ff, #ff00ff);
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z'/%3E%3C/svg%3E") center/contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z'/%3E%3C/svg%3E") center/contain no-repeat;
+  }
+  
+  .searchResults {
+    max-width: 600px;
+    margin: 1rem auto 0;
+    background: rgba(0, 0, 0, 0.9);
+    border: 1px solid transparent;
+    border-radius: 8px;
+    overflow: hidden;
+    background-image: linear-gradient(rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1)), 
+                      linear-gradient(90deg, #00c2ff, #7000ff, #ff00ff);
+    background-origin: border-box;
+    background-clip: content-box, border-box;
+  }
+  
+  .searchItem {
+    padding: 0.8rem 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+  
+  .searchItem:last-child {
+    border-bottom: none;
+  }
+  
+  .searchItem:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+  
+  .gameName {
+    color: #fff;
+    font-size: 1rem;
+  }
+  
+  .gameSection {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.9rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.1);
+  }
+  
+  .noResults {
+    padding: 1rem;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  .searchImg {
+    width: 38px;
+    height: 38px;
+    object-fit: contain;
+    border-radius: 8px;
+    background: #222;
+    margin-right: 12px;
+    box-shadow: 0 2px 8px #8A6EFF22;
+  }
+  
+  .price {
+    display: block;
+    color: #fff;
+    font-weight: 700;
+    font-size: 15px;
+    margin-top: 2px;
+  }
+  
+  .searchItem {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid #23234a;
+  } 

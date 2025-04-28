@@ -1,0 +1,118 @@
+@import url('https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap');
+
+.heroSection {
+  position: relative;
+  min-height: 40vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #0a0a0a;
+  padding: 15px 5%;
+}
+
+.heroBg {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 30% 40%, #8A6EFF33 0%, transparent 70%),
+              radial-gradient(circle at 70% 60%, #FF1F7A33 0%, transparent 70%);
+  z-index: 1;
+  animation: bgMove 10s infinite alternate;
+}
+
+@keyframes bgMove {
+  0% { background-position: 30% 40%, 70% 60%; }
+  100% { background-position: 40% 50%, 60% 70%; }
+}
+
+.heroContent {
+  position: relative;
+  z-index: 2;
+  max-width: 600px;
+  text-align: center;
+  margin: 0 auto;
+}
+
+.heroTitle {
+  font-size: 48px;
+  font-weight: 900;
+  margin-bottom: 24px;
+  line-height: 1.1;
+}
+
+.gradientText {
+  background: linear-gradient(90deg, #FF1F7A, #8A6EFF);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.heroDescription {
+  font-size: 20px;
+  color: #fff;
+  margin-bottom: 40px;
+  text-shadow: 0 2px 16px #8A6EFF44;
+}
+
+.heroButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 36px;
+  font-size: 20px;
+  font-weight: bold;
+  border: none;
+  border-radius: 32px;
+  background: linear-gradient(90deg, #FF1F7A, #8A6EFF);
+  color: #fff;
+  box-shadow: 0 4px 24px #8A6EFF55;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+
+.heroButton:hover {
+  transform: translateY(-3px) scale(1.04);
+  box-shadow: 0 8px 32px #FF1F7A88;
+}
+
+.buttonIcon {
+  font-size: 24px;
+}
+
+@media (max-width: 768px) {
+  .heroTitle { font-size: 32px; }
+  .heroDescription { font-size: 16px; }
+  .heroButton { font-size: 16px; padding: 12px 24px; }
+}
+
+.heroSubtitle {
+  font-family: 'Play', sans-serif;
+  font-size: 2rem;
+  margin-bottom: 1rem;
+  background: linear-gradient(90deg, #00c2ff, #7000ff, #ff00ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 20px rgba(0, 194, 255, 0.5);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  line-height: 1.3;
+}
+
+.emoji {
+  -webkit-text-fill-color: initial;
+  background: none;
+  text-shadow: none;
+  margin-left: 5px;
+}
+
+@media (max-width: 480px) {
+  .heroSubtitle {
+    font-size: 28px;
+  }
+
+  .heroDescription {
+    font-size: 25px;
+  }
+} 

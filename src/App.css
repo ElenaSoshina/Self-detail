@@ -1,0 +1,15 @@
+#root {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  text-align: center;
+}
+
+.app {
+  width: 100%;
+  min-height: 100vh;
+}
+
+main {
+  padding-top: 80px;
+}

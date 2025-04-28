@@ -1,0 +1,105 @@
+/* ───────── базовая обёртка ───────── */
+:root {
+  --accent-1: #ff0447; /* розовый */
+  --accent-2: #923cff; /* фиолетовый */
+  --accent-3: #00c2ff; /* голубой  */
+}
+.header {
+  position: fixed;
+  inset: 0 0 auto 0;   /* top:0; left:0; width:100% */
+  background: #000;
+  z-index: 1000;
+  box-shadow: 0 2px 4px rgba(0,0,0,.1);
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* ───────── тройная сетка ───────── */
+.left,
+.center,
+.right {
+  display: flex;
+  align-items: center;
+}
+
+.left   { flex: 1 1 0; gap: 1rem; }
+.center { flex: 0 0 auto; justify-content: center; }
+.right  { flex: 1 1 0; gap: 1rem; justify-content: flex-end; }
+
+/* ───────── логотип ───────── */
+.logo {
+  width: 115px;
+  object-fit: contain;
+  cursor: pointer;
+}
+
+/* ───────── бургер ───────── */
+.burgerBtn {
+  display: none;              /* desktop */
+  flex-direction: column;
+  justify-content: center;
+  width: 30px;
+  height: 26px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+.burgerBtn span {
+  height: 4px;
+  width: 100%;
+  background: linear-gradient(90deg, #FF1F7A, #8A6EFF, #FF1F7A);
+  border-radius: 4px;
+  transition: .3s;
+}
+.burgerBtn span + span { margin-top: 7px; }
+
+.burgerBtn.active span:nth-child(1) { transform: translateY(11px) rotate(45deg); }
+.burgerBtn.active span:nth-child(2) { opacity: 0; }
+.burgerBtn.active span:nth-child(3) { transform: translateY(-11px) rotate(-45deg); }
+
+/* ───────── навигация ───────── */
+.nav       { display: flex; gap: 2rem; }
+.nav a     { color:#fff; text-decoration:none; font-weight:700; }
+.nav a:hover {
+  background: linear-gradient(90deg,#00c2ff,#7000ff,#ff00ff);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+
+/* ───────── иконка поиска ───────── */
+.searchBtn {
+  background:none;
+  border:none;
+  cursor:pointer;
+  width:30px;
+  height:30px;
+  padding:0;
+}
+.searchIcon{
+  width:100%;
+  height:100%;
+  background: linear-gradient(90deg, #FF1F7A, #8A6EFF, #FF1F7A);
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z'/%3E%3C/svg%3E") center/contain no-repeat;
+          mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z'/%3E%3C/svg%3E") center/contain no-repeat;
+}
+
+/* ───────── мобильные правки ───────── */
+@media (max-width: 768px) {
+  .burgerBtn      { display:flex; }
+  .nav            { position:fixed; top:70px; left:0; right:0;
+                    flex-direction:column; gap:1.5rem;
+                    background:#000; padding:2rem; height:calc(100vh-70px);
+                    transform:translateX(-100%); transition:.3s; }
+  .navActive      { transform:translateX(0); }
+
+  /* центр оставляем по-прежнему, чтобы логотип не уползал */
+}
