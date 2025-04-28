@@ -1,0 +1,10 @@
+server {
+    listen 80;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # SPA: при прямом заходе по любому маршруту отдаем index.html
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
