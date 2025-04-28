@@ -18,6 +18,7 @@ const HomePage: React.FC = () => {
         const y = el.getBoundingClientRect().top + window.scrollY - headerOffset;
         window.scrollTo({ top: y, behavior: 'smooth' });
       }
+      
     }
   }, [location.state]);
   
