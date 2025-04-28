@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  self-detailing-frontend:
+    image: "${DOCKERHUB_REPO}:${VERSION}"
+    container_name: self-detailing-frontend
+    restart: always
+
+    environment:
+      - VIRTUAL_PORT=80
+      - VIRTUAL_HOST=frontend.self-detailing.duckdns.org
+      - LETSENCRYPT_HOST=frontend.self-detailing.duckdns.org
+      - LETSENCRYPT_EMAIL=soshinaalena6415@gmail.com
+
+    expose:
+      - "18081"
+
+    ports:
+      - "18081:80"
+
+    networks:
+      - self-detailing_network
+
+networks:
+  self-detailing_network:
+    external: true

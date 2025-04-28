@@ -1,48 +1,117 @@
-# .github/workflows/miniapp-deploy.yml
-name: Deploy React App to GitHub Pages
+name: Frontend CI/CD Pipeline
 
 on:
   push:
-    branches: ["main"]
+    branches: ["test"]
+    tags: ["v*"]
   workflow_dispatch:
 
-permissions:
-  contents: write
-  pages: write
-  id-token: write
+concurrency:
+  group: frontend-deploy
+  cancel-in-progress: true
+
+env:
+  # Docker Hub repo for the frontend image
+  DOCKERHUB_REPO: normat/celebrity-strike-frontend
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout
+      # 1) Checkout
+      - name: Checkout code
         uses: actions/checkout@v3
 
+      # 2) Cache NPM
+      - name: Cache node modules
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+
+      # 3) Setup Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '20'
+          node-version: "20"
+          cache: "npm"
 
-      - name: Install Dependencies
+      # 4) Install & Build
+      - name: Install dependencies
         run: npm ci
 
-      # Bypass TypeScript checks and tests
-      - name: Create Empty reportWebVitals.ts
+      - name: Determine version
+        id: set_version
         run: |
-          cat > src/reportWebVitals.ts << 'EOF'
-          const reportWebVitals = () => {}; 
-          export default reportWebVitals;
-          EOF
+          if [[ $GITHUB_REF == refs/tags/v* ]]; then
+            echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
+          else
+            echo "VERSION=latest" >> $GITHUB_ENV
+          fi
 
-      # Delete test files
-      - name: Remove Test Files
-        run: find src -name "*.test.*" -delete || true
+      - name: Create production env file
+        run: |
+          echo "REACT_APP_API_URL=https://backend.self-detailing.duckdns.org/api/v1" > .env.production
 
-      - name: Build
+      - name: Build production bundle
         run: CI=false npm run build
 
-      - name: Deploy to GitHub Pages
-        uses: JamesIves/github-pages-deploy-action@v4
+      # 5) Generate Dockerfile
+      - name: Create Dockerfile
+        run: |
+          cat > Dockerfile << 'EOL'
+          FROM nginx:alpine
+          COPY build/ /usr/share/nginx/html
+          EXPOSE 80
+          CMD ["nginx", "-g", "daemon off;"]
+          EOL
+
+      # 6) DockerHub login
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
         with:
-          folder: build
-          branch: gh-pages
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # 7) Build & Push image
+      - name: Build and Push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: ${{ env.DOCKERHUB_REPO }}:${{ env.VERSION }}
+
+      - name: Upload nginx docker config for frontend
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.REMOTE_USER }}
+          key: ${{ secrets.REMOTE_SSH_KEY }}
+          port: 22
+          source: docker/*
+          target: /docker/
+          strip_components: 1
+
+      # 11) Deploy on remote
+      - name: Deploy frontend on remote
+        uses: appleboy/ssh-action@master
+        env:
+          VERSION: ${{ env.VERSION }}
+          DOCKERHUB_REPO: ${{ env.DOCKERHUB_REPO }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.REMOTE_USER }}
+          key: ${{ secrets.REMOTE_SSH_KEY }}
+          port: 22
+          envs: VERSION,DOCKERHUB_REPO,DOCKERHUB_USERNAME,DOCKERHUB_TOKEN
+          script: |
+            set -e
+            echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            docker network create celebrity_network || true
+            docker pull "${DOCKERHUB_REPO}:${VERSION}"
+            cd /docker
+            docker compose -f docker-compose-frontend.yml up -d --pull always
+            docker image prune -f

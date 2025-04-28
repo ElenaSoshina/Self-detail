@@ -2,6 +2,13 @@ import React from 'react';
 import styles from './HowItWorks.module.css';
 
 const HowItWorks: React.FC = () => {
+  const handleBookClick = () => {
+    const pricingSection = document.getElementById('pricing');
+    if (pricingSection) {
+      pricingSection.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   return (
     <section id="how-it-works" className={styles.howItWorks}>
       <h2 className={styles.title}>Как мы работаем?</h2>
@@ -72,8 +79,13 @@ const HowItWorks: React.FC = () => {
         </div>
       </div>
       
+      <button className={styles.heroButton} onClick={handleBookClick}>
+        <span className={styles.buttonIcon}>🛠️</span>
+        Забронировать бокс
+      </button>
     </section>
   );
 };
 
 export default HowItWorks; 
+

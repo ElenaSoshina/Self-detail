@@ -135,6 +135,25 @@
   margin: 0;
 }
 
+.bookBtn {
+  background: linear-gradient(90deg, #FF1F7A, #8A6EFF);
+  color: #fff;
+  font-weight: 700;
+  font-size: 1.2rem;
+  border: none;
+  border-radius: 12px;
+  padding: 16px 32px;
+  margin-top: 40px;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 16px #8A6EFF33;
+}
+
+.bookBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 32px #FF1F7A55;
+}
+
 @media (max-width: 768px) {
   .howItWorks {
     padding: 50px 15px 0;
