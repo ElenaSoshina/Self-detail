@@ -17,11 +17,19 @@ const ProductPreviewSection: React.FC = () => {
       <h2 className={styles.title}>Товары для детейлинга</h2>
       <div className={styles.productsScroll}>
         {products.map(p => (
-          <div className={styles.card} key={p.id}>
-            <img src={p.img} alt={p.name} className={styles.img} />
-            <div className={styles.name}>{p.name}</div>
-            <div className={styles.price}>{p.price} ₽</div>
-          </div>
+          p.name === 'Автошампунь' ? (
+            <Link to={`/product/${p.id}`} className={styles.card} key={p.id}>
+              <img src={p.img} alt={p.name} className={styles.img} />
+              <div className={styles.name}>{p.name}</div>
+              <div className={styles.price}>{p.price} ₽</div>
+            </Link>
+          ) : (
+            <div className={styles.card} key={p.id}>
+              <img src={p.img} alt={p.name} className={styles.img} />
+              <div className={styles.name}>{p.name}</div>
+              <div className={styles.price}>{p.price} ₽</div>
+            </div>
+          )
         ))}
       </div>
       <Link to="/products" className={styles.allBtn}>Смотреть все товары</Link>
