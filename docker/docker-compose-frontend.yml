@@ -19,8 +19,8 @@ services:
       - "18081:80"
 
     networks:
-      - self-detailing_network
+      - backend-self-detailing-network
 
 networks:
-  self-detailing_network:
+  backend-self-detailing-network:
     external: true

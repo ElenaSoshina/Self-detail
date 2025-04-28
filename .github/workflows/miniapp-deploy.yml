@@ -111,7 +111,6 @@ jobs:
           script: |
             set -e
             echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
-            docker network create celebrity_network || true
             docker pull "${DOCKERHUB_REPO}:${VERSION}"
             cd /docker
             docker compose -f docker-compose-frontend.yml up -d --pull always
