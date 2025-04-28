@@ -135,23 +135,32 @@
   margin: 0;
 }
 
-.bookBtn {
+
+.heroButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 36px;
+  font-size: 20px;
+  font-weight: bold;
+  border: none;
+  border-radius: 32px;
   background: linear-gradient(90deg, #FF1F7A, #8A6EFF);
   color: #fff;
-  font-weight: 700;
-  font-size: 1.2rem;
-  border: none;
-  border-radius: 12px;
-  padding: 16px 32px;
-  margin-top: 40px;
+  box-shadow: 0 4px 24px #8A6EFF55;
   cursor: pointer;
   transition: transform 0.2s, box-shadow 0.2s;
-  box-shadow: 0 4px 16px #8A6EFF33;
+  position: relative;
+  overflow: hidden;
 }
 
-.bookBtn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 32px #FF1F7A55;
+.heroButton:hover {
+  transform: translateY(-3px) scale(1.04);
+  box-shadow: 0 8px 32px #FF1F7A88;
+}
+
+.buttonIcon {
+  font-size: 24px;
 }
 
 @media (max-width: 768px) {

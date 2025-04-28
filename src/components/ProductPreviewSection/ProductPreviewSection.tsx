@@ -1,9 +1,10 @@
 import React from 'react';
 import styles from './ProductPreviewSection.module.css';
 import { Link } from 'react-router-dom';
+import image from '../../assets/shampoo.jpg'
 
 const products = [
-  { id: 1, name: 'Автошампунь', price: 350, img: '/img/shampoo.jpg' },
+  { id: 1, name: 'Автошампунь', price: 350, img: image },
   { id: 2, name: 'Губка для мойки', price: 120, img: '/img/sponge.jpg' },
   { id: 3, name: 'Средство для химчистки', price: 490, img: '/img/cleaner.jpg' },
   { id: 4, name: 'Микрофибра', price: 200, img: '/img/microfiber.jpg' },
