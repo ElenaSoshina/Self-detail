@@ -33,5 +33,6 @@
     "typescript-eslint": "^8.26.1",
     "vite": "^6.3.1",
     "gh-pages": "^5.0.0"
-  }
+  },
+  "homepage": "https://frontend.self-detailing.duckdns.org/my-app/"
 }
