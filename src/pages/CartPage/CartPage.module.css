@@ -1,0 +1,32 @@
+.cartPageContainer {
+  min-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.emptyCartMsg {
+  font-size: 24px;
+  color: #fff;
+  margin-bottom: 32px;
+  font-weight: 700;
+}
+
+.goToCatalogBtn {
+  display: inline-block;
+  padding: 14px 36px;
+  border-radius: 24px;
+  background: linear-gradient(90deg, #FF1F7A, #8A6EFF);
+  color: #fff;
+  font-weight: 700;
+  text-decoration: none;
+  font-size: 18px;
+  transition: box-shadow 0.2s, transform 0.2s;
+  box-shadow: 0 4px 16px #8A6EFF22;
+}
+.goToCatalogBtn:hover {
+  box-shadow: 0 4px 24px #FF1F7A55;
+  transform: translateY(-2px) scale(1.03);
+} 

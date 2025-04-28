@@ -3,7 +3,7 @@ import { Item } from '../types/item';
 import { CartItem } from '../types';
 
 interface CartContextType {
-  items: Item[];
+  items: CartItem[];
   addToCart: (item: Omit<Item, 'quantity'>) => void;
   removeFromCart: (id: string) => void;
   updateQuantity: (id: string, quantity: number) => void;
@@ -15,15 +15,15 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [items, setItems] = useState<CartItem[]>([]);
 
   const addToCart = (item: Omit<Item, 'quantity'>) => {
-    // setItems(prevItems => {
-    //   const existingItem = prevItems.find(i => i.id === item.id);
-    //   if (existingItem) {
-    //     return prevItems.map(i =>
-    //       i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i
-    //     );
-    //   }
-    //   return [...prevItems, { ...item, quantity: 1 }];
-    // });
+    setItems(prevItems => {
+      const existingItem = prevItems.find(i => i.id === item.id);
+      if (existingItem) {
+        return prevItems.map(i =>
+          i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i
+        );
+      }
+      return [...prevItems, { ...item, quantity: 1, game: '' }];
+    });
   };
 
   const removeFromCart = (id: string) => {
