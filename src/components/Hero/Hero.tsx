@@ -1,5 +1,6 @@
 import React from 'react';
 import styles from './Hero.module.css';
+import BookButton from '../ui/BookButton/BookButton';
 
 const Hero: React.FC = () => {
   return (
@@ -12,10 +13,7 @@ const Hero: React.FC = () => {
         <p className={styles.heroDescription}>
           Почасовая аренда полностью оборудованного бокса для самостоятельного ухода за авто.<br />
         </p>
-        <button className={styles.heroButton}>
-          <span className={styles.buttonIcon}>🛠️</span>
-          Забронировать бокс
-        </button>
+        <BookButton />
       </div>
     </section>
   );

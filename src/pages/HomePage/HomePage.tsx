@@ -30,7 +30,7 @@ const HomePage: React.FC = () => {
       pricingSection.scrollIntoView({ behavior: 'smooth' });
     }
   };
-
+  
   return (
     <div>
       <Hero />

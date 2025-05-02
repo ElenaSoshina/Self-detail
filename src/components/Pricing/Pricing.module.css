@@ -8,13 +8,10 @@
   font-size: 24px;
   margin-bottom: 40px;
   color: #fff;
-  position: relative;
   display: inline-block;
-  left: 50%;
-  transform: translateX(-50%);
 }
 
-.title::after {
+/* .title::after {
   content: '';
   position: absolute;
   bottom: -10px;
@@ -22,7 +19,7 @@
   width: 100%;
   height: 3px;
   background: linear-gradient(90deg, #FF1F7A, #8A6EFF, #FF1F7A);
-}
+} */
 
 .cardsContainer {
   display: grid;
@@ -72,11 +69,12 @@
   align-items: center;
   justify-content: center;
   background: linear-gradient(90deg, #FF1F7A, #8A6EFF);
-  margin-bottom: 20px;
+  margin: 0 auto 20px;
 }
 
 .icon {
   font-size: 30px;
+  text-align: center;
 }
 
 .cardTitle {
@@ -101,9 +99,39 @@
   flex-grow: 1;
 }
 
+.heroButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 36px;
+  font-size: 20px;
+  font-weight: bold;
+  border: none;
+  border-radius: 32px;
+  background: linear-gradient(90deg, #FF1F7A, #8A6EFF);
+  color: #fff;
+  box-shadow: 0 4px 24px #8A6EFF55;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+
+.heroButton:hover {
+  transform: translateY(-3px) scale(1.04);
+  box-shadow: 0 8px 32px #FF1F7A88;
+}
+
+.buttonIcon {
+  font-size: 24px;
+  color: #fff;
+  filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.5));
+}
+
 @media (max-width: 768px) {
   .cardsContainer {
     grid-template-columns: 1fr;
+    margin-bottom: 20px;
   }
   
   .pricing {

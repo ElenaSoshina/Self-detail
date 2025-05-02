@@ -54,37 +54,9 @@
   text-shadow: 0 2px 16px #8A6EFF44;
 }
 
-.heroButton {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 16px 36px;
-  font-size: 20px;
-  font-weight: bold;
-  border: none;
-  border-radius: 32px;
-  background: linear-gradient(90deg, #FF1F7A, #8A6EFF);
-  color: #fff;
-  box-shadow: 0 4px 24px #8A6EFF55;
-  cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
-  position: relative;
-  overflow: hidden;
-}
-
-.heroButton:hover {
-  transform: translateY(-3px) scale(1.04);
-  box-shadow: 0 8px 32px #FF1F7A88;
-}
-
-.buttonIcon {
-  font-size: 24px;
-}
-
 @media (max-width: 768px) {
   .heroTitle { font-size: 32px; }
   .heroDescription { font-size: 16px; }
-  .heroButton { font-size: 16px; padding: 12px 24px; }
 }
 
 .heroSubtitle {
@@ -114,5 +86,19 @@
 
   .heroDescription {
     font-size: 25px;
+  }
+}
+
+.buttonGroup {
+  display: flex;
+  gap: 20px;
+  margin-top: 32px;
+}
+
+@media (max-width: 576px) {
+  .buttonGroup {
+    flex-direction: column;
+    gap: 16px;
+    align-items: center;
   }
 } 

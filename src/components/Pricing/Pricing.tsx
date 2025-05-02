@@ -1,5 +1,6 @@
 import React from 'react';
 import styles from './Pricing.module.css';
+import BookButton from '../ui/BookButton/BookButton';
 
 const Pricing: React.FC = () => {
   return (
@@ -50,6 +51,8 @@ const Pricing: React.FC = () => {
           </p>
         </div>
       </div>
+
+      <BookButton />
     </section>
   );
 };

@@ -19,6 +19,10 @@
     text-decoration: none;
   }
   
+  .cartSvg {
+    stroke: var(--accent-1, #fe356b);
+  }
+  
   .cartCount {
     position: absolute;
     top: -8px;

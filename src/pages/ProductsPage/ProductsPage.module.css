@@ -8,46 +8,62 @@
   font-size: 36px;
   margin-bottom: 40px;
   color: #fff;
-  position: relative;
   display: inline-block;
-  left: 50%;
-  transform: translateX(-50%);
   font-weight: 800;
   letter-spacing: 1px;
 }
-.title::after {
+
+/* Новые стили для табов */
+.tabsContainer {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 32px;
+  position: relative;
+  padding: 0 20px;
+}
+
+.tabs {
+  display: flex;
+  gap: 24px;
+  border-bottom: 1px solid #333;
+  padding-bottom: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.tabBtn {
+  background: transparent;
+  color: #ccc;
+  border: none;
+  padding: 12px 8px;
+  font-size: 17px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.2s;
+  position: relative;
+}
+
+.tabBtn:hover {
+  color: #fff;
+}
+
+.activeTab {
+  color: #fff;
+  font-weight: 600;
+}
+
+.activeTab::after {
   content: '';
   position: absolute;
-  bottom: -10px;
+  bottom: -8px;
   left: 0;
   width: 100%;
   height: 3px;
-  background: linear-gradient(90deg, #FF1F7A, #8A6EFF, #FF1F7A);
+  background: #fe356b; /* розовый цвет из хедера (var(--accent-1)) */
   border-radius: 2px;
 }
-.filters {
-  display: flex;
-  gap: 16px;
-  justify-content: center;
-  margin-bottom: 32px;
-  flex-wrap: wrap;
-}
-.filterBtn {
-  background: #181828;
-  color: #fff;
-  border: none;
-  border-radius: 18px;
-  padding: 10px 22px;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s, color 0.2s;
-}
-.filterBtn.active,
-.filterBtn:hover {
-  background: linear-gradient(90deg, #FF1F7A, #8A6EFF);
-  color: #fff;
-}
+
+/* старые стили */
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -84,7 +100,7 @@
 .price {
   font-size: 1.1rem;
   font-weight: 600;
-  color: #8A6EFF;
+  color: #fe356b;
   text-align: center;
 }
 .buyBtn {
@@ -96,8 +112,37 @@
   font-weight: 700;
   border: none;
   cursor: pointer;
-  transition: box-shadow 0.2s;
+  transition: all 0.2s ease;
 }
+
 .buyBtn:hover {
   box-shadow: 0 4px 16px #8A6EFF55;
+}
+
+/* Стили для кнопки "Добавлено" */
+.buyBtn.added {
+  background: #22c55e;
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+  transform: scale(1.05);
+}
+
+@keyframes addedAnimation {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+.buyBtn.added {
+  animation: addedAnimation 0.4s ease;
+}
+
+@media (max-width: 768px) {
+  .tabs {
+    gap: 16px;
+  }
+  
+  .tabBtn {
+    font-size: 15px;
+    padding: 8px 6px;
+  }
 } 

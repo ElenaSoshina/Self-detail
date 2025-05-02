@@ -1,5 +1,6 @@
 import React from 'react';
 import styles from './HowItWorks.module.css';
+import BookButton from '../ui/BookButton/BookButton';
 
 const HowItWorks: React.FC = () => {
 
@@ -74,10 +75,7 @@ const HowItWorks: React.FC = () => {
         </div>
       </div>
 
-      <button className={styles.heroButton}>
-        <span className={styles.buttonIcon}>🛠️</span>
-        Забронировать бокс
-      </button>
+      <BookButton />
     </section>
   );
 };

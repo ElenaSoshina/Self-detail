@@ -1,0 +1,35 @@
+.bookButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 36px;
+  font-size: 16px;
+  font-weight: bold;
+  border: none;
+  border-radius: 32px;
+  background: linear-gradient(90deg, #FF1F7A, #8A6EFF);
+  color: #fff;
+  box-shadow: 0 4px 24px #8A6EFF55;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+
+.bookButton:hover {
+  transform: translateY(-3px) scale(1.04);
+  box-shadow: 0 8px 32px #FF1F7A88;
+}
+
+.buttonIcon {
+  font-size: 24px;
+  color: #fff;
+  filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.5));
+}
+
+@media (max-width: 768px) {
+  .bookButton {
+    font-size: 16px;
+    padding: 12px 24px;
+  }
+} 

@@ -1,6 +1,6 @@
 /* ───────── базовая обёртка ───────── */
 :root {
-  --accent-1: #ff0447; /* розовый */
+  --accent-1: #fe356b; /* розовый */
   --accent-2: #923cff; /* фиолетовый */
   --accent-3: #00c2ff; /* голубой  */
 }
@@ -55,7 +55,7 @@
 .burgerBtn span {
   height: 4px;
   width: 100%;
-  background: linear-gradient(90deg, #FF1F7A, #8A6EFF, #FF1F7A);
+  background: var(--accent-1);
   border-radius: 4px;
   transition: .3s;
 }
@@ -69,7 +69,7 @@
 .nav       { display: flex; gap: 2rem; }
 .nav a     { color:#fff; text-decoration:none; font-weight:700; }
 .nav a:hover {
-  background: linear-gradient(90deg,#00c2ff,#7000ff,#ff00ff);
+  background: var(--accent-1);
   -webkit-background-clip:text;
   -webkit-text-fill-color:transparent;
   background-clip:text;
@@ -87,7 +87,7 @@
 .searchIcon{
   width:100%;
   height:100%;
-  background: linear-gradient(90deg, #FF1F7A, #8A6EFF, #FF1F7A);
+  background: var(--accent-1);
   -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z'/%3E%3C/svg%3E") center/contain no-repeat;
           mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z'/%3E%3C/svg%3E") center/contain no-repeat;
 }

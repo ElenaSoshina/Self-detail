@@ -1,0 +1,142 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #ddd;
+}
+
+.required {
+  color: #FF1F7A;
+  margin-left: 4px;
+}
+
+.input,
+.textarea {
+  background: #222;
+  border: 1px solid #444;
+  border-radius: 8px;
+  padding: 12px 16px;
+  color: #fff;
+  font-size: 16px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  width: 100%;
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.input:focus,
+.textarea:focus {
+  outline: none;
+  border-color: #8A6EFF;
+  box-shadow: 0 0 0 2px rgba(138, 110, 255, 0.3);
+}
+
+.inputError {
+  border-color: #FF1F7A;
+}
+
+.inputError:focus {
+  box-shadow: 0 0 0 2px rgba(255, 31, 122, 0.3);
+}
+
+.errorMessage {
+  font-size: 12px;
+  color: #FF1F7A;
+  margin-top: 4px;
+}
+
+.formActions {
+  display: flex;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.submitButton,
+.cancelButton {
+  padding: 12px 24px;
+  border-radius: 32px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  border: none;
+}
+
+.submitButton {
+  flex: 1;
+  background: linear-gradient(90deg, #FF1F7A, #8A6EFF);
+  color: #fff;
+}
+
+.submitButton:hover:not(:disabled) {
+  box-shadow: 0 4px 16px #8A6EFF44;
+  transform: translateY(-2px);
+}
+
+.cancelButton {
+  background: none;
+  color: #ddd;
+  border: 1px solid #444;
+}
+
+.cancelButton:hover:not(:disabled) {
+  background: #2a2a3a;
+}
+
+.submitButton:disabled,
+.cancelButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Стили для полей при фокусе */
+.input:focus:not(.inputError),
+.textarea:focus:not(.inputError) {
+  background: #26262e;
+  border-color: #8A6EFF;
+}
+
+/* Плейсхолдеры */
+.input::placeholder,
+.textarea::placeholder {
+  color: #666;
+}
+
+/* Анимация при неверном вводе */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+  20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+.formGroup.shake input,
+.formGroup.shake textarea {
+  animation: shake 0.6s ease-in-out;
+}
+
+/* Адаптивность */
+@media (max-width: 576px) {
+  .formActions {
+    flex-direction: column;
+  }
+  
+  .submitButton,
+  .cancelButton {
+    width: 100%;
+  }
+} 

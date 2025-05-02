@@ -1,0 +1,128 @@
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.modalOverlay.closing {
+  animation: fadeOut 0.3s ease-out;
+}
+
+.modalContent {
+  background: #181828;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 0 1px #8A6EFF33;
+  animation: zoomIn 0.3s ease-out;
+  transform-origin: center;
+  position: relative;
+}
+
+.modalContent.closing {
+  animation: zoomOut 0.3s ease-out;
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 24px 16px;
+  border-bottom: 1px solid #333;
+}
+
+.modalTitle {
+  margin: 0;
+  color: #fff;
+  font-weight: 700;
+  font-size: 24px;
+  background: linear-gradient(90deg, #FF1F7A, #8A6EFF);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 28px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+  transition: color 0.2s, transform 0.2s;
+}
+
+.closeButton:hover {
+  color: #FF1F7A;
+  transform: scale(1.1);
+}
+
+.modalBody {
+  padding: 24px;
+  color: #fff;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes zoomIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes zoomOut {
+  from { transform: scale(1); opacity: 1; }
+  to { transform: scale(0.95); opacity: 0; }
+}
+
+/* Стили для скроллбара */
+.modalContent::-webkit-scrollbar {
+  width: 8px;
+}
+
+.modalContent::-webkit-scrollbar-track {
+  background: #222;
+  border-radius: 8px;
+}
+
+.modalContent::-webkit-scrollbar-thumb {
+  background: linear-gradient(to bottom, #FF1F7A, #8A6EFF);
+  border-radius: 8px;
+}
+
+@media (max-width: 576px) {
+  .modalContent {
+    max-width: 100%;
+  }
+  
+  .modalHeader {
+    padding: 16px 16px 12px;
+  }
+  
+  .modalTitle {
+    font-size: 20px;
+  }
+  
+  .modalBody {
+    padding: 16px;
+  }
+} 

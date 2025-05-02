@@ -1,0 +1,39 @@
+.questionButton {
+  background: linear-gradient(90deg, #8A6EFF, #FF1F7A);
+  color: white;
+  border: none;
+  padding: 14px 24px;
+  border-radius: 30px;
+  font-size: 18px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 16px rgba(138, 110, 255, 0.3);
+}
+
+.questionButton:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 6px 24px rgba(255, 31, 122, 0.4);
+}
+
+.questionButton:active {
+  transform: translateY(1px);
+}
+
+.buttonIcon {
+  font-size: 21px;
+}
+
+@media (max-width: 576px) {
+  .questionButton {
+    padding: 12px 20px;
+    font-size: 16px;
+  }
+  
+  .buttonIcon {
+    font-size: 18px;
+  }
+} 
