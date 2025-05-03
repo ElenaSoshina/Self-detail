@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import PhoneInput from 'react-phone-number-input/input';
+import 'react-phone-number-input/style.css';
 import styles from './FeedbackForm.module.css';
 
 interface FormData {
@@ -40,11 +42,27 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSubmit, onCancel }) => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Особая обработка для поля telegram - автоматически добавляем @ в начало, если его нет
+    if (name === 'telegram' && value && !value.startsWith('@') && value !== '@') {
+      setFormData(prev => ({ ...prev, [name]: `@${value}` }));
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
     
     // Сбрасываем ошибку при изменении поля
     if (errors[name as keyof FormData]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
+    }
+  };
+
+  // Обработчик изменения телефона через PhoneInput
+  const handlePhoneChange = (value: string | undefined) => {
+    setFormData(prev => ({ ...prev, phone: value || '' }));
+    
+    // Сбрасываем ошибку при изменении телефона
+    if (errors.phone) {
+      setErrors(prev => ({ ...prev, phone: '' }));
     }
   };
 
@@ -55,16 +73,21 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSubmit, onCancel }) => {
       newErrors.name = 'Введите ваше имя';
     }
     
+    // Валидация телефона (должен быть не пустым и содержать не менее 10 цифр)
+    const phoneDigits = formData.phone.replace(/\D/g, '');
     if (!formData.phone.trim()) {
       newErrors.phone = 'Введите номер телефона';
-    } else if (!/^(\+7|8)[\s-]?\(?[0-9]{3}\)?[\s-]?[0-9]{3}[\s-]?[0-9]{2}[\s-]?[0-9]{2}$/.test(formData.phone)) {
+    } else if (phoneDigits.length < 10) {
       newErrors.phone = 'Введите корректный номер телефона';
     }
     
+    // Валидация telegram (обязательно должен начинаться с @)
     if (!formData.telegram.trim()) {
       newErrors.telegram = 'Введите ваш username в Telegram';
-    } else if (!formData.telegram.trim().startsWith('@') && !formData.telegram.trim().match(/^[a-zA-Z][a-zA-Z0-9_]{3,}$/)) {
-      newErrors.telegram = 'Введите корректный username (например @username)';
+    } else if (!formData.telegram.trim().startsWith('@')) {
+      newErrors.telegram = 'Username должен начинаться с @';
+    } else if (formData.telegram.trim() === '@') {
+      newErrors.telegram = 'Введите имя пользователя после @';
     }
     
     if (!formData.question.trim()) {
@@ -174,14 +197,16 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSubmit, onCancel }) => {
         <label htmlFor="phone" className={styles.label}>
           Телефон <span className={styles.required}>*</span>
         </label>
-        <input
-          type="tel"
+        <PhoneInput
+          country="RU"
+          international
+          withCountryCallingCode
           id="phone"
           name="phone"
           value={formData.phone}
-          onChange={handleChange}
+          onChange={handlePhoneChange}
           className={`${styles.input} ${errors.phone ? styles.inputError : ''}`}
-          placeholder="+7 (999) 999-99-99"
+          placeholder="+7 (___) ___-__-__"
           disabled={isSubmitting}
         />
         {errors.phone && <div className={styles.errorMessage}>{errors.phone}</div>}
