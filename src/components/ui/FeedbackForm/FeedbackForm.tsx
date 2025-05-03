@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import PhoneInput from 'react-phone-number-input/input';
 import 'react-phone-number-input/style.css';
@@ -14,9 +14,14 @@ interface FormData {
 interface FeedbackFormProps {
   onSubmit: (data: FormData) => void;
   onCancel?: () => void;
+  onInputFocus?: (focused: boolean) => void;
 }
 
-const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSubmit, onCancel }) => {
+const FeedbackForm: React.FC<FeedbackFormProps> = ({ 
+  onSubmit, 
+  onCancel,
+  onInputFocus 
+}) => {
   const [formData, setFormData] = useState<FormData>({
     name: '',
     phone: '',
@@ -27,6 +32,10 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSubmit, onCancel }) => {
   const [errors, setErrors] = useState<Partial<FormData>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [chatId, setChatId] = useState<string | null>(null);
+  
+  // Создаем рефы для элементов формы
+  const formRef = useRef<HTMLFormElement>(null);
+  const submitButtonRef = useRef<HTMLButtonElement>(null);
 
   // Массив ID администраторов
   const adminChatIds: string[] = ['522814078'];
@@ -39,6 +48,41 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSubmit, onCancel }) => {
       tg.ready?.();
     }
   }, []);
+  
+  // Обработчик фокуса для любого поля ввода
+  const handleFocus = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    if (onInputFocus) onInputFocus(true);
+    
+    // Автоскролл к полю ввода на мобильных устройствах
+    if (window.innerWidth <= 768) {
+      // Небольшая задержка для корректной работы с виртуальной клавиатурой
+      setTimeout(() => {
+        const input = e.target;
+        const rect = input.getBoundingClientRect();
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        
+        // Проверяем, находится ли поле ввода в нижней части экрана
+        if (rect.bottom > window.innerHeight - 100) {
+          // Скроллим к полю с отступом для удобства
+          window.scrollTo({
+            top: scrollTop + rect.top - 120,
+            behavior: 'smooth'
+          });
+          
+          // Если это модальное окно, скроллим его контент
+          const modalContent = input.closest('.modalContent');
+          if (modalContent) {
+            modalContent.scrollTop = rect.top - 120;
+          }
+        }
+      }, 300);
+    }
+  };
+  
+  // Обработчик blur для любого поля ввода
+  const handleBlur = () => {
+    if (onInputFocus) onInputFocus(false);
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -148,7 +192,15 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSubmit, onCancel }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validate()) return;
+    if (!validate()) {
+      // Скролл к первому полю с ошибкой
+      const firstErrorField = Object.keys(errors)[0];
+      if (firstErrorField) {
+        const errorElement = document.querySelector(`[name="${firstErrorField}"]`);
+        errorElement?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      return;
+    }
     
     setIsSubmitting(true);
     
@@ -175,7 +227,7 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSubmit, onCancel }) => {
   };
 
   return (
-    <form className={styles.form} onSubmit={handleSubmit}>
+    <form ref={formRef} className={styles.form} onSubmit={handleSubmit}>
       <div className={styles.formGroup}>
         <label htmlFor="name" className={styles.label}>
           Имя <span className={styles.required}>*</span>
@@ -186,6 +238,8 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSubmit, onCancel }) => {
           name="name"
           value={formData.name}
           onChange={handleChange}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
           className={`${styles.input} ${errors.name ? styles.inputError : ''}`}
           placeholder="Ваше имя"
           disabled={isSubmitting}
@@ -205,6 +259,8 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSubmit, onCancel }) => {
           name="phone"
           value={formData.phone}
           onChange={handlePhoneChange}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
           className={`${styles.input} ${errors.phone ? styles.inputError : ''}`}
           placeholder="+7 (___) ___-__-__"
           disabled={isSubmitting}
@@ -222,6 +278,8 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSubmit, onCancel }) => {
           name="telegram"
           value={formData.telegram}
           onChange={handleChange}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
           className={`${styles.input} ${errors.telegram ? styles.inputError : ''}`}
           placeholder="@username"
           disabled={isSubmitting}
@@ -238,6 +296,8 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSubmit, onCancel }) => {
           name="question"
           value={formData.question}
           onChange={handleChange}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
           className={`${styles.textarea} ${errors.question ? styles.inputError : ''}`}
           placeholder="Опишите ваш вопрос подробно"
           rows={4}
@@ -258,6 +318,7 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSubmit, onCancel }) => {
           </button>
         )}
         <button 
+          ref={submitButtonRef}
           type="submit" 
           className={styles.submitButton}
           disabled={isSubmitting}

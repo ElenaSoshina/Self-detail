@@ -16,6 +16,7 @@ interface FeedbackModalProps {
 
 const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose }) => {
   const [success, setSuccess] = useState(false);
+  const [isInputFocused, setIsInputFocused] = useState(false);
 
   const handleSubmit = (data: FormData) => {
     // Здесь можно добавить отправку данных на сервер
@@ -31,11 +32,16 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose }) => {
     }, 3000);
   };
 
+  const handleInputFocus = (focused: boolean) => {
+    setIsInputFocused(focused);
+  };
+
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
       title={success ? "Спасибо за обращение!" : "Задать вопрос"}
+      preventCloseOnBackdrop={isInputFocused}
     >
       {success ? (
         <div style={{ textAlign: 'center', padding: '20px 0' }}>
@@ -49,7 +55,8 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose }) => {
       ) : (
         <FeedbackForm 
           onSubmit={handleSubmit} 
-          onCancel={onClose} 
+          onCancel={onClose}
+          onInputFocus={handleInputFocus}
         />
       )}
     </Modal>

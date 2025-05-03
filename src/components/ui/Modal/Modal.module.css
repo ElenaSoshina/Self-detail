@@ -28,6 +28,18 @@
   animation: zoomIn 0.3s ease-out;
   transform-origin: center;
   position: relative;
+  -webkit-overflow-scrolling: touch; /* Плавный скролл на iOS */
+}
+
+@media (max-height: 600px) {
+  .modalOverlay {
+    align-items: flex-start;
+    padding-top: 10px;
+  }
+
+  .modalContent {
+    max-height: 95vh;
+  }
 }
 
 .modalContent.closing {
@@ -40,6 +52,10 @@
   align-items: center;
   padding: 24px 24px 16px;
   border-bottom: 1px solid #333;
+  position: sticky;
+  top: 0;
+  background: #181828;
+  z-index: 2;
 }
 
 .modalTitle {
@@ -112,6 +128,8 @@
 @media (max-width: 576px) {
   .modalContent {
     max-width: 100%;
+    height: auto;
+    max-height: 95vh;
   }
   
   .modalHeader {
@@ -124,5 +142,29 @@
   
   .modalBody {
     padding: 16px;
+  }
+
+  .modalOverlay {
+    padding: 10px;
+  }
+}
+
+/* Стили для режима когда открыта клавиатура на мобильных устройствах */
+@media (max-height: 450px) {
+  .modalOverlay {
+    align-items: flex-start;
+    padding-top: 5px;
+    overflow-y: auto;
+  }
+
+  .modalContent {
+    max-height: 98vh;
+    margin-bottom: 20px;
+  }
+  
+  .modalHeader {
+    position: sticky;
+    top: 0;
+    z-index: 10;
   }
 } 
