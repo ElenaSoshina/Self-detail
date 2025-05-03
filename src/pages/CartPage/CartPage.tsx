@@ -55,10 +55,10 @@ const CartPage: React.FC = () => {
   
   // Отображаем пустую корзину, если товаров нет
   if (items.length === 0) {
-    return (
-      <div className={styles.cartPageContainer}>
-        <div className={styles.emptyCartMsg}>В корзине ничего нет</div>
-        <Link to="/products" className={styles.goToCatalogBtn}>Перейти в каталог</Link>
+  return (
+    <div className={styles.cartPageContainer}>
+      <div className={styles.emptyCartMsg}>В корзине ничего нет</div>
+      <Link to="/products" className={styles.goToCatalogBtn}>Перейти в каталог</Link>
       </div>
     );
   }

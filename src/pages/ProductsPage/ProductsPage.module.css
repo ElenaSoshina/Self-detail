@@ -17,7 +17,7 @@
 .tabsContainer {
   display: flex;
   justify-content: center;
-  margin-bottom: 32px;
+  margin-bottom: 20px;
   position: relative;
   padding: 0 20px;
 }
@@ -61,6 +61,70 @@
   height: 3px;
   background: #fe356b; /* розовый цвет из хедера (var(--accent-1)) */
   border-radius: 2px;
+}
+
+/* Стили для подкатегорий */
+.subCategoriesContainer {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 32px;
+  overflow-x: auto;
+  padding: 0 5px;
+  width: 100%;
+  -webkit-overflow-scrolling: touch; /* Плавная прокрутка на iOS */
+  scrollbar-width: thin;
+}
+
+.subCategoriesContainer::-webkit-scrollbar {
+  height: 4px;
+}
+
+.subCategoriesContainer::-webkit-scrollbar-thumb {
+  background: rgba(138, 110, 255, 0.3);
+  border-radius: 4px;
+}
+
+.subCategories {
+  display: flex;
+  gap: 12px;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  background: rgba(24, 24, 40, 0.6);
+  padding: 12px 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(138, 110, 255, 0.1);
+  white-space: nowrap;
+  margin: 0 auto;
+  min-width: min-content; /* Предотвращает сжатие контейнера */
+}
+
+.subCategoryBtn:first-child {
+  margin-left: 5px; /* Дополнительное пространство для первого элемента */
+}
+
+.subCategoryBtn {
+  background: transparent;
+  color: #ccc;
+  border: none;
+  padding: 8px 14px;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+.subCategoryBtn:hover {
+  color: #fff;
+  background: rgba(255, 31, 122, 0.1);
+}
+
+.activeSubCategory {
+  color: #fff;
+  background: linear-gradient(90deg, rgba(255, 31, 122, 0.2), rgba(138, 110, 255, 0.2));
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(255, 31, 122, 0.2);
 }
 
 /* старые стили */
@@ -136,6 +200,7 @@
   animation: addedAnimation 0.4s ease;
 }
 
+/* Адаптивные стили */
 @media (max-width: 768px) {
   .tabs {
     gap: 16px;
@@ -144,5 +209,31 @@
   .tabBtn {
     font-size: 15px;
     padding: 8px 6px;
+  }
+  
+  .subCategories {
+    padding: 8px 12px;
+    gap: 8px;
+  }
+  
+  .subCategoryBtn {
+    font-size: 14px;
+    padding: 6px 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .subCategoriesContainer {
+    margin-bottom: 20px;
+  }
+  
+  .subCategories {
+    padding: 8px;
+    gap: 6px;
+  }
+  
+  .subCategoryBtn {
+    padding: 6px 10px;
+    font-size: 13px;
   }
 } 

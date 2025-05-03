@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import styles from './FeedbackForm.module.css';
 
 interface FormData {
@@ -23,6 +24,19 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSubmit, onCancel }) => {
   
   const [errors, setErrors] = useState<Partial<FormData>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [chatId, setChatId] = useState<string | null>(null);
+
+  // Массив ID администраторов
+  const adminChatIds: string[] = ['522814078'];
+
+  // Получаем chatId пользователя из Telegram WebApp
+  useEffect(() => {
+    const tg = (window as any).Telegram?.WebApp;
+    if (tg?.initDataUnsafe?.user?.id) {
+      setChatId(tg.initDataUnsafe.user.id.toString());
+      tg.ready?.();
+    }
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -61,6 +75,53 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSubmit, onCancel }) => {
     return Object.keys(newErrors).length === 0;
   };
 
+  // Функция для отправки сообщений через API
+  const sendMessageToTelegram = async () => {
+    if (!chatId && !adminChatIds.length) {
+      console.error('Нет доступных ID для отправки сообщений');
+      throw new Error('Нет доступных ID для отправки сообщений');
+    }
+
+    // Сообщение для администраторов
+    const adminMessage = 
+      `🔔 Новый вопрос от пользователя!\n\n` +
+      `👤 Имя: ${formData.name}\n` +
+      `📱 Телефон: ${formData.phone}\n` +
+      `📨 Telegram: ${formData.telegram}\n\n` +
+      `❓ Вопрос:\n${formData.question}`;
+
+    // Сообщение для пользователя
+    const userMessage = 
+      `✅ Спасибо за ваш вопрос!\n\n` +
+      `Мы получили вашу заявку и ответим в ближайшее время.\n\n` +
+      `📝 Ваш вопрос:\n${formData.question}`;
+
+    try {
+      // Отправляем сообщения администраторам
+      await Promise.all(
+        adminChatIds.map(id =>
+          axios.post(
+            `https://backend.self-detailing.duckdns.org/api/v1/chat/send-message/${id}`,
+            { message: adminMessage }
+          )
+        )
+      );
+
+      // Отправляем сообщение пользователю, если известен его chatId
+      if (chatId) {
+        await axios.post(
+          `https://backend.self-detailing.duckdns.org/api/v1/chat/send-message/${chatId}`,
+          { message: userMessage }
+        );
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Ошибка при отправке сообщения в Telegram:', error);
+      throw error;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -69,12 +130,10 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSubmit, onCancel }) => {
     setIsSubmitting(true);
     
     try {
-      // Здесь можно добавить реальную отправку данных на сервер
-      // await sendDataToServer(formData);
+      // Отправляем сообщения в Telegram
+      await sendMessageToTelegram();
       
-      // Имитация задержки при отправке
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      // Передаем данные формы в родительский компонент
       onSubmit(formData);
       
       // Сбрасываем форму

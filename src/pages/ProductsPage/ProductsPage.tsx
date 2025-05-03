@@ -5,20 +5,32 @@ import image from '../../assets/shampoo.jpg'
 import { products } from '../../data/products';
 import { useCart } from '../../context/CartContex';
 
-// Список категорий
-const categories = ['Все', 'Мойка', 'Химчистка', 'Полировка', 'Защита', 'Аксессуары', 'Инструменты'];
+// Структура категорий и подкатегорий
+const categoryStructure = {
+  'Мойка': ['Шампуни', 'Аппликаторы', 'Губки', 'Полотенца', 'Осушители'],
+  'Химчистка': ['Очистители салона', 'Торнадо', 'Пароочистители', 'Средства для кожи', 'Средства для ткани'],
+  'Полировка': ['Полироли', 'Абразивы', 'Круги', 'Машинки', 'Аксессуары'],
+  'Защита': ['Жидкое стекло', 'Керамика', 'Воски', 'Силанты', 'Пленки'],
+  'Расходники': ['Перчатки', 'Распылители', 'Фильтры', 'Щетки', 'Микрофибра'],
+  'Мерч': ['Одежда', 'Кепки', 'Наклейки', 'Сувениры', 'Аксессуары']
+};
+
+// Список основных категорий
+const mainCategories = ['Все', ...Object.keys(categoryStructure)];
 
 const ProductsPage: React.FC = () => {
-  const [filter, setFilter] = useState('Все');
-  // Фильтруем продукты по выбранной категории
-  const filtered = filter === 'Все' 
-    ? products 
-    : products.filter(p => p.category === filter);
+  const [mainCategory, setMainCategory] = useState('Все');
+  const [subCategory, setSubCategory] = useState('');
   
   const navigate = useNavigate();
   const { addToCart, items } = useCart();
   const [addedAnimation, setAddedAnimation] = useState<Record<string, boolean>>({});
 
+  // Фильтрация продуктов
+  const filteredProducts = mainCategory === 'Все' 
+    ? products 
+    : products.filter(p => p.category === mainCategory);
+  
   // Определяем, какие товары уже в корзине
   const isInCart = (productId: string): boolean => {
     return items.some(item => item.id === productId);
@@ -53,24 +65,62 @@ const ProductsPage: React.FC = () => {
     }
   };
 
+  // Обработка клика по основной категории
+  const handleMainCategoryClick = (category: string) => {
+    setMainCategory(category);
+    setSubCategory('');
+  };
+
+  // Обработка клика по подкатегории
+  const handleSubCategoryClick = (subCat: string) => {
+    setSubCategory(subCat);
+  };
+
   return (
     <section className={styles.catalogSection}>
       <h1 className={styles.title}>Каталог товаров</h1>
+      
+      {/* Основные категории */}
       <div className={styles.tabsContainer}>
         <div className={styles.tabs}>
-          {categories.map(cat => (
+          {mainCategories.map(cat => (
             <button
               key={cat}
-              className={`${styles.tabBtn} ${filter === cat ? styles.activeTab : ''}`}
-              onClick={() => setFilter(cat)}
+              className={`${styles.tabBtn} ${mainCategory === cat ? styles.activeTab : ''}`}
+              onClick={() => handleMainCategoryClick(cat)}
             >
               {cat}
             </button>
           ))}
         </div>
       </div>
+      
+      {/* Подкатегории */}
+      {mainCategory !== 'Все' && (
+        <div className={styles.subCategoriesContainer}>
+          <div className={styles.subCategories}>
+            <button
+              className={`${styles.subCategoryBtn} ${subCategory === '' ? styles.activeSubCategory : ''}`}
+              onClick={() => handleSubCategoryClick('')}
+            >
+              Все {mainCategory}
+            </button>
+            {categoryStructure[mainCategory as keyof typeof categoryStructure]?.map(subCat => (
+              <button
+                key={subCat}
+                className={`${styles.subCategoryBtn} ${subCategory === subCat ? styles.activeSubCategory : ''}`}
+                onClick={() => handleSubCategoryClick(subCat)}
+              >
+                {subCat}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      
+      {/* Сетка товаров */}
       <div className={styles.grid}>
-        {filtered.map(p => (
+        {filteredProducts.map(p => (
           <div 
             key={p.id} 
             className={styles.card}
