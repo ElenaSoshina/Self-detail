@@ -64,7 +64,7 @@ export const Header: React.FC = () => {
           <img src={logo} alt="Detel Sam" className={styles.logo} />
         </Link>
 
-        {/* ──────── RIGHT: search + cart ──────── */}
+        {/* ──────── RIGHT: search + cart + profile ──────── */}
         <div className={styles.right}>
           <button
             className={styles.searchBtn}
@@ -74,6 +74,9 @@ export const Header: React.FC = () => {
             <div className={styles.searchIcon} />
           </button>
           <Cart />
+          <Link to="/profile" className={styles.profileBtn} aria-label="Личный кабинет">
+            <div className={styles.profileIcon} />
+          </Link>
         </div>
       </div>
 
