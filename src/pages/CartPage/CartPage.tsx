@@ -1,133 +1,117 @@
 import React from 'react';
+import { useCart } from '../../context/CartContex';
 import { Link, useNavigate } from 'react-router-dom';
 import styles from './CartPage.module.css';
-import { useCart } from '../../context/CartContex';
 import { products } from '../../data/products';
-import image from '../../assets/shampoo.jpg';
+import defaultImage from '../../assets/shampoo.jpg';
+import { CartItem } from '../../types';
+
+// Функция для получения изображения продукта по ID
+const getProductImage = (id: string | number): string => {
+  const productId = typeof id === 'string' ? parseInt(id as string) : id;
+  const product = products.find(p => p.id === productId);
+  return product?.image || defaultImage;
+};
 
 const CartPage: React.FC = () => {
   const { items, updateQuantity, removeFromCart } = useCart();
   const navigate = useNavigate();
-  
+
+  const handleProductClick = (productId: string) => {
+    // Переходим на страницу товара только если это не бронирование
+    const item = items.find(item => item.id === productId);
+    if (item && item.type !== 'booking') {
+      navigate(`/product/${productId}`);
+    }
+  };
+
+  const handleUpdateQuantity = (itemId: string, delta: number, currentQuantity: number) => {
+    const newQuantity = currentQuantity + delta;
+    if (newQuantity <= 0) {
+      removeFromCart(itemId);
+    } else {
+      updateQuantity(itemId, newQuantity);
+    }
+  };
+
   // Расчет общей стоимости корзины
-  const totalSum = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  
-  // Функция получения изображения товара (по ID)
-  const getProductImage = (productId: string) => {
-    const product = products.find(p => p.id === parseInt(productId));
-    return product?.image || image;
-  };
-  
-  // Форматирование цены с разделителем тысяч
-  const formatPrice = (price: number): string => {
-    return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
-  };
-  
-  // Обработчики для изменения количества и удаления товара
-  const handleDecreaseQuantity = (id: string) => {
-    const item = items.find(item => item.id === id);
-    if (item && item.quantity > 1) {
-      updateQuantity(id, item.quantity - 1);
-    } else if (item && item.quantity === 1) {
-      // При уменьшении до 0, спрашиваем о удалении
-      if (window.confirm('Удалить товар из корзины?')) {
-        removeFromCart(id);
-      }
-    }
-  };
-  
-  const handleIncreaseQuantity = (id: string) => {
-    const item = items.find(item => item.id === id);
-    if (item) {
-      updateQuantity(id, item.quantity + 1);
-    }
-  };
-  
-  const handleRemove = (id: string) => {
-    if (window.confirm('Вы уверены, что хотите удалить этот товар из корзины?')) {
-      removeFromCart(id);
-    }
-  };
-  
-  const handleProductClick = (id: string) => {
-    navigate(`/product/${id}`);
-  };
-  
-  // Отображаем пустую корзину, если товаров нет
+  const totalCost = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
   if (items.length === 0) {
-  return (
-    <div className={styles.cartPageContainer}>
-      <div className={styles.emptyCartMsg}>В корзине ничего нет</div>
-      <Link to="/products" className={styles.goToCatalogBtn}>Перейти в каталог</Link>
+    return (
+      <div className={styles.cartPage}>
+        <h1 className={styles.pageTitle}>Корзина</h1>
+        <div className={styles.cartPageContainer}>
+          <p className={styles.emptyCartMsg}>Ваша корзина пуста</p>
+          <Link to="/catalog" className={styles.goToCatalogBtn}>Перейти в каталог</Link>
+        </div>
       </div>
     );
   }
-  
-  // Отображаем товары в корзине
+
   return (
     <div className={styles.cartPage}>
       <h1 className={styles.pageTitle}>Корзина</h1>
-      
       <div className={styles.cartContainer}>
         <div className={styles.cartItems}>
-          {items.map(item => (
+          {items.map((item: CartItem) => (
             <div key={item.id} className={styles.cartItem}>
-              <div className={styles.itemImage} onClick={() => handleProductClick(item.id)}>
-                <img src={getProductImage(item.id)} alt={item.name} />
+              <div 
+                className={`${styles.itemImage} ${item.type === 'booking' ? styles.bookingImage : ''}`} 
+                onClick={() => handleProductClick(item.id)}
+              >
+                {item.type === 'booking' && item.icon ? (
+                  <div className={styles.bookingIcon} dangerouslySetInnerHTML={{ __html: item.icon }} />
+                ) : (
+                  <img src={getProductImage(item.id)} alt={item.name} />
+                )}
               </div>
-              
               <div className={styles.itemInfo} onClick={() => handleProductClick(item.id)}>
                 <h3 className={styles.itemName}>{item.name}</h3>
-                <div className={styles.itemPrice}>{formatPrice(item.price)} ₽</div>
+                {item.details && <div className={styles.itemDetails}>{item.details}</div>}
+                <div className={styles.itemPrice}>{item.price} ₽</div>
               </div>
-              
               <div className={styles.itemControls}>
                 <div className={styles.quantityControls}>
                   <button 
-                    className={styles.quantityBtn}
-                    onClick={() => handleDecreaseQuantity(item.id)}
+                    className={styles.quantityBtn} 
+                    onClick={() => handleUpdateQuantity(item.id, -1, item.quantity)}
                   >
                     -
                   </button>
                   <span className={styles.quantity}>{item.quantity}</span>
                   <button 
-                    className={styles.quantityBtn}
-                    onClick={() => handleIncreaseQuantity(item.id)}
+                    className={styles.quantityBtn} 
+                    onClick={() => handleUpdateQuantity(item.id, 1, item.quantity)}
                   >
                     +
                   </button>
                 </div>
-                
-                <div className={styles.itemTotal}>
-                  {formatPrice(item.price * item.quantity)} ₽
-                </div>
-                
+                <div className={styles.itemTotal}>{item.price * item.quantity} ₽</div>
                 <button 
                   className={styles.removeBtn} 
-                  onClick={() => handleRemove(item.id)}
-                  aria-label="Удалить товар"
+                  onClick={() => removeFromCart(item.id)}
                 >
-                  ✕
+                  Удалить
                 </button>
               </div>
             </div>
           ))}
         </div>
-        
         <div className={styles.cartSummary}>
           <div className={styles.summaryRow}>
-            <span>Всего товаров:</span>
-            <span>{items.reduce((count, item) => count + item.quantity, 0)} шт.</span>
+            <span>Сумма заказа:</span>
+            <span>{totalCost} ₽</span>
           </div>
-          
+          <div className={styles.summaryRow}>
+            <span>Скидка:</span>
+            <span>0 ₽</span>
+          </div>
           <div className={styles.summaryRow}>
             <span>Итого:</span>
-            <span className={styles.totalPrice}>{formatPrice(totalSum)} ₽</span>
+            <span className={styles.totalPrice}>{totalCost} ₽</span>
           </div>
-          
-          <button className={styles.checkoutBtn}>
-            Оформить заказ
-          </button>
+          <button className={styles.checkoutBtn}>Оформить заказ</button>
         </div>
       </div>
     </div>

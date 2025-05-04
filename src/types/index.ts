@@ -4,4 +4,8 @@ export interface CartItem {
     game: string;
     price: number;
     quantity: number;
+    type?: string;
+    icon?: string;
+    details?: string;
+    region?: string;
   } 

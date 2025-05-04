@@ -265,10 +265,11 @@ const CalendarPage: React.FC = () => {
       const bookingItem = {
         id: bookingDetails.id,
         name: `${bookingDetails.plan.title} (${formattedDate}, ${bookingDetails.time})`,
-        price: bookingDetails.plan.price,
+        price: bookingDetails.totalPrice, // Используем общую стоимость за все часы
         type: 'booking',
         region: '',
-        details: `Бронирование на ${hours} ч.`,
+        details: `Бронирование на ${bookingDetails.hours} ч. | ${bookingDetails.time}`,
+        icon: bookingDetails.plan.icon, // Добавляем иконку тарифа
       };
 
       addToCart(bookingItem);
@@ -285,10 +286,11 @@ const CalendarPage: React.FC = () => {
       const bookingItem = {
         id: bookingDetails.id,
         name: `${bookingDetails.plan.title} (${formattedDate}, ${bookingDetails.time})`,
-        price: bookingDetails.plan.price,
+        price: bookingDetails.totalPrice, // Используем общую стоимость за все часы
         type: 'booking',
         region: '',
-        details: `Бронирование на ${hours} ч.`,
+        details: `Бронирование на ${bookingDetails.hours} ч. | ${bookingDetails.time}`,
+        icon: bookingDetails.plan.icon, // Добавляем иконку тарифа
       };
 
       addToCart(bookingItem);
