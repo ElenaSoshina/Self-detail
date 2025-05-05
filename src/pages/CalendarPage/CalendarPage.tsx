@@ -3,6 +3,7 @@ import styles from './CalendarPage.module.css';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../../context/CartContex';
 import { v4 as uuidv4 } from 'uuid'; // Для генерации уникальных ID
+import axios from 'axios';
 
 interface Day {
   date: Date;
@@ -41,6 +42,8 @@ const CalendarPage: React.FC = () => {
   const [hours, setHours] = useState<number>(1);
   const [bookingDetails, setBookingDetails] = useState<BookingDetails | null>(null);
   const [bookingCompleted, setBookingCompleted] = useState(false);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+  const [slotsError, setSlotsError] = useState<string | null>(null);
 
   // Данные о тарифах
   const pricingPlans: PricingPlan[] = [
@@ -95,12 +98,11 @@ const CalendarPage: React.FC = () => {
   // Генерация временных слотов при выборе даты
   useEffect(() => {
     if (selectedDate) {
-      // Здесь в реальном приложении был бы запрос к API
-      // Для примера генерируем случайные доступные слоты
-      const slots = generateMockTimeSlots(selectedDate);
-      setAvailableTimeSlots(slots);
+      // Запрашиваем доступные слоты с сервера
+      fetchAvailableTimeSlots(selectedDate);
     } else {
       setAvailableTimeSlots([]);
+      setSlotsError(null);
     }
     setSelectedTime(null);
     setSelectedPlan(null);
@@ -176,27 +178,56 @@ const CalendarPage: React.FC = () => {
     );
   };
 
-  // Генерация временных слотов (имитация)
-  const generateMockTimeSlots = (date: Date): string[] => {
-    // В реальном приложении здесь был бы API-запрос
-    const slots = [];
-    const startHour = 9;
-    const endHour = 20;
-    
-    // Случайно генерируем доступные слоты
-    for (let hour = startHour; hour <= endHour; hour++) {
-      // 50% шанс доступности каждого часа
-      if (Math.random() > 0.5) {
-        slots.push(`${hour}:00`);
-      }
+  // Запрос доступных слотов с сервера
+  const fetchAvailableTimeSlots = async (date: Date) => {
+    try {
+      setLoadingSlots(true);
+      setSlotsError(null);
       
-      // 30% шанс доступности получасовых слотов
-      if (Math.random() > 0.7) {
-        slots.push(`${hour}:30`);
-      }
+      // Создаем начальную и конечную даты (сутки)
+      const startDate = new Date(date);
+      startDate.setHours(0, 0, 0, 0);
+      
+      const endDate = new Date(date);
+      endDate.setHours(23, 59, 59, 999);
+      
+      // Форматируем даты для запроса в ISO формате
+      const startDateISO = startDate.toISOString();
+      const endDateISO = endDate.toISOString();
+      
+      // Выполняем запрос к API с использованием axios
+      const response = await axios.get(
+        'https://backend.self-detailing.duckdns.org/api/v1/calendar/available', 
+        {
+          params: {
+            start: startDateISO,
+            end: endDateISO
+          }
+        }
+      );
+      
+      // Обрабатываем данные из ответа
+      const data = response.data;
+      
+      console.log('Получены данные с сервера:', data);
+      
+      // Форматируем полученные слоты в нужный формат
+      const timeSlots = data.map((slot: any) => {
+        const slotTime = new Date(slot.start);
+        return `${slotTime.getHours()}:${slotTime.getMinutes() === 0 ? '00' : slotTime.getMinutes()}`;
+      });
+      
+      // Сортируем слоты по времени
+      timeSlots.sort();
+      
+      setAvailableTimeSlots(timeSlots);
+      setLoadingSlots(false);
+    } catch (error) {
+      console.error('Ошибка при получении доступных слотов:', error);
+      setSlotsError('Не удалось загрузить доступные слоты. Пожалуйста, попробуйте позже.');
+      setAvailableTimeSlots([]);
+      setLoadingSlots(false);
     }
-    
-    return slots.sort();
   };
 
   // Переключение на предыдущий месяц
@@ -381,7 +412,15 @@ const CalendarPage: React.FC = () => {
                     {formatDate(selectedDate)}
                   </h3>
                   
-                  {availableTimeSlots.length > 0 ? (
+                  {loadingSlots ? (
+                    <div className={styles.loadingMessage}>
+                      Загрузка доступных слотов...
+                    </div>
+                  ) : slotsError ? (
+                    <div className={styles.errorMessage}>
+                      {slotsError}
+                    </div>
+                  ) : availableTimeSlots.length > 0 ? (
                     <div className={styles.timeSlots}>
                       {availableTimeSlots.map(time => (
                         <button 

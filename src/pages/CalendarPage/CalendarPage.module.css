@@ -762,4 +762,26 @@
     padding: 14px;
     font-size: 16px;
   }
+}
+
+/* Стили для индикатора загрузки и сообщения об ошибке */
+.loadingMessage {
+  text-align: center;
+  padding: 20px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 16px;
+  border-radius: 10px;
+  background-color: rgba(138, 110, 255, 0.1);
+  margin-bottom: 16px;
+}
+
+.errorMessage {
+  text-align: center;
+  padding: 20px;
+  color: #ff5555;
+  font-size: 16px;
+  border-radius: 10px;
+  background-color: rgba(255, 85, 85, 0.1);
+  border: 1px solid rgba(255, 85, 85, 0.2);
+  margin-bottom: 16px;
 } 
