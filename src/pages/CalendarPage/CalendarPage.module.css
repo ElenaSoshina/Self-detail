@@ -155,26 +155,32 @@
   color: rgba(255, 255, 255, 0.5);
 }
 
+/* Стиль для сегодняшнего дня */
 .today {
-  font-weight: 700;
   position: relative;
+  /* background: linear-gradient(rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.05)) padding-box,
+              linear-gradient(45deg, #8a6eff, #ff4095) border-box; */
+  border-radius: 8px;
+  border: 2px solid transparent;
+  color: white;
+  box-shadow: 0 0 12px rgba(138, 110, 255, 0.3);
 }
 
-.todayMark {
-  position: absolute;
-  bottom: 5px;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: linear-gradient(to right, #FF1F7A, #8A6EFF);
-}
-
+/* Стиль для выбранного дня (переопределяет стиль сегодняшнего дня) */
 .selected {
   background: linear-gradient(to right, #FF1F7A, #8A6EFF);
+  border: none;
   color: white;
   font-weight: 700;
   transform: translateY(-2px);
   box-shadow: 0 5px 15px rgba(255, 31, 122, 0.3);
+}
+
+/* Специальный стиль для выбранного сегодняшнего дня */
+.today.selected {
+  background: linear-gradient(to right, #FF1F7A, #8A6EFF);
+  border: 2px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
 }
 
 .bookingSelection {
@@ -784,4 +790,8 @@
   background-color: rgba(255, 85, 85, 0.1);
   border: 1px solid rgba(255, 85, 85, 0.2);
   margin-bottom: 16px;
+}
+
+.todayMark {
+  display: none;
 } 

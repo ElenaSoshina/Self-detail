@@ -30,6 +30,13 @@ interface BookingDetails {
   totalPrice: number;
 }
 
+// Интерфейс для слота времени с дополнительными данными
+interface TimeSlotWithData {
+  formattedTime: string;
+  originalData: any;
+  sortKey: number;
+}
+
 const CalendarPage: React.FC = () => {
   const navigate = useNavigate();
   const { addToCart } = useCart();
@@ -42,8 +49,9 @@ const CalendarPage: React.FC = () => {
   const [hours, setHours] = useState<number>(1);
   const [bookingDetails, setBookingDetails] = useState<BookingDetails | null>(null);
   const [bookingCompleted, setBookingCompleted] = useState(false);
-  const [loadingSlots, setLoadingSlots] = useState(false);
+  const [loadingSlots, setLoadingSlots] = useState(true); // Изначально загрузка включена
   const [slotsError, setSlotsError] = useState<string | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // Данные о тарифах
   const pricingPlans: PricingPlan[] = [
@@ -86,28 +94,246 @@ const CalendarPage: React.FC = () => {
   // Массив названий дней недели
   const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
-  // Генерация дней для текущего месяца
+  // Запрос доступных слотов с сервера
+  const fetchAvailableTimeSlots = async (date: Date) => {
+    try {
+      console.log('Запрос слотов для даты:', date);
+      setLoadingSlots(true);
+      setSlotsError(null);
+      
+      // Создаем начальную и конечную даты (сутки)
+      const startDate = new Date(date);
+      startDate.setHours(0, 0, 0, 0);
+      
+      const endDate = new Date(date);
+      endDate.setHours(23, 59, 59, 999);
+      
+      // Форматируем даты для запроса в ISO формате
+      const startDateISO = startDate.toISOString();
+      const endDateISO = endDate.toISOString();
+      
+      // Выводим URL запроса для отладки
+      const apiUrl = 'https://backend.self-detailing.duckdns.org/api/v1/calendar/available';
+      console.log('URL запроса:', apiUrl);
+      console.log('Параметры запроса:', { start: startDateISO, end: endDateISO });
+
+      // Выполняем запрос к API с использованием axios
+      const response = await axios.get(
+        apiUrl, 
+        {
+          params: {
+            start: startDateISO,
+            end: endDateISO
+          },
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          },
+          timeout: 10000, // 10 секунд таймаут
+        }
+      );
+      
+      // Обрабатываем данные из ответа
+      console.log('Статус ответа:', response.status);
+      console.log('Заголовки ответа:', response.headers);
+      console.log('Данные ответа:', response.data);
+      
+      const data = response.data;
+      
+      // Форматируем полученные слоты в нужный формат и сохраняем исходные данные
+      const timeSlotsWithData: TimeSlotWithData[] = data.map((slot: any) => {
+        const slotTime = new Date(slot.start);
+        const hours = slotTime.getHours();
+        const minutes = slotTime.getMinutes();
+        // Создаем объект с отформатированным временем и оригинальными данными
+        return {
+          formattedTime: `${hours < 10 ? '0' + hours : hours}:${minutes === 0 ? '00' : minutes < 10 ? '0' + minutes : minutes}`,
+          originalData: slot,
+          sortKey: hours * 60 + minutes // Ключ для сортировки (минуты от начала дня)
+        };
+      });
+      
+      // Сортируем слоты по времени
+      timeSlotsWithData.sort((a: TimeSlotWithData, b: TimeSlotWithData) => a.sortKey - b.sortKey);
+      
+      // Извлекаем только форматированное время для отображения
+      const formattedTimeSlots = timeSlotsWithData.map((slot: TimeSlotWithData) => slot.formattedTime);
+      
+      setAvailableTimeSlots(formattedTimeSlots);
+      setLoadingSlots(false);
+    } catch (error: any) {
+      console.error('Ошибка при получении доступных слотов:', error);
+      
+      // Выводим подробную информацию об ошибке
+      if (axios.isAxiosError(error)) {
+        console.log('Ошибка Axios:', {
+          message: error.message,
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          config: {
+            url: error.config?.url,
+            method: error.config?.method,
+            params: error.config?.params,
+            headers: error.config?.headers,
+            timeout: error.config?.timeout,
+          }
+        });
+        
+        if (error.response) {
+          // Получен ответ от сервера, но с ошибкой
+          setSlotsError(`Ошибка сервера: ${error.response.status} ${error.response.statusText}. Подробности в консоли.`);
+        } else if (error.request) {
+          // Запрос был сделан, но ответ не получен
+          setSlotsError(`Сервер не отвечает. Возможно проблемы с подключением или CORS.`);
+        } else {
+          // Что-то пошло не так при настройке запроса
+          setSlotsError(`Ошибка запроса: ${error.message}`);
+        }
+      } else {
+        // Обычная ошибка, не связанная с Axios
+        setSlotsError(`Неизвестная ошибка: ${error.message}`);
+      }
+      
+      setAvailableTimeSlots([]);
+      setLoadingSlots(false);
+    }
+  };
+
+  // Простая инициализация при монтировании - выбираем текущий день
   useEffect(() => {
+    console.log('Компонент смонтирован, выбираем текущий день');
+    
+    // Генерируем дни для текущего месяца
     const daysArray = generateDaysForMonth(
       currentDate.getFullYear(),
       currentDate.getMonth()
     );
     setDays(daysArray);
-  }, [currentDate]);
-
-  // Генерация временных слотов при выборе даты
-  useEffect(() => {
-    if (selectedDate) {
-      // Запрашиваем доступные слоты с сервера
-      fetchAvailableTimeSlots(selectedDate);
+    
+    // Находим текущий день и выбираем его, если он доступен
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Сбрасываем время для корректного сравнения
+    
+    console.log('Поиск текущего дня в массиве дней...');
+    const todayDay = daysArray.find(day => 
+      day.isToday && day.isAvailable
+    );
+    
+    if (todayDay) {
+      console.log('Текущий день найден и доступен:', todayDay.date);
+      setSelectedDate(todayDay.date);
+      
+      // Принудительно запрашиваем слоты для текущего дня с небольшой задержкой
+      setTimeout(() => {
+        console.log('Запускаем принудительную загрузку слотов для сегодня');
+        try {
+          // Для запроса нужно использовать полночь сегодняшнего дня и 23:59:59 сегодняшнего дня
+          const todayStart = new Date(today);
+          todayStart.setHours(0, 0, 0, 0);
+          
+          const todayEnd = new Date(today);
+          todayEnd.setHours(23, 59, 59, 999);
+          
+          // Форматируем даты для запроса в ISO формате
+          const startDateISO = todayStart.toISOString();
+          const endDateISO = todayEnd.toISOString();
+          
+          console.log('Прямой запрос к API для текущей даты:', {
+            сегодня: today,
+            начало: startDateISO,
+            конец: endDateISO
+          });
+          
+          // Выполняем запрос напрямую
+          axios.get(
+            'https://backend.self-detailing.duckdns.org/api/v1/calendar/available',
+            {
+              params: {
+                start: startDateISO,
+                end: endDateISO
+              },
+              headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+              },
+              timeout: 10000
+            }
+          )
+          .then(response => {
+            console.log('Успешный ответ от сервера для сегодня:', response.data);
+            console.log('Длина массива слотов:', response.data.length);
+            
+            // Форматируем и сохраняем полученные слоты
+            const data = response.data;
+            const timeSlotsWithData: TimeSlotWithData[] = data.map((slot: any) => {
+              const slotTime = new Date(slot.start);
+              const hours = slotTime.getHours();
+              const minutes = slotTime.getMinutes();
+              return {
+                formattedTime: `${hours < 10 ? '0' + hours : hours}:${minutes === 0 ? '00' : minutes < 10 ? '0' + minutes : minutes}`,
+                originalData: slot,
+                sortKey: hours * 60 + minutes
+              };
+            });
+            
+            timeSlotsWithData.sort((a: TimeSlotWithData, b: TimeSlotWithData) => a.sortKey - b.sortKey);
+            const formattedTimeSlots = timeSlotsWithData.map((slot: TimeSlotWithData) => slot.formattedTime);
+            
+            console.log('Отформатированные слоты:', formattedTimeSlots);
+            setAvailableTimeSlots(formattedTimeSlots);
+            setLoadingSlots(false);
+          })
+          .catch(error => {
+            console.error('Ошибка при загрузке слотов для сегодня:', error);
+            if (axios.isAxiosError(error)) {
+              console.log('Детали ошибки Axios:', {
+                сообщение: error.message,
+                статус: error.response?.status,
+                данные: error.response?.data,
+                параметры: error.config?.params,
+                URL: error.config?.url
+              });
+            }
+            setSlotsError('Ошибка загрузки слотов. Подробности в консоли.');
+            setLoadingSlots(false);
+          });
+        } catch (e) {
+          console.error('Произошла ошибка при прямом вызове:', e);
+          setLoadingSlots(false);
+        }
+      }, 500);
     } else {
-      setAvailableTimeSlots([]);
-      setSlotsError(null);
+      console.log('Текущий день недоступен или не найден');
+      setLoadingSlots(false);
     }
-    setSelectedTime(null);
-    setSelectedPlan(null);
-    setBookingDetails(null);
-    setBookingCompleted(false);
+  }, []); // Пустой массив зависимостей - только при монтировании
+  
+  // Обновление дней при изменении текущего месяца
+  useEffect(() => {
+    // Пропускаем первый рендер, чтобы не перезаписать результаты инициализации
+    if (days.length > 0) {
+      console.log('Обновление месяца:', currentDate);
+      const daysArray = generateDaysForMonth(
+        currentDate.getFullYear(),
+        currentDate.getMonth()
+      );
+      setDays(daysArray);
+    }
+  }, [currentDate, days.length]);
+
+  // Генерация временных слотов при явном выборе даты (не при инициализации)
+  useEffect(() => {
+    // Пропускаем первый рендер
+    if (selectedDate && days.length > 0) {
+      console.log('Дата выбрана вручную:', selectedDate);
+      fetchAvailableTimeSlots(selectedDate);
+      
+      setSelectedTime(null);
+      setSelectedPlan(null);
+      setBookingDetails(null);
+      setBookingCompleted(false);
+    }
   }, [selectedDate]);
 
   // Сброс выбранного тарифа при изменении времени
@@ -142,9 +368,21 @@ const CalendarPage: React.FC = () => {
     
     // Добавляем дни текущего месяца
     const today = new Date();
+    // Сбрасываем время для корректного сравнения дат
+    today.setHours(0, 0, 0, 0);
+    
     for (let i = 1; i <= lastDayOfMonth.getDate(); i++) {
       const date = new Date(year, month, i);
-      const isDateAvailable = date >= today; // доступны только будущие даты
+      // Для корректного сравнения сбрасываем время
+      date.setHours(0, 0, 0, 0);
+      
+      // Считаем сегодняшний день и все будущие доступными для выбора
+      const isDateAvailable = date >= today;
+      
+      // Для отладки
+      if (isSameDay(date, today)) {
+        console.log('Текущий день доступен:', isDateAvailable);
+      }
       
       result.push({
         date,
@@ -161,7 +399,7 @@ const CalendarPage: React.FC = () => {
       result.push({
         date,
         isCurrentMonth: false,
-        isToday: isSameDay(date, today),
+        isToday: isSameDay(date, new Date()),
         isAvailable: true // дни следующего месяца доступны
       });
     }
@@ -176,58 +414,6 @@ const CalendarPage: React.FC = () => {
       date1.getMonth() === date2.getMonth() &&
       date1.getFullYear() === date2.getFullYear()
     );
-  };
-
-  // Запрос доступных слотов с сервера
-  const fetchAvailableTimeSlots = async (date: Date) => {
-    try {
-      setLoadingSlots(true);
-      setSlotsError(null);
-      
-      // Создаем начальную и конечную даты (сутки)
-      const startDate = new Date(date);
-      startDate.setHours(0, 0, 0, 0);
-      
-      const endDate = new Date(date);
-      endDate.setHours(23, 59, 59, 999);
-      
-      // Форматируем даты для запроса в ISO формате
-      const startDateISO = startDate.toISOString();
-      const endDateISO = endDate.toISOString();
-      
-      // Выполняем запрос к API с использованием axios
-      const response = await axios.get(
-        'https://backend.self-detailing.duckdns.org/api/v1/calendar/available', 
-        {
-          params: {
-            start: startDateISO,
-            end: endDateISO
-          }
-        }
-      );
-      
-      // Обрабатываем данные из ответа
-      const data = response.data;
-      
-      console.log('Получены данные с сервера:', data);
-      
-      // Форматируем полученные слоты в нужный формат
-      const timeSlots = data.map((slot: any) => {
-        const slotTime = new Date(slot.start);
-        return `${slotTime.getHours()}:${slotTime.getMinutes() === 0 ? '00' : slotTime.getMinutes()}`;
-      });
-      
-      // Сортируем слоты по времени
-      timeSlots.sort();
-      
-      setAvailableTimeSlots(timeSlots);
-      setLoadingSlots(false);
-    } catch (error) {
-      console.error('Ошибка при получении доступных слотов:', error);
-      setSlotsError('Не удалось загрузить доступные слоты. Пожалуйста, попробуйте позже.');
-      setAvailableTimeSlots([]);
-      setLoadingSlots(false);
-    }
   };
 
   // Переключение на предыдущий месяц
@@ -253,7 +439,92 @@ const CalendarPage: React.FC = () => {
   // Обработчик выбора даты
   const handleDateClick = (day: Day) => {
     if (day.isAvailable) {
+      // Печатаем информацию о выбранной дате
+      console.log('Выбрана дата:', day.date);
+      console.log('Это сегодня:', day.isToday);
+      
+      // Устанавливаем выбранную дату
       setSelectedDate(day.date);
+      
+      // Если выбрана сегодняшняя дата, выполняем прямой запрос для нее
+      if (day.isToday) {
+        console.log('Выбран текущий день, выполняем прямой запрос для сегодня');
+        
+        // Получаем сегодняшнюю дату
+        const today = new Date();
+        
+        // Устанавливаем диапазон времени для запроса (весь день)
+        const todayStart = new Date(today);
+        todayStart.setHours(0, 0, 0, 0);
+        
+        const todayEnd = new Date(today);
+        todayEnd.setHours(23, 59, 59, 999);
+        
+        // Форматируем даты для запроса
+        const startDateISO = todayStart.toISOString();
+        const endDateISO = todayEnd.toISOString();
+        
+        console.log('Запрос на слоты для сегодняшнего дня:', {
+          начало: startDateISO,
+          конец: endDateISO
+        });
+        
+        // Показываем индикатор загрузки
+        setLoadingSlots(true);
+        setSlotsError(null);
+        
+        // Выполняем запрос к API
+        axios.get(
+          'https://backend.self-detailing.duckdns.org/api/v1/calendar/available',
+          {
+            params: {
+              start: startDateISO,
+              end: endDateISO
+            },
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json'
+            },
+            timeout: 10000
+          }
+        )
+        .then(response => {
+          console.log('Получены слоты для сегодня:', response.data);
+          
+          // Обрабатываем данные и сохраняем слоты
+          const data = response.data;
+          if (data && Array.isArray(data)) {
+            // Обрабатываем и форматируем данные
+            const timeSlotsWithData: TimeSlotWithData[] = data.map((slot: any) => {
+              const slotTime = new Date(slot.start);
+              const hours = slotTime.getHours();
+              const minutes = slotTime.getMinutes();
+              return {
+                formattedTime: `${hours < 10 ? '0' + hours : hours}:${minutes === 0 ? '00' : minutes < 10 ? '0' + minutes : minutes}`,
+                originalData: slot,
+                sortKey: hours * 60 + minutes
+              };
+            });
+            
+            timeSlotsWithData.sort((a: TimeSlotWithData, b: TimeSlotWithData) => a.sortKey - b.sortKey);
+            const formattedTimeSlots = timeSlotsWithData.map((slot: TimeSlotWithData) => slot.formattedTime);
+            
+            console.log('Обработанные слоты для отображения:', formattedTimeSlots);
+            setAvailableTimeSlots(formattedTimeSlots);
+          } else {
+            console.error('Неверный формат данных от сервера:', data);
+            setAvailableTimeSlots([]);
+          }
+          
+          setLoadingSlots(false);
+        })
+        .catch(error => {
+          console.error('Ошибка при загрузке слотов для текущего дня:', error);
+          setSlotsError('Не удалось загрузить слоты для текущего дня');
+          setAvailableTimeSlots([]);
+          setLoadingSlots(false);
+        });
+      }
     }
   };
 
@@ -390,14 +661,13 @@ const CalendarPage: React.FC = () => {
                   className={`
                     ${styles.day} 
                     ${!day.isCurrentMonth ? styles.otherMonth : ''} 
-                    ${day.isToday ? styles.today : ''} 
                     ${day.isAvailable ? styles.available : styles.unavailable}
+                    ${day.isToday ? styles.today : ''}
                     ${selectedDate && isSameDay(day.date, selectedDate) ? styles.selected : ''}
                   `}
                   onClick={() => handleDateClick(day)}
                 >
                   {day.date.getDate()}
-                  {day.isToday && <span className={styles.todayMark}></span>}
                 </div>
               ))}
             </div>
@@ -439,8 +709,8 @@ const CalendarPage: React.FC = () => {
                   )}
                 </>
               ) : (
-                <div className={styles.selectDateMessage}>
-                  Выберите дату для просмотра доступного времени
+                <div className={styles.loadingMessage}>
+                  Загрузка свободных слотов...
                 </div>
               )}
             </div>
