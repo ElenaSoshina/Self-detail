@@ -35,6 +35,15 @@ interface TimeSlotWithData {
   formattedTime: string;
   originalData: any;
   sortKey: number;
+  start: Date;  // Время начала слота
+  end: Date;    // Время окончания слота
+}
+
+// Для работы с доступными слотами
+interface AvailabilityData {
+  timeSlots: string[];              // Форматированные слоты для отображения
+  originalData: TimeSlotWithData[]; // Оригинальные данные для вычислений
+  maxAvailableHours: number;        // Максимальное кол-во часов для выбранного слота
 }
 
 const CalendarPage: React.FC = () => {
@@ -44,7 +53,9 @@ const CalendarPage: React.FC = () => {
   const [days, setDays] = useState<Day[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [availableTimeSlots, setAvailableTimeSlots] = useState<string[]>([]);
+  const [timeSlotData, setTimeSlotData] = useState<TimeSlotWithData[]>([]);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const [maxAvailableHours, setMaxAvailableHours] = useState<number>(8); // Максимально возможная продолжительность
   const [selectedPlan, setSelectedPlan] = useState<PricingPlan | null>(null);
   const [hours, setHours] = useState<number>(1);
   const [bookingDetails, setBookingDetails] = useState<BookingDetails | null>(null);
@@ -135,7 +146,6 @@ const CalendarPage: React.FC = () => {
       
       // Обрабатываем данные из ответа
       console.log('Статус ответа:', response.status);
-      console.log('Заголовки ответа:', response.headers);
       console.log('Данные ответа:', response.data);
       
       const data = response.data;
@@ -145,22 +155,47 @@ const CalendarPage: React.FC = () => {
         const slotTime = new Date(slot.start);
         const hours = slotTime.getHours();
         const minutes = slotTime.getMinutes();
+        
+        // Проверяем наличие длительности в данных слота
+        const duration = slot.duration || 60; // По умолчанию 60 минут, если не указано
+        
         // Создаем объект с отформатированным временем и оригинальными данными
         return {
           formattedTime: `${hours < 10 ? '0' + hours : hours}:${minutes === 0 ? '00' : minutes < 10 ? '0' + minutes : minutes}`,
           originalData: slot,
-          sortKey: hours * 60 + minutes // Ключ для сортировки (минуты от начала дня)
+          sortKey: hours * 60 + minutes, // Ключ для сортировки (минуты от начала дня)
+          start: slotTime,
+          end: new Date(slotTime.getTime() + duration * 60000) // Время окончания слота
         };
       });
+      
+      // Выводим полные данные о слотах для отладки
+      console.log('Данные слотов перед сортировкой:', timeSlotsWithData);
       
       // Сортируем слоты по времени
       timeSlotsWithData.sort((a: TimeSlotWithData, b: TimeSlotWithData) => a.sortKey - b.sortKey);
       
+      console.log('Отсортированные данные слотов:', timeSlotsWithData);
+      
       // Извлекаем только форматированное время для отображения
       const formattedTimeSlots = timeSlotsWithData.map((slot: TimeSlotWithData) => slot.formattedTime);
       
+      console.log('Форматированные временные слоты для отображения:', formattedTimeSlots);
+      
       setAvailableTimeSlots(formattedTimeSlots);
+      setTimeSlotData(timeSlotsWithData);
       setLoadingSlots(false);
+      
+      // Если есть выбранное время, пересчитываем доступное количество часов
+      if (selectedTime) {
+        const maxHours = calculateMaxAvailableHours(selectedTime, timeSlotsWithData);
+        setMaxAvailableHours(maxHours);
+        
+        // Корректируем выбранное количество часов, если оно превышает максимум
+        if (hours > maxHours) {
+          setHours(maxHours);
+        }
+      }
     } catch (error: any) {
       console.error('Ошибка при получении доступных слотов:', error);
       
@@ -196,6 +231,7 @@ const CalendarPage: React.FC = () => {
       }
       
       setAvailableTimeSlots([]);
+      setTimeSlotData([]);
       setLoadingSlots(false);
     }
   };
@@ -273,7 +309,9 @@ const CalendarPage: React.FC = () => {
               return {
                 formattedTime: `${hours < 10 ? '0' + hours : hours}:${minutes === 0 ? '00' : minutes < 10 ? '0' + minutes : minutes}`,
                 originalData: slot,
-                sortKey: hours * 60 + minutes
+                sortKey: hours * 60 + minutes,
+                start: slotTime,
+                end: new Date(slotTime.getTime() + slot.duration * 60000)
               };
             });
             
@@ -282,7 +320,7 @@ const CalendarPage: React.FC = () => {
             
             console.log('Отформатированные слоты:', formattedTimeSlots);
             setAvailableTimeSlots(formattedTimeSlots);
-            setLoadingSlots(false);
+            setTimeSlotData(timeSlotsWithData);
           })
           .catch(error => {
             console.error('Ошибка при загрузке слотов для сегодня:', error);
@@ -296,7 +334,8 @@ const CalendarPage: React.FC = () => {
               });
             }
             setSlotsError('Ошибка загрузки слотов. Подробности в консоли.');
-            setLoadingSlots(false);
+            setAvailableTimeSlots([]);
+            setTimeSlotData([]);
           });
         } catch (e) {
           console.error('Произошла ошибка при прямом вызове:', e);
@@ -502,7 +541,9 @@ const CalendarPage: React.FC = () => {
               return {
                 formattedTime: `${hours < 10 ? '0' + hours : hours}:${minutes === 0 ? '00' : minutes < 10 ? '0' + minutes : minutes}`,
                 originalData: slot,
-                sortKey: hours * 60 + minutes
+                sortKey: hours * 60 + minutes,
+                start: slotTime,
+                end: new Date(slotTime.getTime() + slot.duration * 60000)
               };
             });
             
@@ -511,9 +552,11 @@ const CalendarPage: React.FC = () => {
             
             console.log('Обработанные слоты для отображения:', formattedTimeSlots);
             setAvailableTimeSlots(formattedTimeSlots);
+            setTimeSlotData(timeSlotsWithData);
           } else {
             console.error('Неверный формат данных от сервера:', data);
             setAvailableTimeSlots([]);
+            setTimeSlotData([]);
           }
           
           setLoadingSlots(false);
@@ -522,6 +565,7 @@ const CalendarPage: React.FC = () => {
           console.error('Ошибка при загрузке слотов для текущего дня:', error);
           setSlotsError('Не удалось загрузить слоты для текущего дня');
           setAvailableTimeSlots([]);
+          setTimeSlotData([]);
           setLoadingSlots(false);
         });
       }
@@ -531,6 +575,17 @@ const CalendarPage: React.FC = () => {
   // Обработчик выбора времени
   const handleTimeSlotClick = (timeSlot: string) => {
     setSelectedTime(timeSlot);
+    
+    // Вычисляем максимальную продолжительность для выбранного слота
+    const maxHours = calculateMaxAvailableHours(timeSlot, timeSlotData);
+    setMaxAvailableHours(maxHours);
+    
+    // Сбрасываем значение часов на 1, если текущее значение превышает максимум
+    if (hours > maxHours) {
+      setHours(1);
+    }
+    
+    console.log(`Для слота ${timeSlot} доступно максимум ${maxHours} ч.`);
   };
 
   // Обработчик выбора тарифа
@@ -540,7 +595,8 @@ const CalendarPage: React.FC = () => {
 
   // Обработчик изменения количества часов
   const handleHoursChange = (newHours: number) => {
-    setHours(Math.max(1, Math.min(newHours, 8))); // Ограничиваем от 1 до 8 часов
+    // Ограничиваем от 1 до максимально доступного количества часов
+    setHours(Math.max(1, Math.min(newHours, maxAvailableHours)));
   };
 
   // Обработчик бронирования
@@ -618,6 +674,71 @@ const CalendarPage: React.FC = () => {
   const calculateTotalPrice = () => {
     if (!selectedPlan) return 0;
     return selectedPlan.price * hours;
+  };
+
+  // Функция для вычисления максимальной доступной продолжительности брони
+  const calculateMaxAvailableHours = (selectedTimeStr: string, slots: TimeSlotWithData[]): number => {
+    console.log('Вычисление максимальной продолжительности для', selectedTimeStr);
+    console.log('Доступные слоты:', slots.map(s => s.formattedTime));
+    
+    // Находим индекс выбранного слота
+    const selectedIndex = slots.findIndex(slot => slot.formattedTime === selectedTimeStr);
+    
+    if (selectedIndex === -1) {
+      console.log('Выбранный слот не найден в массиве');
+      return 1; // Если слот не найден, по умолчанию 1 час
+    }
+    
+    const selectedSlot = slots[selectedIndex];
+    const selectedStartTime = new Date(selectedSlot.start);
+    
+    console.log('Время начала выбранного слота:', selectedStartTime);
+    
+    // Находим все слоты, которые идут последовательно
+    let availableHours = 1; // Начинаем с 1 часа (выбранный слот)
+    
+    // Формируем массив из последовательных часов
+    let hourSlots = [selectedSlot];
+    
+    // Получаем ожидаемое время начала следующего часового слота
+    let nextHourExpected = new Date(selectedStartTime);
+    nextHourExpected.setHours(nextHourExpected.getHours() + 1);
+    
+    // Отсортируем слоты по времени
+    const sortedSlots = [...slots].sort((a, b) => a.start.getTime() - b.start.getTime());
+    
+    // Проходим по всем слотам после выбранного
+    for (let i = 0; i < sortedSlots.length; i++) {
+      const slot = sortedSlots[i];
+      
+      // Пропускаем слоты, которые начинаются раньше или одновременно с выбранным
+      if (slot.start <= selectedStartTime) continue;
+      
+      const slotStartTime = new Date(slot.start);
+      
+      // Вычисляем разницу между ожидаемым и фактическим временем начала слота (в минутах)
+      const diffMinutes = Math.abs(
+        (slotStartTime.getTime() - nextHourExpected.getTime()) / (60 * 1000)
+      );
+      
+      // Если разница меньше 5 минут, считаем этот слот следующим по порядку
+      if (diffMinutes < 5) {
+        availableHours++;
+        hourSlots.push(slot);
+        
+        // Обновляем ожидаемое время для следующего часа
+        nextHourExpected = new Date(slotStartTime);
+        nextHourExpected.setHours(nextHourExpected.getHours() + 1);
+        
+        // Ограничиваем максимум 8 часами
+        if (availableHours >= 8) break;
+      }
+    }
+    
+    console.log('Найдено последовательных часов:', availableHours);
+    console.log('Последовательные слоты:', hourSlots.map(s => s.formattedTime));
+    
+    return Math.min(availableHours, 8);
   };
 
   return (
@@ -756,11 +877,17 @@ const CalendarPage: React.FC = () => {
                   <button 
                     className={styles.hoursButton}
                     onClick={() => handleHoursChange(hours + 1)}
-                    disabled={hours >= 8}
+                    disabled={hours >= maxAvailableHours}
                   >
                     +
                   </button>
                 </div>
+                
+                {maxAvailableHours < 8 && (
+                  <div className={styles.availabilityInfo}>
+                    В выбранное время бронирование возможно только на {maxAvailableHours} {maxAvailableHours === 1 ? 'час' : maxAvailableHours < 5 ? 'часа' : 'часов'}
+                  </div>
+                )}
                 
                 <div className={styles.totalPrice}>
                   <span>Итого:</span>

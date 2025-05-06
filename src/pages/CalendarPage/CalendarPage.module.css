@@ -794,4 +794,16 @@
 
 .todayMark {
   display: none;
+}
+
+.availabilityInfo {
+  margin-top: 10px;
+  padding: 10px 15px;
+  background-color: rgba(138, 110, 255, 0.15);
+  border-radius: 8px;
+  border-left: 3px solid #8A6EFF;
+  font-size: 14px;
+  color: #fff;
+  text-align: center;
+  line-height: 1.4;
 } 
