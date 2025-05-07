@@ -309,6 +309,18 @@ const CalendarPage: React.FC = () => {
     }
   };
 
+  // Генерируем полный массив слотов за сутки (00:00-01:00 ... 23:00-00:00)
+  const allDaySlots: { formattedTime: string; start: string; end: string }[] = [];
+  for (let h = 0; h < 24; h++) {
+    const start = `${h < 10 ? '0' + h : h}:00`;
+    const end = `${(h + 1) < 10 ? '0' + (h + 1) : (h + 1 === 24 ? '00' : h + 1)}:00`;
+    allDaySlots.push({
+      formattedTime: start,
+      start,
+      end
+    });
+  }
+
   return (
     <div className={styles.calendarContainer}>
       {!bookingCompleted && (
@@ -342,6 +354,7 @@ const CalendarPage: React.FC = () => {
               selectedDate={selectedDate}
               loadingSlots={loadingSlots}
               slotsError={slotsError}
+              allDaySlots={allDaySlots}
               availableTimeSlots={availableTimeSlots}
               startTime={startTime}
               endTime={endTime}

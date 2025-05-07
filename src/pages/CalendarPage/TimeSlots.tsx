@@ -5,6 +5,7 @@ interface TimeSlotsProps {
   selectedDate: Date | null;
   loadingSlots: boolean;
   slotsError: string | null;
+  allDaySlots: { formattedTime: string; start: string; end: string }[];
   availableTimeSlots: string[];
   startTime: string | null;
   endTime: string | null;
@@ -16,6 +17,7 @@ const TimeSlots: React.FC<TimeSlotsProps> = ({
   selectedDate,
   loadingSlots,
   slotsError,
+  allDaySlots,
   availableTimeSlots,
   startTime,
   endTime,
@@ -24,12 +26,12 @@ const TimeSlots: React.FC<TimeSlotsProps> = ({
 }) => {
   let selectedRange: Set<string> = new Set();
   if (startTime && endTime) {
-    const startIdx = availableTimeSlots.indexOf(startTime);
-    const endIdx = availableTimeSlots.indexOf(endTime);
+    const startIdx = allDaySlots.findIndex(s => s.formattedTime === startTime);
+    const endIdx = allDaySlots.findIndex(s => s.formattedTime === endTime);
     if (startIdx !== -1 && endIdx !== -1) {
       const [from, to] = startIdx < endIdx ? [startIdx, endIdx] : [endIdx, startIdx];
       for (let i = from; i <= to; i++) {
-        selectedRange.add(availableTimeSlots[i]);
+        selectedRange.add(allDaySlots[i].formattedTime);
       }
     }
   } else if (startTime) {
@@ -45,20 +47,25 @@ const TimeSlots: React.FC<TimeSlotsProps> = ({
             <div className={styles.loadingMessage}>Загрузка доступных слотов...</div>
           ) : slotsError ? (
             <div className={styles.errorMessage}>{slotsError}</div>
-          ) : availableTimeSlots.length > 0 ? (
+          ) : allDaySlots.length > 0 ? (
             <div className={styles.timeSlots}>
-              {availableTimeSlots.map(time => (
-                <button
-                  key={time}
-                  className={
-                    styles.timeSlot +
-                    (selectedRange.has(time) ? ' ' + styles.selectedTime : '')
-                  }
-                  onClick={() => onTimeSlotClick(time)}
-                >
-                  {time}
-                </button>
-              ))}
+              {allDaySlots.map(slot => {
+                const isAvailable = availableTimeSlots.includes(slot.formattedTime);
+                return (
+                  <button
+                    key={slot.formattedTime}
+                    className={
+                      styles.timeSlot +
+                      (selectedRange.has(slot.formattedTime) ? ' ' + styles.selectedTime : '') +
+                      (!isAvailable ? ' ' + styles.timeSlotUnavailable : '')
+                    }
+                    onClick={() => isAvailable && onTimeSlotClick(slot.formattedTime)}
+                    disabled={!isAvailable}
+                  >
+                    {slot.formattedTime}
+                  </button>
+                );
+              })}
             </div>
           ) : (
             <div className={styles.noTimeSlotsMessage}>Нет доступных слотов на выбранную дату</div>

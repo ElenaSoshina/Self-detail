@@ -869,4 +869,16 @@
 .bookButton:hover {
   background: linear-gradient(90deg, #00C2FF 0%, #8A6EFF 100%);
   box-shadow: 0 8px 24px rgba(138, 110, 255, 0.22);
+}
+
+.timeSlotUnavailable {
+  background: rgba(120, 120, 130, 0.18);
+  color: #bdbdbd;
+  border: 1px solid rgba(138, 110, 255, 0.08);
+  cursor: not-allowed;
+  opacity: 0.55;
+  box-shadow: none;
+  font-weight: 400;
+  pointer-events: none;
+  transition: none;
 } 
