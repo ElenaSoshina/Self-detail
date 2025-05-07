@@ -31,7 +31,7 @@
 
 .left   { flex: 1 1 0; gap: 1rem; }
 .center { flex: 0 0 auto; justify-content: center; }
-.right  { flex: 1 1 0; gap: 1rem; justify-content: flex-end; }
+.right  { flex: 1 1 0; justify-content: flex-end; }
 
 /* ───────── логотип ───────── */
 .logo {

@@ -1,0 +1,59 @@
+import React from 'react';
+import styles from './CalendarPage.module.css';
+import { BookingDetails } from './calendarTypes';
+
+interface BookingSuccessProps {
+  bookingDetails: BookingDetails;
+  formatDate: (date: Date) => string;
+  goToProducts: () => void;
+  addBookingToCart: () => void;
+  onBack: () => void;
+}
+
+const BookingSuccess: React.FC<BookingSuccessProps> = ({ bookingDetails, formatDate, goToProducts, addBookingToCart, onBack }) => (
+  <div className={styles.bookingCompletedContainer}>
+    <div className={styles.bookingSuccessCard}>
+      <div className={styles.successIcon}>✓</div>
+      <h2 className={styles.successTitle}>Бронирование выполнено успешно!</h2>
+      <div className={styles.bookingDetails}>
+        <div className={styles.bookingDetail}>
+          <span className={styles.detailLabel}>Дата:</span>
+          <span className={styles.detailValue}>{formatDate(bookingDetails.date)}</span>
+        </div>
+        <div className={styles.bookingDetail}>
+          <span className={styles.detailLabel}>Время:</span>
+          <span className={styles.detailValue}>{bookingDetails.timeRange}</span>
+        </div>
+        <div className={styles.bookingDetail}>
+          <span className={styles.detailLabel}>Тариф:</span>
+          <span className={styles.detailValue}>{bookingDetails.plan.title}</span>
+        </div>
+        <div className={styles.bookingDetail}>
+          <span className={styles.detailLabel}>Продолжительность:</span>
+          <span className={styles.detailValue}>{bookingDetails.duration.toFixed(2)} ч.</span>
+        </div>
+        <div className={styles.bookingDetail}>
+          <span className={styles.detailLabel}>Стоимость:</span>
+          <span className={styles.detailValue}>{bookingDetails.totalPrice} ₽</span>
+        </div>
+      </div>
+      <h3 className={styles.productsTitle}>Хотите добавить товары для бокса?</h3>
+      <p className={styles.productsDescription}>
+        Вы можете выбрать дополнительные средства, которые будут вас ждать в боксе.
+      </p>
+      <div className={styles.actionButtons}>
+        <button className={styles.skipButton} onClick={onBack}>
+          Изменить бронирование
+        </button>
+        <button className={styles.addProductsButton} onClick={goToProducts}>
+          Добавить товары
+        </button>
+        <button className={styles.skipButton} onClick={addBookingToCart}>
+          Нет, спасибо
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
+export default BookingSuccess; 

@@ -77,6 +77,9 @@ export const Header: React.FC = () => {
           <Link to="/profile" className={styles.profileBtn} aria-label="Личный кабинет">
             <div className={styles.profileIcon} />
           </Link>
+          <Link to="/admin" className={styles.adminBtn} aria-label="Админ">
+            <div className={styles.adminIcon} />
+          </Link>
         </div>
       </div>
 

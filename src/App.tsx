@@ -1,6 +1,5 @@
 import './App.css'
 import { Routes, Route } from 'react-router-dom'
-
 import { Header } from './components/Header/Header'
 import { CartProvider } from './context/CartContex';
 import HomePage from './pages/HomePage/HomePage';
@@ -9,6 +8,7 @@ import CartPage from './pages/CartPage/CartPage';
 import ProductPage from './pages/ProductPage/ProductPage';
 import ProfilePage from './pages/ProfilePage/ProfilePage';
 import CalendarPage from './pages/CalendarPage/CalendarPage';
+import AdminPanel from './pages/AdminPanel/AdminPanel';
 
 function App() {
   return (
@@ -23,6 +23,7 @@ function App() {
             <Route path="/product/:id" element={<ProductPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/calendar" element={<CalendarPage />} />
+            <Route path="/admin/*" element={<AdminPanel />} />
           </Routes>
         </main>
       </div>
