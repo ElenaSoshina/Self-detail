@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useCart } from '../../context/CartContex';
 import { Link, useNavigate } from 'react-router-dom';
 import styles from './CartPage.module.css';
 import { products } from '../../data/products';
 import defaultImage from '../../assets/shampoo.jpg';
 import { CartItem } from '../../types';
+import BookingModal from '../../components/BookingModal/BookingModal';
+import { createBooking } from '../../api/booking';
 
 // Функция для получения изображения продукта по ID
 const getProductImage = (id: string | number): string => {
@@ -16,6 +18,9 @@ const getProductImage = (id: string | number): string => {
 const CartPage: React.FC = () => {
   const { items, updateQuantity, removeFromCart } = useCart();
   const navigate = useNavigate();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedTime, setSelectedTime] = useState<{ start: string; end: string } | null>(null);
+  const [selectedService, setSelectedService] = useState<{ serviceName: string; price: number } | null>(null);
 
   const handleProductClick = (productId: string) => {
     // Переходим на страницу товара только если это не бронирование
@@ -36,6 +41,15 @@ const CartPage: React.FC = () => {
 
   // Расчет общей стоимости корзины
   const totalCost = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+  const handleBooking = async (formData: any) => {
+    try {
+      await createBooking(formData);
+      navigate('/booking-success');
+    } catch (error) {
+      console.error('Ошибка при бронировании:', error);
+    }
+  };
 
   if (items.length === 0) {
     return (
@@ -111,9 +125,25 @@ const CartPage: React.FC = () => {
             <span>Итого:</span>
             <span className={styles.totalPrice}>{totalCost} ₽</span>
           </div>
-          <button className={styles.checkoutBtn}>Оформить заказ</button>
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            className={styles.bookButton}
+          >
+            Забронировать
+          </button>
         </div>
       </div>
+
+      {isModalOpen && selectedTime && selectedService && (
+        <BookingModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          startTime={selectedTime.start}
+          endTime={selectedTime.end}
+          service={selectedService}
+          onSubmit={handleBooking}
+        />
+      )}
     </div>
   );
 };

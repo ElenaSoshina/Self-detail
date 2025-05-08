@@ -1,0 +1,30 @@
+.successPage {
+  padding: 2rem;
+  text-align: center;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.successPage h1 {
+  color: #28a745;
+  margin-bottom: 1rem;
+}
+
+.successPage p {
+  margin-bottom: 2rem;
+  color: #666;
+}
+
+.bookAgainButton {
+  padding: 0.75rem 1.5rem;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.bookAgainButton:hover {
+  background-color: #0056b3;
+} 

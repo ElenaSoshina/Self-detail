@@ -1,0 +1,457 @@
+openapi: 3.0.1
+info:
+  title: Self-Detailing API
+  version: 1.0.0
+  description: API для управления сервисами и календарем бронирования
+servers:
+  - url: /api/v1
+paths:
+  /services:
+    get:
+      summary: Получить все сервисы
+      responses:
+        '200':
+          description: Список сервисов
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result_ListOfAppServiceDtoResp'
+    post:
+      summary: Создать сервис
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppServiceDtoReq'
+      responses:
+        '200':
+          description: Сервис создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result_AppServiceDtoResp'
+  /services/{id}:
+    get:
+      summary: Получить сервис по id
+      parameters:
+        - name: id
+          in: path
+          description: ID сервиса
+          schema:
+            type: integer
+            format: int64
+          required: true
+      responses:
+        '200':
+          description: Сервис
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result_AppServiceDtoResp'
+    put:
+      summary: Обновить сервис
+      parameters:
+        - name: id
+          in: path
+          description: ID сервиса для обновления
+          schema:
+            type: integer
+            format: int64
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppServiceDtoReq'
+      responses:
+        '200':
+          description: Сервис обновлен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result_AppServiceDtoResp'
+    delete:
+      summary: Удалить сервис
+      parameters:
+        - name: id
+          in: path
+          description: ID сервиса для удаления
+          schema:
+            type: integer
+            format: int64
+          required: true
+      responses:
+        '200':
+          description: Сервис удален
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result_Void'
+  /calendar/available:
+    get:
+      summary: Получить доступные слоты
+      parameters:
+        - name: start
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - name: end
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Список доступных слотов
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result_ListOfTimeSlotDtoResp'
+  /calendar/booking:
+    post:
+      summary: Забронировать слот
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookingRequestDto'
+      responses:
+        '200':
+          description: Слот забронирован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result_BookingResponseDto'
+  /calendar/booking/{bookingId}:
+    get:
+      summary: Получить бронирование по ID
+      parameters:
+        - name: bookingId
+          in: path
+          description: ID бронирования
+          schema:
+            type: integer
+            format: int64
+          required: true
+      responses:
+        '200':
+          description: Информация о бронировании
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result_BookingResponseDto'
+    put:
+      summary: Обновить существующее бронирование
+      parameters:
+        - name: bookingId
+          in: path
+          description: ID бронирования для обновления
+          schema:
+            type: integer
+            format: int64
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookingUpdateRequestDto'
+      responses:
+        '200':
+          description: Бронирование обновлено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result_BookingResponseDto'
+    delete:
+      summary: Удалить бронирование
+      parameters:
+        - name: bookingId
+          in: path
+          description: ID бронирования для удаления
+          schema:
+            type: integer
+            format: int64
+          required: true
+      responses:
+        '200':
+          description: Бронирование удалено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result_Void'
+  /calendar/user/{telegramUserId}/bookings:
+    get:
+      summary: Получить все бронирования пользователя
+      parameters:
+        - name: telegramUserId
+          in: path
+          description: ID пользователя в Telegram
+          schema:
+            type: integer
+            format: int64
+          required: true
+      responses:
+        '200':
+          description: Список всех бронирований пользователя
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result_BookingListResponseDto'
+  /calendar/user/{telegramUserId}/bookings/upcoming:
+    get:
+      summary: Получить предстоящие бронирования пользователя
+      parameters:
+        - name: telegramUserId
+          in: path
+          description: ID пользователя в Telegram
+          schema:
+            type: integer
+            format: int64
+          required: true
+      responses:
+        '200':
+          description: Список предстоящих бронирований пользователя
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result_BookingListResponseDto'
+  /chat/send-message/{id}:
+    post:
+      summary: Отправить сообщение в чат
+      parameters:
+        - name: id
+          in: path
+          description: ID чата
+          schema:
+            type: integer
+            format: int64
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MessageToChatReq'
+      responses:
+        '200':
+          description: Сообщение отправлено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Result_String'
+components:
+  schemas:
+    AppServiceDtoReq:
+      type: object
+      required:
+        - serviceName
+        - price
+      properties:
+        serviceName:
+          type: string
+        price:
+          type: number
+          format: decimal
+    AppServiceDtoResp:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        serviceName:
+          type: string
+        price:
+          type: number
+          format: decimal
+    BookingRequestDto:
+      type: object
+      required:
+        - telegramUserId
+        - telegramUserName
+        - clientName
+        - clientPhone
+        - clientEmail
+        - start
+        - end
+        - service
+        - notes
+      properties:
+        telegramUserId:
+          type: integer
+          format: int64
+        telegramUserName:
+          type: string
+        clientName:
+          type: string
+        clientPhone:
+          type: string
+        clientEmail:
+          type: string
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+        service:
+          type: array
+          items:
+            $ref: '#/components/schemas/AppServiceDtoReq'
+        notes:
+          type: string
+    BookingUpdateRequestDto:
+      type: object
+      required:
+        - start
+        - end
+        - service
+      properties:
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+        service:
+          type: array
+          items:
+            $ref: '#/components/schemas/AppServiceDtoReq'
+        notes:
+          type: string
+    MessageToChatReq:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+    TimeSlotDtoResp:
+      type: object
+      properties:
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+        available:
+          type: boolean
+    ServiceDto:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        serviceName:
+          type: string
+        price:
+          type: number
+          format: decimal
+    BookingResponseDto:
+      type: object
+      properties:
+        bookingId:
+          type: integer
+          format: int64
+        telegramUserId:
+          type: integer
+          format: int64
+        telegramUserName:
+          type: string
+        clientName:
+          type: string
+        clientPhone:
+          type: string
+        clientEmail:
+          type: string
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+        services:
+          type: array
+          items:
+            $ref: '#/components/schemas/ServiceDto'
+        notes:
+          type: string
+    BookingListResponseDto:
+      type: object
+      properties:
+        bookings:
+          type: array
+          items:
+            $ref: '#/components/schemas/BookingResponseDto'
+    Result_String:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: string
+        message:
+          type: string
+    Result_Void:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+    Result_BookingResponseDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/BookingResponseDto'
+        message:
+          type: string
+    Result_BookingListResponseDto:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/BookingListResponseDto'
+        message:
+          type: string
+    Result_ListOfTimeSlotDtoResp:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/TimeSlotDtoResp'
+        message:
+          type: string
+    Result_AppServiceDtoResp:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/AppServiceDtoResp'
+        message:
+          type: string
+    Result_ListOfAppServiceDtoResp:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AppServiceDtoResp'
+        message:
+          type: string
