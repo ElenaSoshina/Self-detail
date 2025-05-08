@@ -67,10 +67,24 @@ const BookingModal: React.FC<BookingModalProps> = ({
 
       // Форматируем время в ISO строку
       const formatDateTime = (timeStr: string) => {
-        const [hours, minutes] = timeStr.split(':');
-        const date = new Date();
-        date.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-        return date.toISOString();
+        if (!timeStr) {
+          alert('Ошибка: время не указано');
+          throw new Error('Время не указано');
+        }
+        
+        try {
+          const [hours, minutes] = timeStr.split(':').map(Number);
+          if (isNaN(hours) || isNaN(minutes)) {
+            throw new Error('Неверный формат времени');
+          }
+          
+          const date = new Date();
+          date.setHours(hours, minutes, 0, 0);
+          return date.toISOString();
+        } catch (error) {
+          alert('Ошибка форматирования времени: ' + error);
+          throw error;
+        }
       };
 
       // Формируем данные в соответствии с API
