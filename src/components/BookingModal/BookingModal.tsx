@@ -44,9 +44,14 @@ const BookingModal: React.FC<BookingModalProps> = ({
   // Получаем chatId пользователя из Telegram WebApp
   useEffect(() => {
     const tg = (window as any).Telegram?.WebApp;
+    alert('Telegram WebApp: ' + JSON.stringify(tg));
     if (tg?.initDataUnsafe?.user?.id) {
-      setChatId(tg.initDataUnsafe.user.id.toString());
+      const userId = tg.initDataUnsafe.user.id.toString();
+      alert('Получен ID пользователя: ' + userId);
+      setChatId(userId);
       tg.ready?.();
+    } else {
+      alert('Не удалось получить ID пользователя из Telegram WebApp');
     }
   }, []);
 
@@ -60,15 +65,25 @@ const BookingModal: React.FC<BookingModalProps> = ({
         throw new Error('Не удалось получить ID пользователя из Telegram');
       }
 
+      // Форматируем время в ISO строку
+      const formatDateTime = (timeStr: string) => {
+        const [hours, minutes] = timeStr.split(':');
+        const date = new Date();
+        date.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+        return date.toISOString();
+      };
+
       // Формируем данные в соответствии с API
       const bookingData = {
         telegramUserId: parseInt(chatId),
-        telegramUserName: formData.telegramUserName,
+        telegramUserName: formData.telegramUserName.startsWith('@') 
+          ? formData.telegramUserName 
+          : `@${formData.telegramUserName}`,
         clientName: formData.name,
         clientPhone: formData.phone,
         clientEmail: formData.email,
-        start: startTime,
-        end: endTime,
+        start: formatDateTime(startTime),
+        end: formatDateTime(endTime),
         service: [{
           serviceName: service.serviceName,
           price: service.price
@@ -76,7 +91,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
         notes: ''
       };
 
-      console.log('Отправляем данные:', bookingData);
+      alert('Отправляем данные: ' + JSON.stringify(bookingData, null, 2));
 
       // Отправка данных на сервер
       const response = await fetch('https://backend.self-detailing.duckdns.org/api/v1/calendar/booking', {
@@ -88,16 +103,22 @@ const BookingModal: React.FC<BookingModalProps> = ({
         body: JSON.stringify(bookingData),
       });
 
-      console.log('Ответ сервера:', response.status, response.statusText);
+      alert('Статус ответа: ' + response.status);
+      alert('Заголовки ответа: ' + JSON.stringify(Object.fromEntries(response.headers.entries())));
+
+      const responseText = await response.text();
+      alert('Текст ответа: ' + responseText);
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        console.error('Ошибка сервера:', errorData);
-        throw new Error(errorData?.message || 'Ошибка при отправке бронирования');
+        let errorMessage = 'Ошибка при отправке бронирования';
+        try {
+          const errorData = JSON.parse(responseText);
+          errorMessage = errorData.message || errorMessage;
+        } catch (e) {
+          alert('Ошибка при парсинге ответа: ' + e);
+        }
+        throw new Error(errorMessage);
       }
-
-      const responseData = await response.json();
-      console.log('Успешный ответ:', responseData);
 
       // Отправка сообщений в Telegram
       try {
@@ -106,8 +127,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
           sendTelegramMessage(formatAdminMessage(formData), ADMIN_CHAT_ID),
         ]);
       } catch (telegramError) {
-        console.error('Ошибка при отправке сообщений в Telegram:', telegramError);
-        // Продолжаем выполнение, даже если отправка в Telegram не удалась
+        alert('Ошибка при отправке сообщений в Telegram: ' + telegramError);
       }
 
       // Показываем попап успеха
@@ -120,7 +140,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
       }, 2000);
 
     } catch (error) {
-      console.error('Ошибка при отправке формы:', error);
+      alert('Ошибка при отправке формы: ' + error);
       setError(error instanceof Error ? error.message : 'Произошла ошибка при отправке формы. Пожалуйста, попробуйте еще раз.');
     } finally {
       setIsLoading(false);
