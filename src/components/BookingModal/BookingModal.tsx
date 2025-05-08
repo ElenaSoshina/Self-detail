@@ -80,7 +80,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
           
           const date = new Date();
           date.setHours(hours, minutes, 0, 0);
-          return date.toISOString();
+          return date.toISOString().replace(/\.\d{3}Z$/, 'Z');
         } catch (error) {
           alert('Ошибка форматирования времени: ' + error);
           throw error;
