@@ -76,24 +76,39 @@ const BookingModal: React.FC<BookingModalProps> = ({
         notes: ''
       };
 
+      console.log('Отправляем данные:', bookingData);
+
       // Отправка данных на сервер
       const response = await fetch('https://backend.self-detailing.duckdns.org/api/v1/calendar/booking', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
         body: JSON.stringify(bookingData),
       });
 
+      console.log('Ответ сервера:', response.status, response.statusText);
+
       if (!response.ok) {
-        throw new Error('Ошибка при отправке бронирования');
+        const errorData = await response.json().catch(() => null);
+        console.error('Ошибка сервера:', errorData);
+        throw new Error(errorData?.message || 'Ошибка при отправке бронирования');
       }
 
+      const responseData = await response.json();
+      console.log('Успешный ответ:', responseData);
+
       // Отправка сообщений в Telegram
-      await Promise.all([
-        sendTelegramMessage(formatUserMessage(formData), formData.telegramUserName),
-        sendTelegramMessage(formatAdminMessage(formData), ADMIN_CHAT_ID),
-      ]);
+      try {
+        await Promise.all([
+          sendTelegramMessage(formatUserMessage(formData), formData.telegramUserName),
+          sendTelegramMessage(formatAdminMessage(formData), ADMIN_CHAT_ID),
+        ]);
+      } catch (telegramError) {
+        console.error('Ошибка при отправке сообщений в Telegram:', telegramError);
+        // Продолжаем выполнение, даже если отправка в Telegram не удалась
+      }
 
       // Показываем попап успеха
       setShowSuccess(true);
@@ -106,7 +121,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
 
     } catch (error) {
       console.error('Ошибка при отправке формы:', error);
-      setError('Произошла ошибка при отправке формы. Пожалуйста, попробуйте еще раз.');
+      setError(error instanceof Error ? error.message : 'Произошла ошибка при отправке формы. Пожалуйста, попробуйте еще раз.');
     } finally {
       setIsLoading(false);
     }
