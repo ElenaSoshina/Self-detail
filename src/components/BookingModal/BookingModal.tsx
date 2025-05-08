@@ -114,7 +114,22 @@ const BookingModal: React.FC<BookingModalProps> = ({
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        body: JSON.stringify(bookingData),
+        body: JSON.stringify({
+          telegramUserId: parseInt(chatId),
+          telegramUserName: formData.telegramUserName.startsWith('@') 
+            ? formData.telegramUserName 
+            : `@${formData.telegramUserName}`,
+          clientName: formData.name,
+          clientPhone: formData.phone,
+          clientEmail: formData.email,
+          start: formatDateTime(startTime),
+          end: formatDateTime(endTime),
+          service: [{
+            serviceName: service.serviceName,
+            price: service.price
+          }],
+          notes: ''
+        }),
       });
 
       alert('Статус ответа: ' + response.status);
