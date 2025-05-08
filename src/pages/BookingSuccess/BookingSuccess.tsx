@@ -24,12 +24,21 @@ const BookingSuccess: React.FC = () => {
       <h1>Бронирование успешно создано!</h1>
       <p>Спасибо за ваш заказ. Мы свяжемся с вами в ближайшее время.</p>
       
-      <button 
-        onClick={() => setIsModalOpen(true)}
-        className={styles.bookAgainButton}
-      >
-        Забронировать еще раз
-      </button>
+      <div className={styles.buttonGroup}>
+        <button 
+          onClick={() => setIsModalOpen(true)}
+          className={styles.confirmButton}
+        >
+          Подтвердить бронирование
+        </button>
+        
+        <button 
+          onClick={() => navigate('/')}
+          className={styles.homeButton}
+        >
+          Вернуться на главную
+        </button>
+      </div>
 
       {isModalOpen && bookingData && (
         <BookingModal
