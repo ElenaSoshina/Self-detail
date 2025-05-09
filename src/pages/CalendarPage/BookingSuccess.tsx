@@ -11,13 +11,26 @@ interface BookingSuccessProps {
   onBack: () => void;
 }
 
+const serviceMap = {
+  'Мойка авто':   { serviceName: 'wash_car', price: 800 },
+  'Сухой пост':   { serviceName: 'dry_post', price: 500 },
+  'Химчистка':    { serviceName: 'dry_cleaning', price: 800 },
+  'Полировка':    { serviceName: 'polish', price: 800 }
+};
+
 const BookingSuccess: React.FC<BookingSuccessProps> = ({ bookingDetails, formatDate, goToProducts, addBookingToCart, onBack }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleBooking = async (formData: any) => {
     try {
+      const selectedService = serviceMap[formData.service[0].serviceName as keyof typeof serviceMap];
+      const bookingData = {
+        // ...другие поля...
+        service: [selectedService],
+        notes: ''
+      };
       // Здесь будет логика отправки данных на сервер
-      console.log('Booking data: ', formData);
+      console.log('Booking data: ', bookingData);
       setIsModalOpen(false);
     } catch (error) {
       console.error('Ошибка при бронировании:', error);
