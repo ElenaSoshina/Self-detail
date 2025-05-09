@@ -37,15 +37,14 @@ export const formatUserMessage = (bookingData: any, service: any, serviceRu: str
   };
   const dateStr = formatDate(bookingData.start);
   const timeStr = `${formatTime(bookingData.start)} - ${formatTime(bookingData.end)}`;
-  return `
-Ваше бронирование успешно создано!
-
-📅 Дата: ${dateStr}
-🕒 Время: ${timeStr}
-
-📋 Услуга: ${serviceRu}
-💰 Стоимость: ${service.price}₽
-`;
+  let productsBlock = '';
+  if (bookingData.products && Array.isArray(bookingData.products) && bookingData.products.length > 0) {
+    const productsTotal = bookingData.products.reduce((sum: number, p: any) => sum + p.price * p.quantity, 0);
+    productsBlock = '\n🛒 Товары:' + bookingData.products.map((p: any) => `\n- ${p.name} x${p.quantity} = ${p.price * p.quantity}₽`).join('') +
+      `\nСумма товаров: ${productsTotal}₽` +
+      (bookingData.totalPrice ? `\n\n💵 Итоговая сумма: ${bookingData.totalPrice}₽` : '');
+  }
+  return `\nВаше бронирование успешно создано!\n\n📅 Дата: ${dateStr}\n🕒 Время: ${timeStr}\n\n📋 Услуга: ${serviceRu}\n💰 Стоимость: ${service.price}₽${productsBlock}`;
 };
 
 export const formatAdminMessage = (bookingData: any, service: any, serviceRu: string) => {
@@ -61,18 +60,12 @@ export const formatAdminMessage = (bookingData: any, service: any, serviceRu: st
   };
   const dateStr = formatDate(bookingData.start);
   const timeStr = `${formatTime(bookingData.start)} - ${formatTime(bookingData.end)}`;
-  return `
-Новое бронирование
-
-👤 Клиент: ${bookingData.clientName}
-📱 Телефон: ${bookingData.clientPhone}
-📧 Email: ${bookingData.clientEmail}
-📱 Telegram: ${bookingData.telegramUserName}
-
-📅 Дата: ${dateStr}
-🕒 Время: ${timeStr}
-
-📋 Услуга: ${serviceRu}
-💰 Стоимость: ${service.price}₽
-`;
+  let productsBlock = '';
+  if (bookingData.products && Array.isArray(bookingData.products) && bookingData.products.length > 0) {
+    const productsTotal = bookingData.products.reduce((sum: number, p: any) => sum + p.price * p.quantity, 0);
+    productsBlock = '\n🛒 Товары:' + bookingData.products.map((p: any) => `\n- ${p.name} x${p.quantity} = ${p.price * p.quantity}₽`).join('') +
+      `\nСумма товаров: ${productsTotal}₽` +
+      (bookingData.totalPrice ? `\n\n💵 Итоговая сумма: ${bookingData.totalPrice}₽` : '');
+  }
+  return `\nНовое бронирование\n\n👤 Клиент: ${bookingData.clientName}\n📱 Телефон: ${bookingData.clientPhone}\n📧 Email: ${bookingData.clientEmail}\n📱 Telegram: ${bookingData.telegramUserName}\n\n📅 Дата: ${dateStr}\n🕒 Время: ${timeStr}\n\n📋 Услуга: ${serviceRu}\n💰 Стоимость: ${service.price}₽${productsBlock}`;
 }; 

@@ -2,12 +2,15 @@ import React, { useState, useEffect, useRef } from 'react';
 import styles from './AdminCalendar.module.css';
 import { mockSlots, BookingSlot } from './mockData';
 
+const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+
 const AdminCalendar: React.FC<{ onUserSelect: (userId: string) => void }> = ({ onUserSelect }) => {
   const [slots, setSlots] = useState<BookingSlot[]>([]);
   const [selectedSlot, setSelectedSlot] = useState<BookingSlot | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [showDatePicker, setShowDatePicker] = useState(true);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [calendarDate, setCalendarDate] = useState(new Date());
   const popoverRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -65,36 +68,125 @@ const AdminCalendar: React.FC<{ onUserSelect: (userId: string) => void }> = ({ o
     setSelectedSlot(null);
   };
 
-  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    if (val) {
-      const [year, month, day] = val.split('-').map(Number);
-      setCurrentDate(new Date(year, month - 1, day));
-      setShowDatePicker(false);
-      setSelectedSlot(null);
-    }
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('ru-RU', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      weekday: 'short'
+    });
   };
+
+  const generateDaysForMonth = (year: number, month: number) => {
+    const days: { date: Date; isCurrentMonth: boolean; isToday: boolean }[] = [];
+    const firstDayOfMonth = new Date(year, month, 1);
+    const lastDayOfMonth = new Date(year, month + 1, 0);
+    const firstDayWeekday = firstDayOfMonth.getDay() || 7;
+    const daysFromPrevMonth = firstDayWeekday - 1;
+
+    // Добавляем дни предыдущего месяца
+    const prevMonth = new Date(year, month, 0);
+    for (let i = prevMonth.getDate() - daysFromPrevMonth + 1; i <= prevMonth.getDate(); i++) {
+      const date = new Date(year, month - 1, i);
+      days.push({
+        date,
+        isCurrentMonth: false,
+        isToday: isSameDay(date, new Date())
+      });
+    }
+
+    // Добавляем дни текущего месяца
+    const today = new Date();
+    for (let i = 1; i <= lastDayOfMonth.getDate(); i++) {
+      const date = new Date(year, month, i);
+      days.push({
+        date,
+        isCurrentMonth: true,
+        isToday: isSameDay(date, today)
+      });
+    }
+
+    // Добавляем дни следующего месяца
+    const remainingDays = 42 - days.length;
+    for (let i = 1; i <= remainingDays; i++) {
+      const date = new Date(year, month + 1, i);
+      days.push({
+        date,
+        isCurrentMonth: false,
+        isToday: isSameDay(date, new Date())
+      });
+    }
+
+    return days;
+  };
+
+  const isSameDay = (date1: Date, date2: Date) => {
+    return date1.getDate() === date2.getDate() &&
+      date1.getMonth() === date2.getMonth() &&
+      date1.getFullYear() === date2.getFullYear();
+  };
+
+  const handlePrevMonth = () => {
+    setCalendarDate(prev => {
+      const d = new Date(prev);
+      d.setMonth(d.getMonth() - 1);
+      return d;
+    });
+  };
+
+  const handleNextMonth = () => {
+    setCalendarDate(prev => {
+      const d = new Date(prev);
+      d.setMonth(d.getMonth() + 1);
+      return d;
+    });
+  };
+
+  const handleDayClick = (date: Date) => {
+    setCurrentDate(date);
+    setShowDatePicker(false);
+    setSelectedSlot(null);
+  };
+
+  const days = generateDaysForMonth(calendarDate.getFullYear(), calendarDate.getMonth());
 
   return (
     <div className={styles.container}>
       <div className={styles.calendar}>
-        <div className={styles.header} style={{ position: 'relative' }}>
-          <button className={styles.dateBtn} onClick={handlePrevDay}>←</button>
-          <h2>
-            {currentDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric', weekday: 'short' })}
-          </h2>
-          <button className={styles.dateBtn} onClick={handleNextDay}>→</button>
-          <button className={styles.calendarIconBtn} onClick={() => setShowDatePicker(v => !v)}>
-            <span className={styles.calendarIcon} />
-          </button>
+        <div className={styles.header}>
+          <h2>{formatDate(currentDate)}</h2>
+          <div className={styles.dateControls}>
+            <button className={styles.dateBtn} onClick={handlePrevDay} title="Предыдущий день">←</button>
+            <button className={styles.calendarIconBtn} onClick={() => setShowDatePicker(v => !v)} title="Выбрать дату">
+              <span className={styles.calendarIcon} />
+            </button>
+            <button className={styles.dateBtn} onClick={handleNextDay} title="Следующий день">→</button>
+          </div>
           {showDatePicker && (
             <div className={styles.datePopover} ref={popoverRef}>
-              <input
-                type="date"
-                value={currentDate.toISOString().slice(0, 10)}
-                onChange={handleDateChange}
-                autoFocus
-              />
+              <div className={styles.calendarHeader}>
+                <div className={styles.calendarTitle}>
+                  {calendarDate.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })}
+                </div>
+                <div className={styles.calendarNav}>
+                  <button className={styles.calendarNavBtn} onClick={handlePrevMonth}>←</button>
+                  <button className={styles.calendarNavBtn} onClick={handleNextMonth}>→</button>
+                </div>
+              </div>
+              <div className={styles.calendarGrid}>
+                {weekDays.map(day => (
+                  <div key={day} className={styles.weekday}>{day}</div>
+                ))}
+                {days.map((day, index) => (
+                  <div
+                    key={index}
+                    className={`${styles.day} ${!day.isCurrentMonth ? styles.otherMonth : ''} ${day.isToday ? styles.today : ''} ${isSameDay(day.date, currentDate) ? styles.selected : ''}`}
+                    onClick={() => handleDayClick(day.date)}
+                  >
+                    {day.date.getDate()}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>

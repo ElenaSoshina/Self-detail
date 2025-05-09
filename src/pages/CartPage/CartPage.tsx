@@ -82,7 +82,7 @@ const CartPage: React.FC = () => {
               </div>
               <div className={styles.itemInfo} onClick={() => handleProductClick(item.id)}>
                 <h3 className={styles.itemName}>{item.name}</h3>
-                {item.details && <div className={styles.itemDetails}>{item.details}</div>}
+                {/* {item.details && <div className={styles.itemDetails}>{item.details}</div>} */}
                 <div className={styles.itemPrice}>{item.price} ₽</div>
               </div>
               <div className={styles.itemControls}>

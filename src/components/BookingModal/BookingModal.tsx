@@ -4,6 +4,7 @@ import SuccessPopup from '../SuccessPopup/SuccessPopup';
 import { sendTelegramMessage, formatUserMessage, formatAdminMessage, ADMIN_CHAT_ID } from '../../api/telegram';
 import PhoneInput from 'react-phone-number-input/input';
 import 'react-phone-number-input/style.css';
+import { useCart } from '../../context/CartContex';
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -45,6 +46,9 @@ const BookingModal: React.FC<BookingModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [chatId, setChatId] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<{ name?: string; phone?: string; email?: string; telegramUserName?: string }>({});
+  const { items } = useCart();
+  const products = items.filter(item => item.type !== 'booking');
+  const productsTotal = products.reduce((sum, p) => sum + p.price * p.quantity, 0);
 
   // Получаем chatId пользователя из Telegram WebApp
   useEffect(() => {
@@ -84,7 +88,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
     }
   };
   const durationHours = getDurationHours();
-  const totalPrice = service.price * durationHours;
+  const totalPrice = service.price * durationHours + productsTotal;
   const serviceRu = serviceNameMap[service.serviceName] || service.serviceName;
 
   const validate = (): boolean => {
@@ -178,7 +182,9 @@ const BookingModal: React.FC<BookingModalProps> = ({
           serviceName: service.serviceName,
           price: totalPrice
         }],
-        notes: ''
+        notes: '',
+        products: products,
+        totalPrice: totalPrice
       };
 
       // Отправка данных на сервер
@@ -205,8 +211,14 @@ const BookingModal: React.FC<BookingModalProps> = ({
       // Отправка сообщений в Telegram
       try {
         await Promise.all([
-          sendTelegramMessage(formatUserMessage(bookingData, { ...service, price: totalPrice }, serviceRu), chatId),
-          sendTelegramMessage(formatAdminMessage(bookingData, { ...service, price: totalPrice }, serviceRu), ADMIN_CHAT_ID),
+          sendTelegramMessage(
+            formatUserMessage(bookingData, { ...service, price: totalPrice }, serviceRu),
+            chatId
+          ),
+          sendTelegramMessage(
+            formatAdminMessage(bookingData, { ...service, price: totalPrice }, serviceRu),
+            ADMIN_CHAT_ID
+          ),
         ]);
       } catch (telegramError) {
         // alert('Ошибка при отправке сообщений в Telegram: ' + telegramError);
@@ -267,7 +279,23 @@ const BookingModal: React.FC<BookingModalProps> = ({
             <span className={styles.infoValue}>{startTime} - {endTime}</span>
           </div>
           <div className={styles.infoRow}>
-            <span className={styles.infoLabel}>Стоимость:</span>
+            <span className={styles.infoLabel}>Стоимость услуги:</span>
+            <span className={styles.infoValue}>{service.price * durationHours} ₽</span>
+          </div>
+          {products.length > 0 && products.map(product => (
+            <div className={styles.infoRow} key={product.id}>
+              <span className={styles.infoLabel}>{product.name} x{product.quantity}</span>
+              <span className={styles.infoValue}>{product.price * product.quantity} ₽</span>
+            </div>
+          ))}
+          {products.length > 0 && (
+            <div className={styles.infoRow}>
+              <span className={styles.infoLabel}>Сумма товаров:</span>
+              <span className={styles.infoValue}>{productsTotal} ₽</span>
+            </div>
+          )}
+          <div className={styles.infoRow}>
+            <span className={styles.infoLabel}>Итого:</span>
             <span className={styles.infoValue}>{totalPrice} ₽</span>
           </div>
         </div>

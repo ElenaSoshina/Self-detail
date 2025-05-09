@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import styles from './CalendarPage.module.css';
 import { BookingDetails } from './calendarTypes';
 import BookingModal from '../../components/BookingModal/BookingModal';
+import { useCart } from '../../context/CartContex';
 
 interface BookingSuccessProps {
   bookingDetails: BookingDetails;
@@ -20,6 +21,8 @@ const serviceMap = {
 
 const BookingSuccess: React.FC<BookingSuccessProps> = ({ bookingDetails, formatDate, goToProducts, addBookingToCart, onBack }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const { items } = useCart();
+  const products = items.filter(item => item.type !== 'booking');
 
   const handleBooking = async (formData: any) => {
     try {
@@ -62,6 +65,21 @@ const BookingSuccess: React.FC<BookingSuccessProps> = ({ bookingDetails, formatD
             <span className={styles.detailValue}>{bookingDetails.totalPrice} ₽</span>
           </div>
         </div>
+        {products.length > 0 && (
+          <div className={styles.productsSection}>
+            <h3 className={styles.productsTitle}>Выбранные товары:</h3>
+            <ul className={styles.productsList}>
+              {products.map(product => (
+                <li key={product.id} className={styles.productItem}>
+                  <span className={styles.productName}>{product.name}</span>
+                  <span className={styles.productQuantity}>x{product.quantity}</span>
+                  <span className={styles.productPrice}>{product.price} ₽</span>
+                  <span className={styles.productTotal}>{product.price * product.quantity} ₽</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         <button className={styles.gradientBorderButton} onClick={onBack}>
           Изменить
         </button>
