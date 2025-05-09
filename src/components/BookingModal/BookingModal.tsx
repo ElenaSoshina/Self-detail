@@ -13,6 +13,7 @@ interface BookingModalProps {
     price: number;
   };
   onSubmit: (formData: any) => void;
+  selectedDate: Date;
 }
 
 interface FormData {
@@ -29,6 +30,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
   endTime,
   service,
   onSubmit,
+  selectedDate,
 }) => {
   const [formData, setFormData] = useState<FormData>({
     name: '',
@@ -44,14 +46,14 @@ const BookingModal: React.FC<BookingModalProps> = ({
   // Получаем chatId пользователя из Telegram WebApp
   useEffect(() => {
     const tg = (window as any).Telegram?.WebApp;
-    alert('Telegram WebApp: ' + JSON.stringify(tg));
+    // alert('Telegram WebApp: ' + JSON.stringify(tg));
     if (tg?.initDataUnsafe?.user?.id) {
       const userId = tg.initDataUnsafe.user.id.toString();
-      alert('Получен ID пользователя: ' + userId);
+      // alert('Получен ID пользователя: ' + userId);
       setChatId(userId);
       tg.ready?.();
     } else {
-      alert('Не удалось получить ID пользователя из Telegram WebApp');
+      // alert('Не удалось получить ID пользователя из Telegram WebApp');
     }
   }, []);
 
@@ -82,7 +84,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
           if (isNaN(hours) || isNaN(minutes)) {
             throw new Error('Неверный формат времени');
           }
-          const date = new Date();
+          const date = new Date(selectedDate);
           date.setHours(hours, minutes, 0, 0);
           return date.toISOString().replace(/\.\d{3}Z$/, 'Z');
         } catch (error) {
