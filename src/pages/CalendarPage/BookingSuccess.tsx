@@ -85,6 +85,7 @@ const BookingSuccess: React.FC<BookingSuccessProps> = ({ bookingDetails, formatD
             price: bookingDetails.totalPrice
           }}
           onSubmit={handleBooking}
+          selectedDate={bookingDetails.date}
         />
       )}
     </div>
