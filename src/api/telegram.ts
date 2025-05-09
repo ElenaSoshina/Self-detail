@@ -63,7 +63,7 @@ export const formatAdminMessage = (bookingData: any, service: any, serviceRu: st
 👤 Клиент: ${bookingData.clientName}
 📱 Телефон: ${bookingData.clientPhone}
 📧 Email: ${bookingData.clientEmail}
-📱 Telegram: @${bookingData.telegramUserName}
+📱 Telegram: ${bookingData.telegramUserName}
 
 📅 Дата: ${dateStr}
 🕒 Время: ${timeStr}

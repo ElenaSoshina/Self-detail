@@ -469,7 +469,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 30px 0;
+  /* padding: 30px 0; */
 }
 
 .bookingSuccessCard {
@@ -755,6 +755,7 @@
   }
   
   .productsTitle {
+    margin-top: 20px;
     font-size: 18px;
   }
   
@@ -898,4 +899,45 @@
 
 .confirmButton:hover {
   background-color: #218838;
+}
+
+.confirmButtonWide {
+  width: 100%;
+  background: linear-gradient(90deg, #FF1F7A, #8A6EFF);
+  color: #fff;
+  padding: 0.9rem 0;
+  border: none;
+  border-radius: 6px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-top: 1.2rem;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
+  box-shadow: 0 2px 12px #8A6EFF22;
+}
+
+.confirmButtonWide:hover:not(:disabled) {
+  background: linear-gradient(90deg, #8A6EFF, #FF1F7A);
+  box-shadow: 0 4px 24px #8A6EFF44;
+  transform: translateY(-2px) scale(1.01);
+}
+
+.gradientBorderButton {
+  padding: 16px 30px;
+  background: transparent;
+  border: 2px solid;
+  border-image: linear-gradient(90deg, #FF1F7A, #8A6EFF) 1;
+  border-radius: 30px;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+  box-shadow: none;
+}
+
+.gradientBorderButton:hover {
+  background: linear-gradient(90deg, #FF1F7A22, #8A6EFF22);
+  color: #fff;
+  box-shadow: 0 4px 16px #8A6EFF33;
 } 

@@ -40,8 +40,6 @@ const BookingSuccess: React.FC<BookingSuccessProps> = ({ bookingDetails, formatD
   return (
     <div className={styles.bookingCompletedContainer}>
       <div className={styles.bookingSuccessCard}>
-        <div className={styles.successIcon}>✓</div>
-        <h2 className={styles.successTitle}>Бронирование выполнено успешно!</h2>
         <div className={styles.bookingDetails}>
           <div className={styles.bookingDetail}>
             <span className={styles.detailLabel}>Дата:</span>
@@ -64,27 +62,22 @@ const BookingSuccess: React.FC<BookingSuccessProps> = ({ bookingDetails, formatD
             <span className={styles.detailValue}>{bookingDetails.totalPrice} ₽</span>
           </div>
         </div>
+        <button className={styles.gradientBorderButton} onClick={onBack}>
+          Изменить
+        </button>
         <h3 className={styles.productsTitle}>Хотите добавить товары для бокса?</h3>
         <p className={styles.productsDescription}>
           Вы можете выбрать дополнительные средства, которые будут вас ждать в боксе.
         </p>
-        <div className={styles.actionButtons}>
-          <button className={styles.skipButton} onClick={onBack}>
-            Изменить бронирование
-          </button>
-          <button className={styles.addProductsButton} onClick={goToProducts}>
-            Добавить товары
-          </button>
-          <button className={styles.skipButton} onClick={addBookingToCart}>
-            Нет, спасибо
-          </button>
-          <button 
-            className={styles.confirmButton} 
-            onClick={() => setIsModalOpen(true)}
-          >
-            Подтвердить бронирование
-          </button>
-        </div>
+        <button className={styles.gradientBorderButton} onClick={goToProducts}>
+          Добавить товары
+        </button>
+        <button 
+          className={styles.confirmButtonWide} 
+          onClick={() => setIsModalOpen(true)}
+        >
+          Подтвердить
+        </button>
       </div>
 
       {isModalOpen && (

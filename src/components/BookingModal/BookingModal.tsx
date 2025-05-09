@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import styles from './BookingModal.module.css';
 import SuccessPopup from '../SuccessPopup/SuccessPopup';
 import { sendTelegramMessage, formatUserMessage, formatAdminMessage, ADMIN_CHAT_ID } from '../../api/telegram';
+import PhoneInput from 'react-phone-number-input/input';
+import 'react-phone-number-input/style.css';
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -42,6 +44,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [chatId, setChatId] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{ name?: string; phone?: string; email?: string; telegramUserName?: string }>({});
 
   // Получаем chatId пользователя из Telegram WebApp
   useEffect(() => {
@@ -85,15 +88,18 @@ const BookingModal: React.FC<BookingModalProps> = ({
   const serviceRu = serviceNameMap[service.serviceName] || service.serviceName;
 
   const validate = (): boolean => {
-    const newErrors: Partial<FormData> = {};
+    const newErrors: { name?: string; phone?: string; email?: string; telegramUserName?: string } = {};
     if (!formData.name.trim()) {
       newErrors.name = 'Введите ваше имя';
     }
-    const phoneDigits = formData.phone.replace(/\D/g, '');
-    if (!formData.phone.trim()) {
+    const phone = formData.phone.replace(/\u00A0/g, ' ');
+    const phoneDigits = phone.replace(/\D/g, '');
+    if (!phone.trim()) {
       newErrors.phone = 'Введите номер телефона';
-    } else if (phoneDigits.length < 10) {
-      newErrors.phone = 'Введите корректный номер телефона';
+    } else if (!phone.startsWith('+7')) {
+      newErrors.phone = 'Номер должен начинаться с +7';
+    } else if (phoneDigits.length !== 11) {
+      newErrors.phone = 'Номер должен содержать 11 цифр';
     }
     if (!formData.email.trim()) {
       newErrors.email = 'Введите email';
@@ -107,7 +113,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
     } else if (formData.telegramUserName.trim() === '@') {
       newErrors.telegramUserName = 'Введите имя пользователя после @';
     }
-    setError(Object.values(newErrors)[0] || null);
+    setFieldErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
@@ -225,10 +231,20 @@ const BookingModal: React.FC<BookingModalProps> = ({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    // Авто-добавление @ для Telegram
+    if (name === 'telegramUserName' && value && !value.startsWith('@') && value !== '@') {
+      setFormData(prev => ({ ...prev, [name]: `@${value}` }));
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
+    setFieldErrors((prev) => ({ ...prev, [name]: undefined }));
+  };
+
+  const handlePhoneChange = (value: string | undefined) => {
+    const digits = (value || '').replace(/\D/g, '');
+    if (digits.length > 11) return;
+    setFormData(prev => ({ ...prev, phone: value || '' }));
+    setFieldErrors((prev) => ({ ...prev, phone: undefined }));
   };
 
   if (!isOpen) return null;
@@ -262,31 +278,35 @@ const BookingModal: React.FC<BookingModalProps> = ({
               Ваше имя
             </label>
             <input
-              className={styles.input}
+              className={`${styles.input} ${fieldErrors.name ? styles.inputError : ''}`}
               type="text"
               id="name"
               name="name"
               value={formData.name}
               onChange={handleChange}
-              required
-              placeholder="Введите ваше имя"
+              placeholder="Ваше имя"
+              maxLength={40}
             />
+            {fieldErrors.name && <div className={styles.errorMessage}>{fieldErrors.name}</div>}
           </div>
 
           <div className={styles.formGroup}>
             <label className={styles.label} htmlFor="phone">
               Телефон
             </label>
-            <input
-              className={styles.input}
-              type="tel"
+            <PhoneInput
+              country="RU"
+              international
+              withCountryCallingCode
               id="phone"
               name="phone"
               value={formData.phone}
-              onChange={handleChange}
-              required
+              onChange={handlePhoneChange}
+              className={`${styles.input} ${fieldErrors.phone ? styles.inputError : ''}`}
               placeholder="+7 (___) ___-__-__"
+              disabled={isLoading}
             />
+            {fieldErrors.phone && <div className={styles.errorMessage}>{fieldErrors.phone}</div>}
           </div>
 
           <div className={styles.formGroup}>
@@ -300,9 +320,12 @@ const BookingModal: React.FC<BookingModalProps> = ({
               name="email"
               value={formData.email}
               onChange={handleChange}
-              required
               placeholder="your@email.com"
+              maxLength={40}
             />
+            {fieldErrors.email && (
+              <div className={styles.errorMessage}>{fieldErrors.email}</div>
+            )}
           </div>
 
           <div className={styles.formGroup}>
@@ -310,18 +333,17 @@ const BookingModal: React.FC<BookingModalProps> = ({
               Telegram Username
             </label>
             <input
-              className={styles.input}
+              className={`${styles.input} ${fieldErrors.telegramUserName ? styles.inputError : ''}`}
               type="text"
               id="telegramUserName"
               name="telegramUserName"
               value={formData.telegramUserName}
               onChange={handleChange}
-              required
               placeholder="@username"
+              maxLength={32}
             />
+            {fieldErrors.telegramUserName && <div className={styles.errorMessage}>{fieldErrors.telegramUserName}</div>}
           </div>
-
-          {error && <div className={styles.errorMessage}>{error}</div>}
 
           <button 
             type="submit" 
