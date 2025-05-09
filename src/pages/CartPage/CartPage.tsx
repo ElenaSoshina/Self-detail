@@ -7,6 +7,7 @@ import defaultImage from '../../assets/shampoo.jpg';
 import { CartItem } from '../../types';
 import BookingModal from '../../components/BookingModal/BookingModal';
 import { createBooking } from '../../api/booking';
+import BookingSuccess from '../BookingSuccess/BookingSuccess';
 
 // Функция для получения изображения продукта по ID
 const getProductImage = (id: string | number): string => {
@@ -21,6 +22,7 @@ const CartPage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTime, setSelectedTime] = useState<{ start: string; end: string } | null>(null);
   const [selectedService, setSelectedService] = useState<{ serviceName: string; price: number } | null>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const handleProductClick = (productId: string) => {
     // Переходим на страницу товара только если это не бронирование
@@ -45,7 +47,7 @@ const CartPage: React.FC = () => {
   const handleBooking = async (formData: any) => {
     try {
       await createBooking(formData);
-      navigate('/booking-success');
+      setShowSuccess(true);
     } catch (error) {
       console.error('Ошибка при бронировании:', error);
     }
@@ -126,15 +128,21 @@ const CartPage: React.FC = () => {
             <span className={styles.totalPrice}>{totalCost} ₽</span>
           </div>
           <button 
-            onClick={() => setIsModalOpen(true)}
+            onClick={() => {
+              setSelectedTime({ start: '10:00', end: '11:00' });
+              setSelectedService({ serviceName: 'Мойка авто', price: totalCost });
+              setIsModalOpen(true);
+            }}
             className={styles.bookButton}
           >
             Забронировать
           </button>
         </div>
       </div>
-
-      {isModalOpen && selectedTime && selectedService && (
+      {showSuccess && (
+        <BookingSuccess />
+      )}
+      {!showSuccess && isModalOpen && selectedTime && selectedService && (
         <BookingModal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
@@ -142,6 +150,7 @@ const CartPage: React.FC = () => {
           endTime={selectedTime.end}
           service={selectedService}
           onSubmit={handleBooking}
+          selectedDate={new Date()}
         />
       )}
     </div>

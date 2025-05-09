@@ -251,6 +251,26 @@
   box-shadow: 0 6px 20px #8A6EFF44;
 }
 
+.bookButton {
+  width: 100%;
+  padding: 16px 0;
+  border-radius: 24px;
+  background: linear-gradient(90deg, #FF1F7A, #8A6EFF);
+  color: #fff;
+  font-weight: 700;
+  font-size: 20px;
+  border: none;
+  cursor: pointer;
+  margin-top: 24px;
+  box-shadow: 0 4px 16px #8A6EFF22;
+  transition: box-shadow 0.2s, transform 0.2s, background 0.2s;
+}
+.bookButton:hover {
+  box-shadow: 0 4px 24px #FF1F7A55;
+  transform: translateY(-2px) scale(1.03);
+  background: linear-gradient(90deg, #8A6EFF, #FF1F7A);
+}
+
 /* Медиа-запросы для адаптивности */
 @media (max-width: 768px) {
   .cartItem {
