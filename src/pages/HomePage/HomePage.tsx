@@ -6,7 +6,7 @@ import HowItWorks from '../../components/HowItWorks/HowItWorks';
 import FAQ from '../../components/FAQ/FAQ';
 import ProductPreviewSection from '../../components/ProductPreviewSection/ProductPreviewSection';
 
-const ADMIN_IDS = ['522814078']; // сюда можно добавить других админов
+const ADMIN_IDS = ['522814078'];
 
 const HomePage: React.FC = () => {
   const location = useLocation();
@@ -50,11 +50,13 @@ const HomePage: React.FC = () => {
   
   return (
     <div>
-      {isAdmin && (
+      {/*{isAdmin && (*/}
         <div>
-          <button style={{ padding: '20px 10px', background: 'linear-gradient(90deg, #FF1F7A, #8A6EFF)', textAlign: 'center', color: 'white', borderRadius: '10px' }} onClick={handleGoAdmin}>Админ панель</button>
+          <button style={{ width: '100%', padding: '20px 10px', background: 'linear-gradient(90deg, #FF1F7A, #8A6EFF)', textAlign: 'center', color: 'white', borderRadius: '10px', fontWeight: 'bold', fontSize: '18px' }}
+                  onClick={handleGoAdmin}
+          >Админ панель</button>
         </div>
-      )}
+      {/*)}*/}
       <Hero />
       <HowItWorks />
       <Pricing />
