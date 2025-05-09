@@ -148,8 +148,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
       // Отправка сообщений в Telegram
       try {
         await Promise.all([
-          sendTelegramMessage(formatUserMessage(formData), formData.telegramUserName),
-          sendTelegramMessage(formatAdminMessage(formData), ADMIN_CHAT_ID),
+          sendTelegramMessage(formatUserMessage(formData, service), formData.telegramUserName),
+          sendTelegramMessage(formatAdminMessage(formData, service), ADMIN_CHAT_ID),
         ]);
       } catch (telegramError) {
         alert('Ошибка при отправке сообщений в Telegram: ' + telegramError);

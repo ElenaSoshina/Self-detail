@@ -24,19 +24,19 @@ export const sendTelegramMessage = async (message: string, chatId: string) => {
   }
 };
 
-export const formatUserMessage = (bookingData: any) => {
+export const formatUserMessage = (bookingData: any, service: any) => {
   return `
 Ваше бронирование успешно создано!
 
 🕒 Время: ${bookingData.start} - ${bookingData.end}
 
-📋 Услуга: ${bookingData.service[0].serviceName}
-💰 Стоимость: ${bookingData.service[0].price}₽
+📋 Услуга: ${service.serviceName}
+💰 Стоимость: ${service.price}₽
 
   `;
 };
 
-export const formatAdminMessage = (bookingData: any) => {
+export const formatAdminMessage = (bookingData: any, service: any) => {
   return `
 Новое бронирование
 
@@ -47,7 +47,7 @@ export const formatAdminMessage = (bookingData: any) => {
 
 🕒 Время: ${bookingData.start} - ${bookingData.end}
 
-📋 Услуга: ${bookingData.service[0].serviceName}
-💰 Стоимость: ${bookingData.service[0].price}₽
+📋 Услуга: ${service.serviceName}
+💰 Стоимость: ${service.price}₽
   `;
 }; 
