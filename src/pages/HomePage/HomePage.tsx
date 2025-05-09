@@ -36,26 +36,23 @@ const HomePage: React.FC = () => {
     }
   }, [location.state]);
   
-  const handleBookClick = () => {
-    const pricingSection = document.getElementById('pricing');
-    if (pricingSection) {
-      pricingSection.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
+  // const handleBookClick = () => {
+  //   const pricingSection = document.getElementById('pricing');
+  //   if (pricingSection) {
+  //     pricingSection.scrollIntoView({ behavior: 'smooth' });
+  //   }
+  // };
 
   const handleGoAdmin = () => {
     navigate('/admin');
   };
-  const handleGoHome = () => {
-    navigate('/');
-  };
+
   
   return (
     <div>
       {isAdmin && (
-        <div style={{ display: 'flex', gap: 16, margin: '16px 0' }}>
-          <button onClick={handleGoAdmin}>Перейти в админку</button>
-          <button onClick={handleGoHome}>Перейти на главную</button>
+        <div style={{ padding: '20px 10px', background: 'linear-gradient(90deg, #FF1F7A, #8A6EFF)', textAlign: 'center', color: 'white', borderRadius: '10px' }}>
+          <button onClick={handleGoAdmin}>Админ панель</button>
         </div>
       )}
       <Hero />
