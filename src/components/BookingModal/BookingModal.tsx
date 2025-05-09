@@ -130,6 +130,14 @@ const BookingModal: React.FC<BookingModalProps> = ({
         }
       };
 
+      // Соответствие serviceName <-> serviceRu
+      const serviceNameMap: Record<string, string> = {
+        'wash_car': 'Мойка авто',
+        'dry_post': 'Сухой пост',
+        'dry_cleaning': 'Химчистка',
+        'polish': 'Полировка',
+      };
+
       // Формируем данные в соответствии с API
       const bookingData = {
         telegramUserId: parseInt(chatId),
@@ -179,9 +187,10 @@ const BookingModal: React.FC<BookingModalProps> = ({
 
       // Отправка сообщений в Telegram
       try {
+        const serviceRu = serviceNameMap[service.serviceName] || service.serviceName;
         await Promise.all([
-          sendTelegramMessage(formatUserMessage(bookingData, service), chatId),
-          sendTelegramMessage(formatAdminMessage(bookingData, service), ADMIN_CHAT_ID),
+          sendTelegramMessage(formatUserMessage(bookingData, service, serviceRu), chatId),
+          sendTelegramMessage(formatAdminMessage(bookingData, service, serviceRu), ADMIN_CHAT_ID),
         ]);
       } catch (telegramError) {
         alert('Ошибка при отправке сообщений в Telegram: ' + telegramError);

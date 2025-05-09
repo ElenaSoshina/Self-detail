@@ -24,19 +24,39 @@ export const sendTelegramMessage = async (message: string, chatId: string) => {
   }
 };
 
-export const formatUserMessage = (bookingData: any, service: any) => {
+export const formatUserMessage = (bookingData: any, service: any, serviceRu: string) => {
+  const formatDate = (iso: string) => {
+    const date = new Date(iso);
+    return date.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  };
+  const formatTime = (iso: string) => {
+    const date = new Date(iso);
+    return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+  };
+  const dateStr = formatDate(bookingData.start);
+  const timeStr = `${formatTime(bookingData.start)} - ${formatTime(bookingData.end)}`;
   return `
 Ваше бронирование успешно создано!
 
-🕒 Время: ${bookingData.start} - ${bookingData.end}
+📅 Дата: ${dateStr}
+🕒 Время: ${timeStr}
 
-📋 Услуга: ${service.serviceName}
+📋 Услуга: ${serviceRu}
 💰 Стоимость: ${service.price}₽
-
-  `;
+`;
 };
 
-export const formatAdminMessage = (bookingData: any, service: any) => {
+export const formatAdminMessage = (bookingData: any, service: any, serviceRu: string) => {
+  const formatDate = (iso: string) => {
+    const date = new Date(iso);
+    return date.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  };
+  const formatTime = (iso: string) => {
+    const date = new Date(iso);
+    return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+  };
+  const dateStr = formatDate(bookingData.start);
+  const timeStr = `${formatTime(bookingData.start)} - ${formatTime(bookingData.end)}`;
   return `
 Новое бронирование
 
@@ -45,9 +65,10 @@ export const formatAdminMessage = (bookingData: any, service: any) => {
 📧 Email: ${bookingData.clientEmail}
 📱 Telegram: @${bookingData.telegramUserName}
 
-🕒 Время: ${bookingData.start} - ${bookingData.end}
+📅 Дата: ${dateStr}
+🕒 Время: ${timeStr}
 
-📋 Услуга: ${service.serviceName}
+📋 Услуга: ${serviceRu}
 💰 Стоимость: ${service.price}₽
-  `;
+`;
 }; 
