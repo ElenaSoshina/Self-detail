@@ -31,7 +31,9 @@ export const formatUserMessage = (bookingData: any, service: any, serviceRu: str
   };
   const formatTime = (iso: string) => {
     const date = new Date(iso);
-    return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    const h = String(date.getUTCHours()).padStart(2, '0');
+    const m = String(date.getUTCMinutes()).padStart(2, '0');
+    return `${h}:${m}`;
   };
   const dateStr = formatDate(bookingData.start);
   const timeStr = `${formatTime(bookingData.start)} - ${formatTime(bookingData.end)}`;
@@ -53,7 +55,9 @@ export const formatAdminMessage = (bookingData: any, service: any, serviceRu: st
   };
   const formatTime = (iso: string) => {
     const date = new Date(iso);
-    return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    const h = String(date.getUTCHours()).padStart(2, '0');
+    const m = String(date.getUTCMinutes()).padStart(2, '0');
+    return `${h}:${m}`;
   };
   const dateStr = formatDate(bookingData.start);
   const timeStr = `${formatTime(bookingData.start)} - ${formatTime(bookingData.end)}`;
