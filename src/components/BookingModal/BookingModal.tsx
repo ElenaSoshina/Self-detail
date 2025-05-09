@@ -67,13 +67,10 @@ const BookingModal: React.FC<BookingModalProps> = ({
 
       // Форматируем время в ISO строку
       const formatDateTime = (rangeStr: string, type: 'start' | 'end') => {
-        alert('Входное значение времени: ' + rangeStr);
         if (!rangeStr) {
-          alert('Ошибка: время не указано');
           throw new Error('Время не указано');
         }
         try {
-          // Ожидаем формат "09:00 — 11:00"
           const parts = rangeStr.split(/[—-]/).map(s => s.trim());
           let timeStr = '';
           if (type === 'start') {
@@ -81,19 +78,14 @@ const BookingModal: React.FC<BookingModalProps> = ({
           } else {
             timeStr = parts[1] || parts[0];
           }
-          alert('Выбранное время (' + type + '): ' + timeStr);
           const [hours, minutes] = timeStr.split(':').map(Number);
-          alert('Часы: ' + hours + ', Минуты: ' + minutes);
           if (isNaN(hours) || isNaN(minutes)) {
             throw new Error('Неверный формат времени');
           }
           const date = new Date();
           date.setHours(hours, minutes, 0, 0);
-          const formattedDate = date.toISOString().replace(/\.\d{3}Z$/, 'Z');
-          alert('Отформатированное время: ' + formattedDate);
-          return formattedDate;
+          return date.toISOString().replace(/\.\d{3}Z$/, 'Z');
         } catch (error) {
-          alert('Ошибка форматирования времени: ' + error);
           throw error;
         }
       };
@@ -125,22 +117,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        body: JSON.stringify({
-          telegramUserId: parseInt(chatId),
-          telegramUserName: formData.telegramUserName.startsWith('@') 
-            ? formData.telegramUserName 
-            : `@${formData.telegramUserName}`,
-          clientName: formData.name,
-          clientPhone: formData.phone,
-          clientEmail: formData.email,
-          start: formatDateTime(startTime, 'start'),
-          end: formatDateTime(startTime, 'end'),
-          service: [{
-            serviceName: service.serviceName,
-            price: service.price
-          }],
-          notes: ''
-        }),
+        body: JSON.stringify(bookingData),
       });
 
       alert('Статус ответа: ' + response.status);
