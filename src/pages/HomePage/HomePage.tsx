@@ -51,8 +51,8 @@ const HomePage: React.FC = () => {
   return (
     <div>
       {isAdmin && (
-        <div style={{ padding: '20px 10px', background: 'linear-gradient(90deg, #FF1F7A, #8A6EFF)', textAlign: 'center', color: 'white', borderRadius: '10px' }}>
-          <button onClick={handleGoAdmin}>Админ панель</button>
+        <div>
+          <button style={{ padding: '20px 10px', background: 'linear-gradient(90deg, #FF1F7A, #8A6EFF)', textAlign: 'center', color: 'white', borderRadius: '10px' }} onClick={handleGoAdmin}>Админ панель</button>
         </div>
       )}
       <Hero />
