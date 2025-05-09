@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useCart } from '../../context/CartContex';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import styles from './CartPage.module.css';
 import { products } from '../../data/products';
 import defaultImage from '../../assets/shampoo.jpg';
@@ -19,10 +19,14 @@ const getProductImage = (id: string | number): string => {
 const CartPage: React.FC = () => {
   const { items, updateQuantity, removeFromCart } = useCart();
   const navigate = useNavigate();
+  const location = useLocation();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTime, setSelectedTime] = useState<{ start: string; end: string } | null>(null);
   const [selectedService, setSelectedService] = useState<{ serviceName: string; price: number } | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
+
+  // Получаем данные из location state
+  const bookingData = location.state?.bookingData;
 
   const handleProductClick = (productId: string) => {
     // Переходим на страницу товара только если это не бронирование
@@ -129,8 +133,16 @@ const CartPage: React.FC = () => {
           </div>
           <button 
             onClick={() => {
-              setSelectedTime({ start: '10:00', end: '11:00' });
-              setSelectedService({ serviceName: 'Мойка авто', price: totalCost });
+              if (bookingData) {
+                setSelectedTime({ 
+                  start: bookingData.startTime, 
+                  end: bookingData.endTime 
+                });
+                setSelectedService({ 
+                  serviceName: bookingData.serviceName, 
+                  price: totalCost 
+                });
+              }
               setIsModalOpen(true);
             }}
             className={styles.bookButton}
