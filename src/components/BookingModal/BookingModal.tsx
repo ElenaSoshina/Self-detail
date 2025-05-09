@@ -279,7 +279,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
             <span className={styles.infoValue}>{startTime} - {endTime}</span>
           </div>
           <div className={styles.infoRow}>
-            <span className={styles.infoLabel}>Стоимость услуги:</span>
+            <span className={styles.infoLabel}>Стоимость услуги: </span>
             <span className={styles.infoValue}>{service.price * durationHours} ₽</span>
           </div>
           {products.length > 0 && products.map(product => (
