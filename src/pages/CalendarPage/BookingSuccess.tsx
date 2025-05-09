@@ -17,7 +17,7 @@ const BookingSuccess: React.FC<BookingSuccessProps> = ({ bookingDetails, formatD
   const handleBooking = async (formData: any) => {
     try {
       // Здесь будет логика отправки данных на сервер
-      console.log('Booking data:', formData);
+      console.log('Booking data: ', formData);
       setIsModalOpen(false);
     } catch (error) {
       console.error('Ошибка при бронировании:', error);
@@ -87,6 +87,7 @@ const BookingSuccess: React.FC<BookingSuccessProps> = ({ bookingDetails, formatD
           onSubmit={handleBooking}
           selectedDate={bookingDetails.date}
         />
+
       )}
     </div>
   );
