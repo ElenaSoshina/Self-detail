@@ -72,6 +72,9 @@ const BookingModal: React.FC<BookingModalProps> = ({
         if (!rangeStr) {
           throw new Error('Время не указано');
         }
+        if (!selectedDate || isNaN(new Date(selectedDate).getTime())) {
+          throw new Error('Некорректная или не передана дата бронирования: ' + String(selectedDate));
+        }
         try {
           const parts = rangeStr.split(/[—-]/).map(s => s.trim());
           let timeStr = '';
@@ -86,6 +89,9 @@ const BookingModal: React.FC<BookingModalProps> = ({
           }
           const date = new Date(selectedDate);
           date.setHours(hours, minutes, 0, 0);
+          if (isNaN(date.getTime())) {
+            throw new Error('Ошибка формирования даты: ' + String(date));
+          }
           return date.toISOString().replace(/\.\d{3}Z$/, 'Z');
         } catch (error) {
           throw error;
