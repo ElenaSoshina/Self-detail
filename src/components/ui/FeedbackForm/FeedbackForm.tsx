@@ -220,7 +220,7 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({
       });
     } catch (error) {
       console.error('Ошибка при отправке данных:', error);
-      alert('Произошла ошибка при отправке формы. Пожалуйста, попробуйте снова позже.');
+      // alert('Произошла ошибка при отправке формы. Пожалуйста, попробуйте снова позже.');
     } finally {
       setIsSubmitting(false);
     }

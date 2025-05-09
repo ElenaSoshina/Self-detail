@@ -156,8 +156,6 @@ const BookingModal: React.FC<BookingModalProps> = ({
         notes: ''
       };
 
-      alert('Отправляем данные: ' + JSON.stringify(bookingData, null, 2));
-
       // Отправка данных на сервер
       const response = await fetch('https://backend.self-detailing.duckdns.org/api/v1/calendar/booking', {
         method: 'POST',
@@ -168,19 +166,13 @@ const BookingModal: React.FC<BookingModalProps> = ({
         body: JSON.stringify(bookingData),
       });
 
-      alert('Статус ответа: ' + response.status);
-      alert('Заголовки ответа: ' + JSON.stringify(Object.fromEntries(response.headers.entries())));
-
-      const responseText = await response.text();
-      alert('Текст ответа: ' + responseText);
-
       if (!response.ok) {
         let errorMessage = 'Ошибка при отправке бронирования';
         try {
-          const errorData = JSON.parse(responseText);
+          const errorData = JSON.parse(await response.text());
           errorMessage = errorData.message || errorMessage;
         } catch (e) {
-          alert('Ошибка при парсинге ответа: ' + e);
+          // alert('Ошибка при парсинге ответа: ' + e);
         }
         throw new Error(errorMessage);
       }
@@ -193,7 +185,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
           sendTelegramMessage(formatAdminMessage(bookingData, service, serviceRu), ADMIN_CHAT_ID),
         ]);
       } catch (telegramError) {
-        alert('Ошибка при отправке сообщений в Telegram: ' + telegramError);
+        // alert('Ошибка при отправке сообщений в Telegram: ' + telegramError);
       }
 
       // Показываем попап успеха
@@ -206,7 +198,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
       }, 2000);
 
     } catch (error) {
-      alert('Ошибка при отправке формы: ' + error);
+      // alert('Ошибка при отправке формы: ' + error);
       setError(error instanceof Error ? error.message : 'Произошла ошибка при отправке формы. Пожалуйста, попробуйте еще раз.');
     } finally {
       setIsLoading(false);
