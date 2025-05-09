@@ -66,22 +66,27 @@ const BookingModal: React.FC<BookingModalProps> = ({
       }
 
       // Форматируем время в ISO строку
-      const formatDateTime = (timeStr: string) => {
-        alert('Входное время: ' + timeStr);
-        
-        if (!timeStr) {
+      const formatDateTime = (rangeStr: string, type: 'start' | 'end') => {
+        alert('Входное значение времени: ' + rangeStr);
+        if (!rangeStr) {
           alert('Ошибка: время не указано');
           throw new Error('Время не указано');
         }
-        
         try {
+          // Ожидаем формат "09:00 — 11:00"
+          const parts = rangeStr.split(/[—-]/).map(s => s.trim());
+          let timeStr = '';
+          if (type === 'start') {
+            timeStr = parts[0];
+          } else {
+            timeStr = parts[1] || parts[0];
+          }
+          alert('Выбранное время (' + type + '): ' + timeStr);
           const [hours, minutes] = timeStr.split(':').map(Number);
           alert('Часы: ' + hours + ', Минуты: ' + minutes);
-          
           if (isNaN(hours) || isNaN(minutes)) {
             throw new Error('Неверный формат времени');
           }
-          
           const date = new Date();
           date.setHours(hours, minutes, 0, 0);
           const formattedDate = date.toISOString().replace(/\.\d{3}Z$/, 'Z');
@@ -102,8 +107,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
         clientName: formData.name,
         clientPhone: formData.phone,
         clientEmail: formData.email,
-        start: formatDateTime(startTime),
-        end: formatDateTime(endTime),
+        start: formatDateTime(startTime, 'start'),
+        end: formatDateTime(startTime, 'end'),
         service: [{
           serviceName: service.serviceName,
           price: service.price
@@ -128,8 +133,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
           clientName: formData.name,
           clientPhone: formData.phone,
           clientEmail: formData.email,
-          start: formatDateTime(startTime),
-          end: formatDateTime(endTime),
+          start: formatDateTime(startTime, 'start'),
+          end: formatDateTime(startTime, 'end'),
           service: [{
             serviceName: service.serviceName,
             price: service.price
