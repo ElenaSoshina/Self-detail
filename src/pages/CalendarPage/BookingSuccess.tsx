@@ -93,14 +93,10 @@ const BookingSuccess: React.FC<BookingSuccessProps> = ({ bookingDetails, formatD
           onClose={() => setIsModalOpen(false)}
           startTime={bookingDetails.timeRange.split(' - ')[0]}
           endTime={bookingDetails.timeRange.split(' - ')[1]}
-          service={{
-            serviceName: bookingDetails.plan.title,
-            price: bookingDetails.totalPrice
-          }}
+          service={serviceMap[bookingDetails.plan.title as keyof typeof serviceMap]}
           onSubmit={handleBooking}
           selectedDate={bookingDetails.date}
         />
-
       )}
     </div>
   );
