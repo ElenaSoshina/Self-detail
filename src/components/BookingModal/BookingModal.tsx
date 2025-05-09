@@ -57,10 +57,42 @@ const BookingModal: React.FC<BookingModalProps> = ({
     }
   }, []);
 
+  const validate = (): boolean => {
+    const newErrors: Partial<FormData> = {};
+    if (!formData.name.trim()) {
+      newErrors.name = 'Введите ваше имя';
+    }
+    const phoneDigits = formData.phone.replace(/\D/g, '');
+    if (!formData.phone.trim()) {
+      newErrors.phone = 'Введите номер телефона';
+    } else if (phoneDigits.length < 10) {
+      newErrors.phone = 'Введите корректный номер телефона';
+    }
+    if (!formData.email.trim()) {
+      newErrors.email = 'Введите email';
+    } else if (!/^\S+@\S+\.\S+$/.test(formData.email)) {
+      newErrors.email = 'Введите корректный email';
+    }
+    if (!formData.telegramUserName.trim()) {
+      newErrors.telegramUserName = 'Введите ваш username в Telegram';
+    } else if (!formData.telegramUserName.trim().startsWith('@')) {
+      newErrors.telegramUserName = 'Username должен начинаться с @';
+    } else if (formData.telegramUserName.trim() === '@') {
+      newErrors.telegramUserName = 'Введите имя пользователя после @';
+    }
+    setError(Object.values(newErrors)[0] || null);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
+
+    if (!validate()) {
+      setIsLoading(false);
+      return;
+    }
 
     try {
       if (!chatId) {
@@ -148,8 +180,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
       // Отправка сообщений в Telegram
       try {
         await Promise.all([
-          sendTelegramMessage(formatUserMessage(formData, service), formData.telegramUserName),
-          sendTelegramMessage(formatAdminMessage(formData, service), ADMIN_CHAT_ID),
+          sendTelegramMessage(formatUserMessage(bookingData, service), chatId),
+          sendTelegramMessage(formatAdminMessage(bookingData, service), ADMIN_CHAT_ID),
         ]);
       } catch (telegramError) {
         alert('Ошибка при отправке сообщений в Telegram: ' + telegramError);
