@@ -88,7 +88,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
             throw new Error('Неверный формат времени');
           }
           const date = new Date(selectedDate);
-          date.setHours(hours, minutes, 0, 0);
+          date.setHours(hours + 3, minutes, 0, 0); // +3 часа для Москвы
           if (isNaN(date.getTime())) {
             throw new Error('Ошибка формирования даты: ' + String(date));
           }
