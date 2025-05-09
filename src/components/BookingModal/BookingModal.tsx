@@ -57,6 +57,33 @@ const BookingModal: React.FC<BookingModalProps> = ({
     }
   }, []);
 
+  // Соответствие serviceName <-> serviceRu
+  const serviceNameMap: Record<string, string> = {
+    'wash_car': 'Мойка авто',
+    'dry_post': 'Сухой пост',
+    'dry_cleaning': 'Химчистка',
+    'polish': 'Полировка',
+  };
+
+  // Вычисление количества часов бронирования
+  const getDurationHours = () => {
+    try {
+      const parts = startTime.split(/[—-]/).map(s => s.trim());
+      const start = parts[0];
+      const end = parts[1] || parts[0];
+      const [startH, startM] = start.split(':').map(Number);
+      const [endH, endM] = end.split(':').map(Number);
+      let hours = endH - startH;
+      if (endM - startM > 0) hours += 1;
+      return hours > 0 ? hours : 1;
+    } catch {
+      return 1;
+    }
+  };
+  const durationHours = getDurationHours();
+  const totalPrice = service.price * durationHours;
+  const serviceRu = serviceNameMap[service.serviceName] || service.serviceName;
+
   const validate = (): boolean => {
     const newErrors: Partial<FormData> = {};
     if (!formData.name.trim()) {
@@ -130,14 +157,6 @@ const BookingModal: React.FC<BookingModalProps> = ({
         }
       };
 
-      // Соответствие serviceName <-> serviceRu
-      const serviceNameMap: Record<string, string> = {
-        'wash_car': 'Мойка авто',
-        'dry_post': 'Сухой пост',
-        'dry_cleaning': 'Химчистка',
-        'polish': 'Полировка',
-      };
-
       // Формируем данные в соответствии с API
       const bookingData = {
         telegramUserId: parseInt(chatId),
@@ -151,7 +170,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
         end: formatDateTime(startTime, 'end'),
         service: [{
           serviceName: service.serviceName,
-          price: service.price
+          price: totalPrice
         }],
         notes: ''
       };
@@ -179,10 +198,9 @@ const BookingModal: React.FC<BookingModalProps> = ({
 
       // Отправка сообщений в Telegram
       try {
-        const serviceRu = serviceNameMap[service.serviceName] || service.serviceName;
         await Promise.all([
-          sendTelegramMessage(formatUserMessage(bookingData, service, serviceRu), chatId),
-          sendTelegramMessage(formatAdminMessage(bookingData, service, serviceRu), ADMIN_CHAT_ID),
+          sendTelegramMessage(formatUserMessage(bookingData, { ...service, price: totalPrice }, serviceRu), chatId),
+          sendTelegramMessage(formatAdminMessage(bookingData, { ...service, price: totalPrice }, serviceRu), ADMIN_CHAT_ID),
         ]);
       } catch (telegramError) {
         // alert('Ошибка при отправке сообщений в Telegram: ' + telegramError);
@@ -226,7 +244,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
         <div className={styles.bookingInfo}>
           <div className={styles.infoRow}>
             <span className={styles.infoLabel}>Услуга:</span>
-            <span className={styles.infoValue}>{service.serviceName}</span>
+            <span className={styles.infoValue}>{serviceRu}</span>
           </div>
           <div className={styles.infoRow}>
             <span className={styles.infoLabel}>Время:</span>
@@ -234,7 +252,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
           </div>
           <div className={styles.infoRow}>
             <span className={styles.infoLabel}>Стоимость:</span>
-            <span className={styles.infoValue}>{service.price} ₽</span>
+            <span className={styles.infoValue}>{totalPrice} ₽</span>
           </div>
         </div>
 
