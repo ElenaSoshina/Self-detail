@@ -11,10 +11,10 @@ interface BookingModalProps {
   onClose: () => void;
   startTime: string;
   endTime: string;
-  service: {
+  service?: {
     serviceName: string;
     price: number;
-  };
+  } | null;
   onSubmit: (formData: any) => void;
   selectedDate: Date;
   isAdmin?: boolean;
@@ -51,6 +51,32 @@ const BookingModal: React.FC<BookingModalProps> = ({
   const { items } = useCart();
   const products = items.filter(item => item.type !== 'booking');
   const productsTotal = products.reduce((sum, p) => sum + p.price * p.quantity, 0);
+  
+  // Нормализуем отображение времени
+  const [displayTime, setDisplayTime] = useState('');
+  
+  useEffect(() => {
+    console.log('Время полученное в модальном окне:', { startTime, endTime });
+    
+    // Нормализуем время для отображения
+    if (startTime) {
+      // Ищем все числа формата ЧЧ:ММ
+      const timeMatches = startTime.match(/\d{1,2}:\d{2}/g);
+      if (timeMatches && timeMatches.length >= 2) {
+        // Если в startTime найдены два времени, используем их
+        setDisplayTime(`${timeMatches[0]} - ${timeMatches[1]}`);
+        console.log('Время нормализовано из startTime:', `${timeMatches[0]} - ${timeMatches[1]}`);
+      } else if (startTime && endTime) {
+        // Если есть отдельные startTime и endTime
+        setDisplayTime(`${startTime} - ${endTime}`);
+        console.log('Время составлено из startTime и endTime:', `${startTime} - ${endTime}`);
+      } else {
+        // Если найдено только одно время в startTime
+        setDisplayTime(startTime);
+        console.log('Используется исходное время:', startTime);
+      }
+    }
+  }, [startTime, endTime]);
 
   // Получаем chatId пользователя из Telegram WebApp
   useEffect(() => {
@@ -91,8 +117,12 @@ const BookingModal: React.FC<BookingModalProps> = ({
   };
   const durationHours = getDurationHours();
   const servicePrice = service?.price ?? 0;
-  const totalPrice = servicePrice * durationHours + productsTotal;
-  const serviceRu = serviceNameMap[service?.serviceName] || service?.serviceName || '';
+  // Расчет итоговой стоимости: если есть услуга, то стоимость услуги + товары, иначе только товары
+  const hasService = Boolean(service && service.serviceName && service.serviceName !== '');
+  const totalPrice = hasService 
+    ? servicePrice * durationHours + productsTotal 
+    : productsTotal;
+  const serviceRu = hasService && service?.serviceName ? (serviceNameMap[service.serviceName] || service.serviceName) : '';
 
   const validate = (): boolean => {
     const newErrors: { name?: string; phone?: string; email?: string; telegramUserName?: string } = {};
@@ -139,6 +169,9 @@ const BookingModal: React.FC<BookingModalProps> = ({
         throw new Error('Не удалось получить ID пользователя из Telegram');
       }
 
+      // Отладочная информация о времени
+      console.log('Исходные значения startTime и endTime:', { startTime, endTime });
+
       // Форматируем время в ISO строку
       const formatDateTime = (rangeStr: string, type: 'start' | 'end') => {
         if (!rangeStr) {
@@ -149,12 +182,14 @@ const BookingModal: React.FC<BookingModalProps> = ({
         }
         try {
           const parts = rangeStr.split(/[—-]/).map(s => s.trim());
+          console.log('Разбор времени:', parts);
           let timeStr = '';
           if (type === 'start') {
             timeStr = parts[0];
           } else {
             timeStr = parts[1] || parts[0];
           }
+          console.log(`Извлеченное время (${type}):`, timeStr);
           const [hours, minutes] = timeStr.split(':').map(Number);
           if (isNaN(hours) || isNaN(minutes)) {
             throw new Error('Неверный формат времени');
@@ -166,9 +201,35 @@ const BookingModal: React.FC<BookingModalProps> = ({
           }
           return date.toISOString().replace(/\.\d{3}Z$/, 'Z');
         } catch (error) {
+          console.error(`Ошибка при форматировании времени (${type}):`, error);
           throw error;
         }
       };
+
+      // Формируем данные для onSubmit
+      const submittedData = {
+        name: formData.name,
+        phone: formData.phone,
+        email: formData.email,
+        telegramUserName: formData.telegramUserName,
+        selectedDate: selectedDate,
+        startTime: hasService ? (displayTime.split(' - ')[0] || startTime) : '', 
+        endTime: hasService ? (displayTime.split(' - ')[1] || endTime) : '',
+        service: hasService && service 
+          ? { 
+              serviceName: service.serviceName,
+              price: servicePrice
+            }
+          : null
+      };
+      
+      console.log('Данные, передаваемые в onSubmit:', submittedData);
+      console.log('Есть ли услуга в модальном окне:', hasService);
+      
+      // Вызываем функцию onSubmit для создания бронирования
+      if (onSubmit) {
+        await onSubmit(submittedData);
+      }
 
       // Формируем данные в соответствии с API
       const bookingData = {
@@ -179,12 +240,18 @@ const BookingModal: React.FC<BookingModalProps> = ({
         clientName: formData.name,
         clientPhone: formData.phone,
         clientEmail: formData.email,
-        start: formatDateTime(startTime, 'start'),
-        end: formatDateTime(startTime, 'end'),
-        service: [{
-          serviceName: service?.serviceName || 'Технические работы',
-          price: servicePrice
-        }],
+        start: hasService 
+          ? formatDateTime(displayTime.split(' - ')[0] || startTime, 'start')
+          : new Date().toISOString(),
+        end: hasService 
+          ? formatDateTime(displayTime.split(' - ')[1] || displayTime.split(' - ')[0] || startTime, 'end')
+          : new Date().toISOString(),
+        service: hasService && service
+          ? [{
+              serviceName: service.serviceName,
+              price: servicePrice
+            }]
+          : [],
         notes: '',
         products: products,
         totalPrice: totalPrice
@@ -294,21 +361,29 @@ const BookingModal: React.FC<BookingModalProps> = ({
         <button className={styles.closeButton} onClick={onClose}>
           ×
         </button>
-        <h2 className={styles.modalTitle}>Подтверждение бронирования</h2>
+        <h2 className={styles.modalTitle}>
+          {hasService ? 'Подтверждение бронирования' : 'Оформление заказа'}
+        </h2>
         
         <div className={styles.bookingInfo}>
-          <div className={styles.infoRow}>
-            <span className={styles.infoLabel}>Услуга:</span>
-            <span className={styles.infoValue}>{serviceRu}</span>
-          </div>
-          <div className={styles.infoRow}>
-            <span className={styles.infoLabel}>Время:</span>
-            <span className={styles.infoValue}>{startTime} - {endTime}</span>
-          </div>
-          <div className={styles.infoRow}>
-            <span className={styles.infoLabel}>Стоимость услуги: </span>
-            <span className={styles.infoValue}>{servicePrice * durationHours} ₽</span>
-          </div>
+          {hasService && (
+            <>
+              <div className={styles.infoRow}>
+                <span className={styles.infoLabel}>Услуга:</span>
+                <span className={styles.infoValue}>{serviceRu}</span>
+              </div>
+              <div className={styles.infoRow}>
+                <span className={styles.infoLabel}>Время:</span>
+                <span className={styles.infoValue}>
+                  {displayTime}
+                </span>
+              </div>
+              <div className={styles.infoRow}>
+                <span className={styles.infoLabel}>Стоимость услуги: </span>
+                <span className={styles.infoValue}>{servicePrice * durationHours} ₽</span>
+              </div>
+            </>
+          )}
           {products.length > 0 && products.map(product => (
             <div className={styles.infoRow} key={product.id}>
               <span className={styles.infoLabel}>{product.name} x{product.quantity}</span>
@@ -405,7 +480,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
             className={styles.submitButton}
             disabled={isLoading}
           >
-            {isLoading ? 'Отправка...' : 'Подтвердить бронирование'}
+            {isLoading ? 'Отправка...' : 'Подтвердить'}
           </button>
         </form>
       </div>
