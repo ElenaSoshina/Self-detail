@@ -1,8 +1,26 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styles from './AdminCalendar.module.css';
 import { mockSlots, BookingSlot } from './mockData';
+import axios from 'axios';
+import TimeSlots from '../CalendarPage/TimeSlots';
+import CalendarPage from '../CalendarPage/CalendarPage';
 
 const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+
+interface TimeSlot {
+  start: string;
+  end: string;
+  available: boolean;
+}
+
+interface TimeSlotData {
+  formattedTime: string;
+  originalData: any;
+  sortKey: number;
+  start: Date;
+  end: Date;
+  available: boolean;
+}
 
 const AdminCalendar: React.FC<{ onUserSelect: (userId: string) => void }> = ({ onUserSelect }) => {
   const [slots, setSlots] = useState<BookingSlot[]>([]);
@@ -11,7 +29,68 @@ const AdminCalendar: React.FC<{ onUserSelect: (userId: string) => void }> = ({ o
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [calendarDate, setCalendarDate] = useState(new Date());
+  const [showAvailableSlots, setShowAvailableSlots] = useState(false);
+  const [availableTimeSlots, setAvailableTimeSlots] = useState<string[]>([]);
+  const [timeSlotData, setTimeSlotData] = useState<TimeSlotData[]>([]);
+  const [startTime, setStartTime] = useState<string | null>(null);
+  const [endTime, setEndTime] = useState<string | null>(null);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+  const [slotsError, setSlotsError] = useState<string | null>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
+  const [showCalendarPage, setShowCalendarPage] = useState(false);
+
+  const fetchAvailableSlots = async () => {
+    setLoadingSlots(true);
+    try {
+      const year = currentDate.getFullYear();
+      const month = (currentDate.getMonth() + 1).toString().padStart(2, '0');
+      const day = currentDate.getDate().toString().padStart(2, '0');
+      const start = `${year}-${month}-${day}T00:00:00`;
+      const nextDay = new Date(currentDate);
+      nextDay.setDate(nextDay.getDate() + 1);
+      const nextYear = nextDay.getFullYear();
+      const nextMonth = (nextDay.getMonth() + 1).toString().padStart(2, '0');
+      const nextDayNum = nextDay.getDate().toString().padStart(2, '0');
+      const end = `${nextYear}-${nextMonth}-${nextDayNum}T00:00:00`;
+
+      const response = await axios.get('https://backend.self-detailing.duckdns.org/api/v1/calendar/available', {
+        params: { start, end },
+        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+      });
+
+      if (!response.data || !response.data.data) {
+        throw new Error('Неверный формат данных');
+      }
+
+      const timeSlotsWithData = response.data.data.map((slot: any) => {
+        const slotTime = new Date(slot.start);
+        const hours = slotTime.getHours();
+        const minutes = slotTime.getMinutes();
+        return {
+          formattedTime: `${hours < 10 ? '0' + hours : hours}:${minutes === 0 ? '00' : minutes < 10 ? '0' + minutes : minutes}`,
+          originalData: slot,
+          sortKey: hours * 60 + minutes,
+          start: slotTime,
+          end: new Date(slot.end),
+          available: slot.available
+        };
+      });
+
+      timeSlotsWithData.sort((a: TimeSlotData, b: TimeSlotData) => a.sortKey - b.sortKey);
+      const formattedTimeSlots = timeSlotsWithData.map((slot: TimeSlotData) => slot.formattedTime);
+      
+      setAvailableTimeSlots(formattedTimeSlots);
+      setTimeSlotData(timeSlotsWithData);
+      setSlotsError(null);
+    } catch (error) {
+      console.error('Error fetching available slots:', error);
+      setSlotsError('Ошибка загрузки слотов.');
+      setAvailableTimeSlots([]);
+      setTimeSlotData([]);
+    } finally {
+      setLoadingSlots(false);
+    }
+  };
 
   useEffect(() => {
     const fetchSlots = async () => {
@@ -148,6 +227,45 @@ const AdminCalendar: React.FC<{ onUserSelect: (userId: string) => void }> = ({ o
     setSelectedSlot(null);
   };
 
+  const handleAdminBooking = () => {
+    setShowCalendarPage(true);
+  };
+
+  const handleTimeSlotClick = (time: string) => {
+    const slot = timeSlotData.find(s => s.formattedTime === time);
+    if (!slot || !slot.available) return;
+
+    if (!startTime || (startTime && endTime)) {
+      setStartTime(time);
+      setEndTime(null);
+    } else if (startTime && !endTime) {
+      if (time === startTime) {
+        setStartTime(null);
+        setEndTime(null);
+      } else {
+        setEndTime(time);
+      }
+    }
+  };
+
+  // Генерация всех слотов за сутки (00:00-01:00 ... 23:00-00:00)
+  const allDaySlots = Array.from({ length: 24 }, (_, h) => {
+    const start = `${h < 10 ? '0' + h : h}:00`;
+    const end = `${(h + 1) < 10 ? '0' + (h + 1) : (h + 1 === 24 ? '00' : h + 1)}:00`;
+    return { formattedTime: start, start, end };
+  });
+
+  // Проверка, занят ли слот
+  const isSlotBooked = (slotTime: string) => {
+    return slots.some(slot => {
+      const date = new Date(slot.start);
+      const hours = date.getHours();
+      const minutes = date.getMinutes();
+      const formatted = `${hours < 10 ? '0' + hours : hours}:${minutes === 0 ? '00' : minutes < 10 ? '0' + minutes : minutes}`;
+      return formatted === slotTime;
+    });
+  };
+
   const days = generateDaysForMonth(calendarDate.getFullYear(), calendarDate.getMonth());
 
   return (
@@ -196,23 +314,57 @@ const AdminCalendar: React.FC<{ onUserSelect: (userId: string) => void }> = ({ o
           ) : slots.length === 0 ? (
             <div className={styles.loading}>Нет бронирований на этот день</div>
           ) : (
-            slots.map((slot) => (
-              <div
-                key={slot.id}
-                className={`${styles.slot} ${slot.isBooked ? styles.booked : ''}`}
-                onClick={() => handleSlotClick(slot)}
-              >
-                <div className={styles.time}>
-                  {new Date(slot.start).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })} — {new Date(slot.end).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+            <>
+              {slots.map((slot) => (
+                <div
+                  key={slot.id}
+                  className={`${styles.slot} ${slot.isBooked ? styles.booked : ''}`}
+                  onClick={() => handleSlotClick(slot)}
+                >
+                  <div className={styles.time}>
+                    {new Date(slot.start).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })} — {new Date(slot.end).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                  <div className={styles.bookingInfo}>
+                    <b>{slot.bookingDetails?.userName}</b><br/>
+                    {slot.bookingDetails?.plan.title}
+                  </div>
                 </div>
-                <div className={styles.bookingInfo}>
-                  <b>{slot.bookingDetails?.userName}</b><br/>
-                  {slot.bookingDetails?.plan.title}
-                </div>
-              </div>
-            ))
+              ))}
+              <button className={styles.addBookingBtn} onClick={handleAdminBooking}>
+                Добавить бронирование
+              </button>
+            </>
           )}
         </div>
+        {showAvailableSlots && (
+          <div className={styles.timeSlots}>
+            {allDaySlots.map(slot => {
+              const booked = isSlotBooked(slot.formattedTime);
+              return (
+                <button
+                  key={slot.formattedTime}
+                  className={
+                    styles.timeSlot +
+                    (booked ? ' ' + styles.timeSlotUnavailable : '') +
+                    (startTime === slot.formattedTime ? ' ' + styles.selectedTime : '')
+                  }
+                  onClick={() => !booked && handleTimeSlotClick(slot.formattedTime)}
+                  disabled={booked}
+                >
+                  {slot.formattedTime}
+                </button>
+              );
+            })}
+          </div>
+        )}
+        {showCalendarPage && (
+          <div className={styles.calendarModalOverlay}>
+            <div className={styles.calendarModalContent}>
+              <button className={styles.cancelButton} onClick={() => setShowCalendarPage(false)}>Отменить</button>
+              <CalendarPage isAdmin={true} />
+            </div>
+          </div>
+        )}
       </div>
       {selectedSlot && selectedSlot.bookingDetails && (
         <div className={styles.slotDetails}>

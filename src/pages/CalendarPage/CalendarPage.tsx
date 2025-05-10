@@ -21,7 +21,11 @@ import { generateDaysForMonth, isSameDay, formatDate, calculateMaxAvailableHours
 import { months, weekDays } from './calendarConstants';
 import BookingSummary from './BookingSummary';
 
-const CalendarPage: React.FC = () => {
+interface CalendarPageProps {
+  isAdmin?: boolean;
+}
+
+const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin }) => {
   const navigate = useNavigate();
   const { addToCart } = useCart();
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -67,7 +71,14 @@ const CalendarPage: React.FC = () => {
       price: 800,
       icon: '✨',
       description: 'Полировочная машинка, подложки, средства для хим. чистки кузова. Паста и круги не включены.'
-    }
+    },
+    ...(isAdmin ? [{
+      id: 'tech',
+      title: 'Технические работы',
+      price: 0,
+      icon: '🛠️',
+      description: 'Слот для внутренних или сервисных работ. Не отображается для клиентов.'
+    }] : [])
   ];
 
   // Запрос доступных слотов с сервера
@@ -322,11 +333,13 @@ const CalendarPage: React.FC = () => {
   }
 
   return (
-    <div className={styles.calendarContainer}>
+    <div className={isAdmin ? `${styles.calendarContainer} ${styles.admin}` : styles.calendarContainer}>
       {!bookingCompleted && (
         <div className={styles.calendarHeader}>
           <h1 className={styles.title}>Выберите дату и время</h1>
-          <button className={styles.backButton} onClick={() => navigate('/')}>Назад</button>
+          {!isAdmin && (
+            <button className={styles.backButton} onClick={() => navigate('/')}>Назад</button>
+          )}
         </div>
       )}
       {!bookingCompleted ? (

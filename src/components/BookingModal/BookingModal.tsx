@@ -88,8 +88,9 @@ const BookingModal: React.FC<BookingModalProps> = ({
     }
   };
   const durationHours = getDurationHours();
-  const totalPrice = service.price * durationHours + productsTotal;
-  const serviceRu = serviceNameMap[service.serviceName] || service.serviceName;
+  const servicePrice = service?.price ?? 0;
+  const totalPrice = servicePrice * durationHours + productsTotal;
+  const serviceRu = serviceNameMap[service?.serviceName] || service?.serviceName || '';
 
   const validate = (): boolean => {
     const newErrors: { name?: string; phone?: string; email?: string; telegramUserName?: string } = {};
@@ -280,7 +281,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
           </div>
           <div className={styles.infoRow}>
             <span className={styles.infoLabel}>Стоимость услуги: </span>
-            <span className={styles.infoValue}>{service.price * durationHours} ₽</span>
+            <span className={styles.infoValue}>{servicePrice * durationHours} ₽</span>
           </div>
           {products.length > 0 && products.map(product => (
             <div className={styles.infoRow} key={product.id}>
