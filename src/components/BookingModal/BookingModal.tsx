@@ -192,19 +192,19 @@ const BookingModal: React.FC<BookingModalProps> = ({
 
       // Формируем данные в соответствии с API
       const bookingData = {
-        telegramUserId: parseInt(chatId),
+        telegramUserId: parseInt(chatId || '0'),
         telegramUserName: formData.telegramUserName.startsWith('@') 
           ? formData.telegramUserName 
           : `@${formData.telegramUserName}`,
         clientName: formData.name,
-        clientPhone: formData.phone,
+        clientPhone: formData.phone.replace(/\+/g, ''),
         clientEmail: formData.email,
         start: hasService 
           ? formatDateTime(displayTime.split(' - ')[0] || startTime, 'start')
-          : new Date().toISOString(),
+          : new Date().toISOString().replace(/\.\d{3}Z$/, ''),
         end: hasService 
           ? formatDateTime(displayTime.split(' - ')[1] || displayTime.split(' - ')[0] || startTime, 'end')
-          : new Date().toISOString(),
+          : new Date().toISOString().replace(/\.\d{3}Z$/, ''),
         service: hasService && service
           ? [{
               serviceName: service.serviceName,
@@ -212,9 +212,18 @@ const BookingModal: React.FC<BookingModalProps> = ({
             }]
           : [],
         notes: '',
-        products: products,
-        totalPrice: totalPrice
+        products: products.map(p => ({
+          productName: p.name,
+          price: p.price,
+          quantity: p.quantity
+        }))
       };
+
+      console.log(`Проверка структуры данных перед отправкой:`, {
+        service: bookingData.service,
+        hasService: hasService,
+        serviceObj: service
+      });
 
       alert(`Данные для отправки: ${JSON.stringify(bookingData, null, 2)}`);
 
@@ -333,8 +342,12 @@ const BookingModal: React.FC<BookingModalProps> = ({
       // Устанавливаем часы и минуты
       date.setHours(hours, minutes, 0, 0);
       
-      console.log(`Итоговая дата (${type}):`, date.toISOString());
-      return date.toISOString();
+      // Форматируем дату в нужном формате YYYY-MM-DDTHH:MM:SS без миллисекунд
+      const isoString = date.toISOString();
+      const formattedDate = isoString.replace(/\.\d{3}Z$/, '');
+      
+      console.log(`Итоговая дата (${type}):`, formattedDate);
+      return formattedDate;
     } catch (error) {
       console.error(`Ошибка при форматировании времени (${type}):`, error);
       throw error;
