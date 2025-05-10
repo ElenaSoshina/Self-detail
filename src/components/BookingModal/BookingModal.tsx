@@ -153,19 +153,23 @@ const BookingModal: React.FC<BookingModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    alert('Начало отправки формы');
     setIsLoading(true);
     setError(null);
 
     if (!validate()) {
+      alert('Валидация не пройдена');
       setIsLoading(false);
       return;
     }
 
     try {
       if (!chatId) {
+        alert('Нет chatId');
         throw new Error('Не удалось получить ID пользователя из Telegram');
       }
 
+      alert('Формируем данные для отправки');
       // Формируем данные для onSubmit
       const submittedData = {
         name: formData.name,
@@ -183,13 +187,15 @@ const BookingModal: React.FC<BookingModalProps> = ({
           : null
       };
       
-      console.log('Данные, передаваемые в onSubmit:', submittedData);
+      alert('Данные для onSubmit: ' + JSON.stringify(submittedData));
       
       // Вызываем функцию onSubmit для создания бронирования
       if (onSubmit) {
+        alert('Вызываем onSubmit');
         await onSubmit(submittedData);
       }
 
+      alert('Формируем данные для API');
       // Формируем данные в соответствии с API
       const bookingData = {
         telegramUserId: parseInt(chatId || '0'),
@@ -217,7 +223,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
           : []
       };
 
-      console.log(`Финальные данные для отправки:`, bookingData);
+      alert('Данные для API: ' + JSON.stringify(bookingData));
       
       const response = await fetch('https://backend.self-detailing.duckdns.org/api/v1/calendar/booking', {
         method: 'POST',
@@ -227,17 +233,21 @@ const BookingModal: React.FC<BookingModalProps> = ({
         body: JSON.stringify(bookingData),
       });
 
+      alert('Получен ответ от сервера: ' + response.status);
+      
       if (!response.ok) {
-        throw new Error(`Ошибка сервера: ${response.status}`);
+        const errorText = await response.text();
+        alert('Ошибка сервера: ' + errorText);
+        throw new Error(`Ошибка сервера: ${response.status} ${errorText}`);
       }
 
       const result = await response.json();
-      console.log('Ответ сервера:', result);
+      alert('Успешный ответ сервера: ' + JSON.stringify(result));
       
       setShowSuccess(true);
       onClose();
     } catch (error) {
-      console.error('Ошибка при отправке формы:', error);
+      alert('Ошибка при отправке формы: ' + error);
       setError(error instanceof Error ? error.message : 'Произошла ошибка при отправке формы');
     } finally {
       setIsLoading(false);

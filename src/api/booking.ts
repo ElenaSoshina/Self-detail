@@ -18,7 +18,8 @@ const API_URL = 'https://backend.self-detailing.duckdns.org/api/v1';
 
 export const createBooking = async (bookingData: BookingFormData) => {
   try {
-    console.log('Данные для бронирования (до преобразования):', bookingData);
+    alert('Начало createBooking');
+    alert('Данные для бронирования: ' + JSON.stringify(bookingData));
     
     // Создаем правильную структуру данных для API
     const apiData = {
@@ -40,6 +41,8 @@ export const createBooking = async (bookingData: BookingFormData) => {
       notes: '',
       products: []
     };
+
+    alert('Сформированные данные для API: ' + JSON.stringify(apiData));
 
     // Правильно формируем даты для бронирования
     if (bookingData.selectedDate && bookingData.startTime) {
@@ -63,67 +66,31 @@ export const createBooking = async (bookingData: BookingFormData) => {
         endDate.setHours(endDate.getHours() + 1);
         apiData.end = endDate.toISOString();
       }
-      
-      console.log('Выбранная дата:', selectedDate);
-      console.log('Время начала:', bookingData.startTime);
-      console.log('Время окончания:', bookingData.endTime);
-      console.log('Итоговое время начала (ISO):', apiData.start);
-      console.log('Итоговое время окончания (ISO):', apiData.end);
-    } else {
-      // Если нет выбранной даты или времени, используем текущую дату
-      const now = new Date();
-      apiData.start = now.toISOString();
-      
-      const oneHourLater = new Date(now);
-      oneHourLater.setHours(oneHourLater.getHours() + 1);
-      apiData.end = oneHourLater.toISOString();
     }
 
-    console.log('Данные, отправляемые на сервер:', apiData);
-    
-    // Проверяем корректность данных перед отправкой
-    if (!apiData.telegramUserName || !apiData.clientName || !apiData.clientPhone || !apiData.clientEmail) {
-      alert('Ошибка: не заполнены обязательные поля формы. Проверьте имя, телефон, email и username Telegram.');
-      throw new Error('Не заполнены обязательные поля формы');
-    }
-
-    // Формируем строку JSON и проверяем её валидность
-    const jsonString = JSON.stringify(apiData);
-    try {
-      // Проверяем, что JSON валидный
-      JSON.parse(jsonString);
-      alert(`Отправка на API: ${jsonString}`);
-    } catch (e) {
-      alert(`ОШИБКА: Невалидный JSON: ${e}`);
-      throw new Error(`Невалидный JSON: ${e}`);
-    }
+    alert('Данные с датами: ' + JSON.stringify(apiData));
 
     const response = await fetch(`${API_URL}/calendar/booking`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: jsonString,
+      body: JSON.stringify(apiData),
     });
 
-    const responseText = await response.text();
-    
+    alert('Получен ответ от сервера: ' + response.status);
+
     if (!response.ok) {
-      alert(`Ошибка от сервера: ${response.status} ${response.statusText}\n${responseText}`);
-      throw new Error(`Ошибка при создании бронирования: ${response.status} ${responseText}`);
+      const errorText = await response.text();
+      alert('Ошибка сервера: ' + errorText);
+      throw new Error(`Ошибка при создании бронирования: ${response.status} ${errorText}`);
     }
 
-    let responseData;
-    try {
-      responseData = JSON.parse(responseText);
-    } catch (e) {
-      responseData = { message: 'Успешно, но невалидный JSON в ответе' };
-    }
-
+    const responseData = await response.json();
+    alert('Успешный ответ сервера: ' + JSON.stringify(responseData));
     return responseData;
   } catch (error) {
-    console.error('Ошибка:', error);
-    alert(`Ошибка в createBooking: ${error}`);
+    alert('Ошибка в createBooking: ' + error);
     throw error;
   }
 }; 
