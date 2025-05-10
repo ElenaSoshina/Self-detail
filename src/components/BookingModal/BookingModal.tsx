@@ -257,6 +257,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
         totalPrice: totalPrice
       };
 
+      alert(`Данные для отправки: ${JSON.stringify(bookingData, null, 2)}`);
+
       // Отправка данных на сервер
       const response = await fetch('https://backend.self-detailing.duckdns.org/api/v1/calendar/booking', {
         method: 'POST',
@@ -269,12 +271,21 @@ const BookingModal: React.FC<BookingModalProps> = ({
 
       if (!response.ok) {
         let errorMessage = 'Ошибка при отправке бронирования';
+        let errorData = null;
         try {
-          const errorData = JSON.parse(await response.text());
-          errorMessage = errorData.message || errorMessage;
+          const errorText = await response.text();
+          alert(`Ответ сервера: ${errorText}`);
+          
+          try {
+            errorData = JSON.parse(errorText);
+            errorMessage = errorData.message || errorMessage;
+          } catch (parseError) {
+            alert(`Ошибка при парсинге ответа: ${parseError}`);
+          }
         } catch (e) {
-          // alert('Ошибка при парсинге ответа: ' + e);
+          alert(`Ошибка при получении текста ответа: ${e}`);
         }
+        alert(`Детали ошибки: ${errorMessage}`);
         throw new Error(errorMessage);
       }
 
@@ -328,7 +339,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
       }, 2000);
 
     } catch (error) {
-      // alert('Ошибка при отправке формы: ' + error);
+      alert(`Ошибка при отправке формы: ${error}`);
       setError(error instanceof Error ? error.message : 'Произошла ошибка при отправке формы. Пожалуйста, попробуйте еще раз.');
     } finally {
       setIsLoading(false);

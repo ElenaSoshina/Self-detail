@@ -52,6 +52,8 @@ const CartPage: React.FC = () => {
 
   const handleBooking = async (formData: any) => {
     try {
+      alert(`Получены данные от модального окна: ${JSON.stringify(formData, null, 2)}`);
+      
       // Получаем бронируемую услугу и товары
       const bookingItem = items.find(item => item.type === 'booking');
       const products = items.filter(item => item.type !== 'booking');
@@ -90,8 +92,8 @@ const CartPage: React.FC = () => {
         duration: 1, // или вычисли из времени
         plan: {
           id: bookingItem?.id || 'custom',
-          title: formData.service.serviceName,
-          price: formData.service.price,
+          title: formData.service?.serviceName || 'Товары',
+          price: formData.service?.price || 0,
           icon: bookingItem?.icon || '',
           description: ''
         },
@@ -101,13 +103,20 @@ const CartPage: React.FC = () => {
       console.log('Отправка данных бронирования:', formData);
       console.log('Объект bookingDetails:', bookingDetails);
       
-      // Вызываем API для создания бронирования
-      await createBooking(formData);
+      try {
+        // Вызываем API для создания бронирования
+        const response = await createBooking(formData);
+        alert(`Успешный ответ от сервера: ${JSON.stringify(response, null, 2)}`);
+      } catch (apiError) {
+        alert(`Ошибка от API createBooking: ${apiError}`);
+        throw apiError;
+      }
       
       // После успешного запроса устанавливаем данные
       setSuccessBookingDetails(bookingDetails);
     } catch (error) {
       console.error('Ошибка при бронировании:', error);
+      alert(`Полная ошибка при бронировании: ${error}`);
       alert('Произошла ошибка при оформлении бронирования. Попробуйте еще раз.');
     }
   };
