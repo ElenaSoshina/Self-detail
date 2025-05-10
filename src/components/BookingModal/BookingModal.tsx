@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styles from './BookingModal.module.css';
 import SuccessPopup from '../SuccessPopup/SuccessPopup';
-import { sendTelegramMessage, formatUserMessage, formatAdminMessage, ADMIN_CHAT_ID } from '../../api/telegram';
+import { sendTelegramMessage, sendTelegramMessageByUsername, formatUserMessage, formatAdminMessage, ADMIN_CHAT_ID } from '../../api/telegram';
 import PhoneInput from 'react-phone-number-input/input';
 import 'react-phone-number-input/style.css';
 import { useCart } from '../../context/CartContex';
@@ -17,6 +17,7 @@ interface BookingModalProps {
   };
   onSubmit: (formData: any) => void;
   selectedDate: Date;
+  isAdmin?: boolean;
 }
 
 interface FormData {
@@ -34,6 +35,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
   service,
   onSubmit,
   selectedDate,
+  isAdmin
 }) => {
   const [formData, setFormData] = useState<FormData>({
     name: '',
@@ -211,16 +213,40 @@ const BookingModal: React.FC<BookingModalProps> = ({
 
       // Отправка сообщений в Telegram
       try {
-        await Promise.all([
-          sendTelegramMessage(
-            formatUserMessage(bookingData, { ...service, price: totalPrice }, serviceRu),
-            chatId
-          ),
-          sendTelegramMessage(
-            formatAdminMessage(bookingData, { ...service, price: totalPrice }, serviceRu),
-            ADMIN_CHAT_ID
-          ),
-        ]);
+        const isTech = (service?.serviceName || '').toLowerCase().includes('техничес');
+        if (isAdmin) {
+          if (isTech) {
+            // Только админу
+            await sendTelegramMessage(
+              formatAdminMessage(bookingData, { ...service, price: totalPrice }, serviceRu),
+              ADMIN_CHAT_ID
+            );
+          } else {
+            // Пользователю по username через endpoint и админу
+            await Promise.all([
+              sendTelegramMessageByUsername(
+                formatUserMessage(bookingData, { ...service, price: totalPrice }, serviceRu),
+                formData.telegramUserName
+              ),
+              sendTelegramMessage(
+                formatAdminMessage(bookingData, { ...service, price: totalPrice }, serviceRu),
+                ADMIN_CHAT_ID
+              ),
+            ]);
+          }
+        } else {
+          // Обычный пользователь — по chatId и админу
+          await Promise.all([
+            sendTelegramMessage(
+              formatUserMessage(bookingData, { ...service, price: totalPrice }, serviceRu),
+              chatId
+            ),
+            sendTelegramMessage(
+              formatAdminMessage(bookingData, { ...service, price: totalPrice }, serviceRu),
+              ADMIN_CHAT_ID
+            ),
+          ]);
+        }
       } catch (telegramError) {
         // alert('Ошибка при отправке сообщений в Telegram: ' + telegramError);
       }

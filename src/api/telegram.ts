@@ -24,6 +24,23 @@ export const sendTelegramMessage = async (message: string, chatId: string) => {
   }
 };
 
+export const sendTelegramMessageByUsername = async (message: string, username: string) => {
+  if (!username) throw new Error('Username is required');
+  const cleanUsername = username.startsWith('@') ? username.slice(1) : username;
+  const url = `https://backend.self-detailing.duckdns.org/api/v1/chat/send-message/${encodeURIComponent(cleanUsername)}`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    },
+    body: JSON.stringify({ message }),
+  });
+  if (!response.ok) {
+    throw new Error('Ошибка при отправке сообщения по username');
+  }
+};
+
 export const formatUserMessage = (bookingData: any, service: any, serviceRu: string) => {
   const formatDate = (iso: string) => {
     const date = new Date(iso);
