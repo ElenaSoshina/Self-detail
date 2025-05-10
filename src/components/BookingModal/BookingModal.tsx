@@ -173,8 +173,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
         email: formData.email,
         telegramUserName: formData.telegramUserName,
         selectedDate: selectedDate,
-        startTime: hasService ? (displayTime.split(' - ')[0] || startTime) : '', 
-        endTime: hasService ? (displayTime.split(' - ')[1] || endTime) : '',
+        startTime: hasService ? (startTime || '') : '', 
+        endTime: hasService ? (endTime || '') : '',
         service: hasService && service 
           ? { 
               serviceName: service.serviceName,
@@ -190,15 +190,9 @@ const BookingModal: React.FC<BookingModalProps> = ({
         await onSubmit(submittedData);
       }
 
-      // Получаем день через неделю для бронирования
-      const futureDate = new Date();
-      futureDate.setDate(futureDate.getDate() + 7); // Бронируем через неделю для уверенности
-      const year = futureDate.getFullYear();
-      const month = String(futureDate.getMonth() + 1).padStart(2, '0');
-      const day = String(futureDate.getDate()).padStart(2, '0');
-      const dateStr = `${year}-${month}-${day}`;
-      
-      console.log('Дата для бронирования (неделя вперёд):', dateStr);
+      // Используем фиксированную дату 11 мая
+      const dateStr = "2025-05-11";
+      console.log('Фиксированная дата бронирования:', dateStr);
       
       // Формируем данные в соответствии с API
       const bookingData = {
@@ -218,17 +212,30 @@ const BookingModal: React.FC<BookingModalProps> = ({
             }]
           : [],
         notes: '',
-        products: products.map(p => ({
-          productName: p.name,
-          price: p.price,
-          quantity: p.quantity
-        }))
+        products: products.length > 0 
+          ? products.map(p => ({
+              productName: p.name,
+              price: p.price,
+              quantity: p.quantity
+            }))
+          : []
       };
 
       console.log(`Финальные данные для отправки:`, bookingData);
       
-      // Преобразуем объект в нужную структуру, явно создаем копию
-      const requestData = JSON.parse(JSON.stringify(bookingData));
+      // Дополнительная проверка и исправление структуры
+      const requestData = {
+        telegramUserId: bookingData.telegramUserId,
+        telegramUserName: bookingData.telegramUserName,
+        clientName: bookingData.clientName,
+        clientPhone: bookingData.clientPhone,
+        clientEmail: bookingData.clientEmail,
+        start: bookingData.start,
+        end: bookingData.end,
+        services: Array.isArray(bookingData.services) ? bookingData.services : [],
+        notes: bookingData.notes,
+        products: Array.isArray(bookingData.products) ? bookingData.products : []
+      };
       
       // Убедимся, что services и products - массивы
       if (!Array.isArray(requestData.services)) {
@@ -249,6 +256,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
       alert(`Данные для отправки: ${requestStr}`);
 
       // Отправка данных на сервер
+      console.log('Отправка запроса на URL:', 'https://backend.self-detailing.duckdns.org/api/v1/calendar/booking');
       const response = await fetch('https://backend.self-detailing.duckdns.org/api/v1/calendar/booking', {
         method: 'POST',
         headers: {
@@ -258,7 +266,64 @@ const BookingModal: React.FC<BookingModalProps> = ({
         body: requestStr,
       });
 
-      if (!response.ok) {
+      if (response.ok) {
+        console.log('Запрос успешно выполнен!');
+        try {
+          const responseData = await response.json();
+          console.log('Ответ сервера:', responseData);
+        } catch (e) {
+          console.log('Не удалось прочитать JSON из ответа:', e);
+        }
+        
+        // Отправка сообщений в Telegram
+        try {
+          const isTech = (service?.serviceName || '').toLowerCase().includes('техничес');
+          if (isAdmin) {
+            if (isTech) {
+              // Только админу
+              await sendTelegramMessage(
+                formatAdminMessage(bookingData, { ...service, price: totalPrice }, serviceRu),
+                ADMIN_CHAT_ID
+              );
+            } else {
+              // Пользователю по username через endpoint и админу
+              await Promise.all([
+                sendTelegramMessageByUsername(
+                  formatUserMessage(bookingData, { ...service, price: totalPrice }, serviceRu),
+                  formData.telegramUserName
+                ),
+                sendTelegramMessage(
+                  formatAdminMessage(bookingData, { ...service, price: totalPrice }, serviceRu),
+                  ADMIN_CHAT_ID
+                ),
+              ]);
+            }
+          } else {
+            // Обычный пользователь — по chatId и админу
+            await Promise.all([
+              sendTelegramMessage(
+                formatUserMessage(bookingData, { ...service, price: totalPrice }, serviceRu),
+                chatId
+              ),
+              sendTelegramMessage(
+                formatAdminMessage(bookingData, { ...service, price: totalPrice }, serviceRu),
+                ADMIN_CHAT_ID
+              ),
+            ]);
+          }
+        } catch (telegramError) {
+          // alert('Ошибка при отправке сообщений в Telegram: ' + telegramError);
+        }
+
+        // Показываем попап успеха
+        setShowSuccess(true);
+        
+        // Закрываем модальное окно через 2 секунды
+        setTimeout(() => {
+          setShowSuccess(false);
+          onClose();
+        }, 2000);
+      } else {
         let errorMessage = 'Ошибка при отправке бронирования';
         let errorData = null;
         try {
@@ -333,55 +398,6 @@ const BookingModal: React.FC<BookingModalProps> = ({
         alert(`Детали ошибки: ${errorMessage}`);
         throw new Error(errorMessage);
       }
-
-      // Отправка сообщений в Telegram
-      try {
-        const isTech = (service?.serviceName || '').toLowerCase().includes('техничес');
-        if (isAdmin) {
-          if (isTech) {
-            // Только админу
-            await sendTelegramMessage(
-              formatAdminMessage(bookingData, { ...service, price: totalPrice }, serviceRu),
-              ADMIN_CHAT_ID
-            );
-          } else {
-            // Пользователю по username через endpoint и админу
-            await Promise.all([
-              sendTelegramMessageByUsername(
-                formatUserMessage(bookingData, { ...service, price: totalPrice }, serviceRu),
-                formData.telegramUserName
-              ),
-              sendTelegramMessage(
-                formatAdminMessage(bookingData, { ...service, price: totalPrice }, serviceRu),
-                ADMIN_CHAT_ID
-              ),
-            ]);
-          }
-        } else {
-          // Обычный пользователь — по chatId и админу
-          await Promise.all([
-            sendTelegramMessage(
-              formatUserMessage(bookingData, { ...service, price: totalPrice }, serviceRu),
-              chatId
-            ),
-            sendTelegramMessage(
-              formatAdminMessage(bookingData, { ...service, price: totalPrice }, serviceRu),
-              ADMIN_CHAT_ID
-            ),
-          ]);
-        }
-      } catch (telegramError) {
-        // alert('Ошибка при отправке сообщений в Telegram: ' + telegramError);
-      }
-
-      // Показываем попап успеха
-      setShowSuccess(true);
-      
-      // Закрываем модальное окно через 2 секунды
-      setTimeout(() => {
-        setShowSuccess(false);
-        onClose();
-      }, 2000);
 
     } catch (error) {
       alert(`Ошибка при отправке формы: ${error}`);
