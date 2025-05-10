@@ -50,13 +50,13 @@ const HomePage: React.FC = () => {
   
   return (
     <div>
-      {/*{isAdmin && (*/}
+      {isAdmin && (
         <div>
           <button style={{ width: '100%', padding: '20px 10px', background: 'linear-gradient(90deg, #FF1F7A, #8A6EFF)', textAlign: 'center', color: 'white', borderRadius: '10px', fontWeight: 'bold', fontSize: '18px' }}
                   onClick={handleGoAdmin}
           >Админ панель</button>
         </div>
-      {/*)}*/}
+      )}
       <Hero />
       <HowItWorks />
       <Pricing />
