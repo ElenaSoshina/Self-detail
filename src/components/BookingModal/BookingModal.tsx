@@ -190,6 +190,16 @@ const BookingModal: React.FC<BookingModalProps> = ({
         await onSubmit(submittedData);
       }
 
+      // Получаем день через неделю для бронирования
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + 7); // Бронируем через неделю для уверенности
+      const year = futureDate.getFullYear();
+      const month = String(futureDate.getMonth() + 1).padStart(2, '0');
+      const day = String(futureDate.getDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${day}`;
+      
+      console.log('Дата для бронирования (неделя вперёд):', dateStr);
+      
       // Формируем данные в соответствии с API
       const bookingData = {
         telegramUserId: parseInt(chatId || '0'),
@@ -200,11 +210,11 @@ const BookingModal: React.FC<BookingModalProps> = ({
         clientPhone: formData.phone.replace(/\+/g, ''),
         clientEmail: formData.email,
         start: hasService 
-          ? `2025-05-11T${startTime ? startTime.trim() : '00:00'}:00`
-          : `2025-05-11T00:00:00`,
+          ? `${dateStr}T${startTime ? startTime.trim() : '00:00'}:00`
+          : `${dateStr}T00:00:00`,
         end: hasService 
-          ? `2025-05-11T${endTime ? endTime.trim() : '01:00'}:00`
-          : `2025-05-11T01:00:00`,
+          ? `${dateStr}T${endTime ? endTime.trim() : '01:00'}:00`
+          : `${dateStr}T01:00:00`,
         service: hasService && service
           ? [{
               serviceName: service.serviceName,
@@ -221,7 +231,23 @@ const BookingModal: React.FC<BookingModalProps> = ({
 
       console.log(`Финальные данные для отправки:`, bookingData);
 
-      alert(`Данные для отправки: ${JSON.stringify(bookingData, null, 2)}`);
+      // Преобразуем объект в нужную структуру
+      const requestData = {
+        telegramUserId: bookingData.telegramUserId,
+        telegramUserName: bookingData.telegramUserName,
+        clientName: bookingData.clientName,
+        clientPhone: bookingData.clientPhone,
+        clientEmail: bookingData.clientEmail,
+        start: bookingData.start,
+        end: bookingData.end,
+        service: bookingData.service,
+        notes: bookingData.notes,
+        products: bookingData.products
+      };
+      
+      const requestStr = JSON.stringify(requestData);
+      console.log('JSON для отправки:', requestStr);
+      alert(`Данные для отправки: ${requestStr}`);
 
       // Отправка данных на сервер
       const response = await fetch('https://backend.self-detailing.duckdns.org/api/v1/calendar/booking', {
@@ -230,18 +256,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        body: JSON.stringify({
-          telegramUserId: bookingData.telegramUserId,
-          telegramUserName: bookingData.telegramUserName,
-          clientName: bookingData.clientName,
-          clientPhone: bookingData.clientPhone,
-          clientEmail: bookingData.clientEmail,
-          start: bookingData.start,
-          end: bookingData.end,
-          service: bookingData.service,
-          notes: bookingData.notes,
-          products: bookingData.products
-        }),
+        body: requestStr,
       });
 
       if (!response.ok) {
@@ -249,17 +264,22 @@ const BookingModal: React.FC<BookingModalProps> = ({
         let errorData = null;
         try {
           const errorText = await response.text();
+          console.error(`Ответ сервера (ошибка ${response.status}):`, errorText);
+          console.error('Отправленные данные:', requestStr);
           alert(`Ответ сервера: ${errorText}`);
           
           try {
             errorData = JSON.parse(errorText);
-            errorMessage = errorData.message || errorMessage;
+            errorMessage = errorData.message || errorData.errorMessage || errorMessage;
           } catch (parseError) {
+            console.error(`Ошибка при парсинге ответа:`, parseError);
             alert(`Ошибка при парсинге ответа: ${parseError}`);
           }
         } catch (e) {
+          console.error(`Ошибка при получении текста ответа:`, e);
           alert(`Ошибка при получении текста ответа: ${e}`);
         }
+        console.error(`Детали ошибки:`, errorMessage);
         alert(`Детали ошибки: ${errorMessage}`);
         throw new Error(errorMessage);
       }
