@@ -28,11 +28,11 @@ export const createBooking = async (bookingData: BookingFormData) => {
         ? bookingData.telegramUserName 
         : `@${bookingData.telegramUserName || ''}`,
       clientName: bookingData.name || '',
-      clientPhone: bookingData.phone || '',
+      clientPhone: bookingData.phone?.replace(/\+/g, '') || '',
       clientEmail: bookingData.email || '',
       start: '',
       end: '',
-      services: bookingData.service 
+      service: bookingData.service 
         ? [{ 
             serviceName: bookingData.service.serviceName || 'Товары', 
             price: bookingData.service.price || 0 

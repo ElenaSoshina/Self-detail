@@ -207,7 +207,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
         clientEmail: formData.email,
         start: formatDateTime(startTime, 'start'),
         end: formatDateTime(endTime, 'end'),
-        services: hasService && service
+        service: hasService && service
           ? [{
               serviceName: service.serviceName,
               price: servicePrice
