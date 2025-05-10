@@ -327,12 +327,14 @@ const BookingModal: React.FC<BookingModalProps> = ({
       if (isNaN(hours) || isNaN(minutes)) {
         throw new Error('Неверный формат времени');
       }
+
+      // Создаем новую дату из выбранной даты
       const date = new Date(selectedDate);
-      date.setHours(hours + 3, minutes, 0, 0); // +3 часа для Москвы
-      if (isNaN(date.getTime())) {
-        throw new Error('Ошибка формирования даты: ' + String(date));
-      }
-      return date.toISOString().replace(/\.\d{3}Z$/, 'Z');
+      // Устанавливаем часы и минуты
+      date.setHours(hours, minutes, 0, 0);
+      
+      console.log(`Итоговая дата (${type}):`, date.toISOString());
+      return date.toISOString();
     } catch (error) {
       console.error(`Ошибка при форматировании времени (${type}):`, error);
       throw error;
