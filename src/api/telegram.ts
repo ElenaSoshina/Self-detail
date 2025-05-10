@@ -61,7 +61,8 @@ export const formatUserMessage = (bookingData: any, service: any, serviceRu: str
       `\nСумма товаров: ${productsTotal}₽` +
       (bookingData.totalPrice ? `\n\n💵 Итоговая сумма: ${bookingData.totalPrice}₽` : '');
   }
-  return `\nВаше бронирование успешно создано!\n\n📅 Дата: ${dateStr}\n🕒 Время: ${timeStr}\n\n📋 Услуга: ${serviceRu}\n💰 Стоимость: ${service.price}₽${productsBlock}`;
+  const serviceText = serviceRu || service?.serviceName || 'Технические работы';
+  return `\nВаше бронирование успешно создано!\n\n📅 Дата: ${dateStr}\n🕒 Время: ${timeStr}\n\n📋 Услуга: ${serviceText}\n💰 Стоимость: ${service.price}₽${productsBlock}`;
 };
 
 export const formatAdminMessage = (bookingData: any, service: any, serviceRu: string) => {
@@ -84,5 +85,6 @@ export const formatAdminMessage = (bookingData: any, service: any, serviceRu: st
       `\nСумма товаров: ${productsTotal}₽` +
       (bookingData.totalPrice ? `\n\n💵 Итоговая сумма: ${bookingData.totalPrice}₽` : '');
   }
-  return `\nНовое бронирование\n\n👤 Клиент: ${bookingData.clientName}\n📱 Телефон: ${bookingData.clientPhone}\n📧 Email: ${bookingData.clientEmail}\n📱 Telegram: ${bookingData.telegramUserName}\n\n📅 Дата: ${dateStr}\n🕒 Время: ${timeStr}\n\n📋 Услуга: ${serviceRu}\n💰 Стоимость: ${service.price}₽${productsBlock}`;
+  const serviceText = serviceRu || service?.serviceName || 'Технические работы';
+  return `\nНовое бронирование\n\n👤 Клиент: ${bookingData.clientName}\n📱 Телефон: ${bookingData.clientPhone}\n📧 Email: ${bookingData.clientEmail}\n📱 Telegram: ${bookingData.telegramUserName}\n\n📅 Дата: ${dateStr}\n🕒 Время: ${timeStr}\n\n📋 Услуга: ${serviceText}\n💰 Стоимость: ${service.price}₽${productsBlock}`;
 }; 
