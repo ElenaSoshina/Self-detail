@@ -31,7 +31,7 @@ export const createBooking = async (bookingData: BookingFormData) => {
       clientEmail: bookingData.email || '',
       start: '',
       end: '',
-      service: bookingData.service 
+      services: bookingData.service 
         ? [{ 
             serviceName: bookingData.service.serviceName || 'Товары', 
             price: bookingData.service.price || 0 
