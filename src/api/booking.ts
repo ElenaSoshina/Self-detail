@@ -29,8 +29,8 @@ export const createBooking = async (bookingData: BookingFormData) => {
       clientName: bookingData.name || '',
       clientPhone: bookingData.phone || '',
       clientEmail: bookingData.email || '',
-      start: bookingData.startTime ? new Date(new Date().setHours(parseInt(bookingData.startTime.split(':')[0]), parseInt(bookingData.startTime.split(':')[1]))).toISOString() : new Date().toISOString(),
-      end: bookingData.endTime ? new Date(new Date().setHours(parseInt(bookingData.endTime.split(':')[0]), parseInt(bookingData.endTime.split(':')[1]))).toISOString() : new Date().toISOString(),
+      start: '',
+      end: '',
       service: bookingData.service 
         ? [{ 
             serviceName: bookingData.service.serviceName || 'Товары', 
@@ -41,15 +41,69 @@ export const createBooking = async (bookingData: BookingFormData) => {
       products: []
     };
 
+    // Правильно формируем даты для бронирования
+    if (bookingData.selectedDate && bookingData.startTime) {
+      const selectedDate = new Date(bookingData.selectedDate);
+      const [startHours, startMinutes] = bookingData.startTime.split(':').map(Number);
+      
+      // Создаем объект даты для начала бронирования
+      const startDate = new Date(selectedDate);
+      startDate.setHours(startHours, startMinutes, 0, 0);
+      apiData.start = startDate.toISOString();
+      
+      // Создаем объект даты для конца бронирования
+      if (bookingData.endTime) {
+        const [endHours, endMinutes] = bookingData.endTime.split(':').map(Number);
+        const endDate = new Date(selectedDate);
+        endDate.setHours(endHours, endMinutes, 0, 0);
+        apiData.end = endDate.toISOString();
+      } else {
+        // Если нет endTime, устанавливаем +1 час к начальному времени
+        const endDate = new Date(startDate);
+        endDate.setHours(endDate.getHours() + 1);
+        apiData.end = endDate.toISOString();
+      }
+      
+      console.log('Выбранная дата:', selectedDate);
+      console.log('Время начала:', bookingData.startTime);
+      console.log('Время окончания:', bookingData.endTime);
+      console.log('Итоговое время начала (ISO):', apiData.start);
+      console.log('Итоговое время окончания (ISO):', apiData.end);
+    } else {
+      // Если нет выбранной даты или времени, используем текущую дату
+      const now = new Date();
+      apiData.start = now.toISOString();
+      
+      const oneHourLater = new Date(now);
+      oneHourLater.setHours(oneHourLater.getHours() + 1);
+      apiData.end = oneHourLater.toISOString();
+    }
+
     console.log('Данные, отправляемые на сервер:', apiData);
-    alert(`Отправка на API: ${JSON.stringify(apiData, null, 2)}`);
+    
+    // Проверяем корректность данных перед отправкой
+    if (!apiData.telegramUserName || !apiData.clientName || !apiData.clientPhone || !apiData.clientEmail) {
+      alert('Ошибка: не заполнены обязательные поля формы. Проверьте имя, телефон, email и username Telegram.');
+      throw new Error('Не заполнены обязательные поля формы');
+    }
+
+    // Формируем строку JSON и проверяем её валидность
+    const jsonString = JSON.stringify(apiData);
+    try {
+      // Проверяем, что JSON валидный
+      JSON.parse(jsonString);
+      alert(`Отправка на API: ${jsonString}`);
+    } catch (e) {
+      alert(`ОШИБКА: Невалидный JSON: ${e}`);
+      throw new Error(`Невалидный JSON: ${e}`);
+    }
 
     const response = await fetch(`${API_URL}/calendar/booking`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(apiData),
+      body: jsonString,
     });
 
     const responseText = await response.text();

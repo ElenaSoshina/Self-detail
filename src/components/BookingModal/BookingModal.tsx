@@ -81,14 +81,10 @@ const BookingModal: React.FC<BookingModalProps> = ({
   // Получаем chatId пользователя из Telegram WebApp
   useEffect(() => {
     const tg = (window as any).Telegram?.WebApp;
-    // alert('Telegram WebApp: ' + JSON.stringify(tg));
     if (tg?.initDataUnsafe?.user?.id) {
       const userId = tg.initDataUnsafe.user.id.toString();
-      // alert('Получен ID пользователя: ' + userId);
       setChatId(userId);
       tg.ready?.();
-    } else {
-      // alert('Не удалось получить ID пользователя из Telegram WebApp');
     }
   }, []);
 
@@ -100,7 +96,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
     'Полировка': 'Полировка',
   };
 
-  // Вычисление количества часов бронирования
+  // Вычисление количества часов бронирования 
   const getDurationHours = () => {
     try {
       const parts = startTime.split(/[—-]/).map(s => s.trim());
@@ -116,13 +112,14 @@ const BookingModal: React.FC<BookingModalProps> = ({
     }
   };
   const durationHours = getDurationHours();
-  const servicePrice = service?.price ?? 0;
-  // Расчет итоговой стоимости: если есть услуга, то стоимость услуги + товары, иначе только товары
+  
+  // Упрощенные переменные для отображения
   const hasService = Boolean(service && service.serviceName && service.serviceName !== '');
-  const totalPrice = hasService 
-    ? servicePrice * durationHours + productsTotal 
-    : productsTotal;
+  const servicePrice = service?.price ?? 0;
   const serviceRu = hasService && service?.serviceName ? (serviceNameMap[service.serviceName] || service.serviceName) : '';
+  
+  // Общая стоимость: услуга + товары
+  const totalPrice = (hasService ? servicePrice : 0) + productsTotal;
 
   const validate = (): boolean => {
     const newErrors: { name?: string; phone?: string; email?: string; telegramUserName?: string } = {};
@@ -169,43 +166,6 @@ const BookingModal: React.FC<BookingModalProps> = ({
         throw new Error('Не удалось получить ID пользователя из Telegram');
       }
 
-      // Отладочная информация о времени
-      console.log('Исходные значения startTime и endTime:', { startTime, endTime });
-
-      // Форматируем время в ISO строку
-      const formatDateTime = (rangeStr: string, type: 'start' | 'end') => {
-        if (!rangeStr) {
-          throw new Error('Время не указано');
-        }
-        if (!selectedDate || isNaN(new Date(selectedDate).getTime())) {
-          throw new Error('Некорректная или не передана дата бронирования: ' + String(selectedDate));
-        }
-        try {
-          const parts = rangeStr.split(/[—-]/).map(s => s.trim());
-          console.log('Разбор времени:', parts);
-          let timeStr = '';
-          if (type === 'start') {
-            timeStr = parts[0];
-          } else {
-            timeStr = parts[1] || parts[0];
-          }
-          console.log(`Извлеченное время (${type}):`, timeStr);
-          const [hours, minutes] = timeStr.split(':').map(Number);
-          if (isNaN(hours) || isNaN(minutes)) {
-            throw new Error('Неверный формат времени');
-          }
-          const date = new Date(selectedDate);
-          date.setHours(hours + 3, minutes, 0, 0); // +3 часа для Москвы
-          if (isNaN(date.getTime())) {
-            throw new Error('Ошибка формирования даты: ' + String(date));
-          }
-          return date.toISOString().replace(/\.\d{3}Z$/, 'Z');
-        } catch (error) {
-          console.error(`Ошибка при форматировании времени (${type}):`, error);
-          throw error;
-        }
-      };
-
       // Формируем данные для onSubmit
       const submittedData = {
         name: formData.name,
@@ -224,7 +184,6 @@ const BookingModal: React.FC<BookingModalProps> = ({
       };
       
       console.log('Данные, передаваемые в onSubmit:', submittedData);
-      console.log('Есть ли услуга в модальном окне:', hasService);
       
       // Вызываем функцию onSubmit для создания бронирования
       if (onSubmit) {
@@ -345,6 +304,40 @@ const BookingModal: React.FC<BookingModalProps> = ({
       setIsLoading(false);
     }
   };
+  
+  // Функция форматирования времени для API
+  const formatDateTime = (rangeStr: string, type: 'start' | 'end') => {
+    if (!rangeStr) {
+      throw new Error('Время не указано');
+    }
+    if (!selectedDate || isNaN(new Date(selectedDate).getTime())) {
+      throw new Error('Некорректная или не передана дата бронирования: ' + String(selectedDate));
+    }
+    try {
+      const parts = rangeStr.split(/[—-]/).map(s => s.trim());
+      console.log('Разбор времени:', parts);
+      let timeStr = '';
+      if (type === 'start') {
+        timeStr = parts[0];
+      } else {
+        timeStr = parts[1] || parts[0];
+      }
+      console.log(`Извлеченное время (${type}):`, timeStr);
+      const [hours, minutes] = timeStr.split(':').map(Number);
+      if (isNaN(hours) || isNaN(minutes)) {
+        throw new Error('Неверный формат времени');
+      }
+      const date = new Date(selectedDate);
+      date.setHours(hours + 3, minutes, 0, 0); // +3 часа для Москвы
+      if (isNaN(date.getTime())) {
+        throw new Error('Ошибка формирования даты: ' + String(date));
+      }
+      return date.toISOString().replace(/\.\d{3}Z$/, 'Z');
+    } catch (error) {
+      console.error(`Ошибка при форматировании времени (${type}):`, error);
+      throw error;
+    }
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -391,7 +384,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
               </div>
               <div className={styles.infoRow}>
                 <span className={styles.infoLabel}>Стоимость услуги: </span>
-                <span className={styles.infoValue}>{servicePrice * durationHours} ₽</span>
+                <span className={styles.infoValue}>{servicePrice} ₽</span>
               </div>
             </>
           )}

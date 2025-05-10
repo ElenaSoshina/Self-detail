@@ -215,7 +215,7 @@ const CartPage: React.FC = () => {
                 // Если есть бронирование в корзине
                 serviceObj = {
                   serviceName: bookingItem.name.split('(')[0].trim(),
-                  price: bookingItem.price
+                  price: bookingItem.price // Цена за час, не умноженная на количество часов
                 };
                 
                 // И получаем время, если оно есть
@@ -234,14 +234,29 @@ const CartPage: React.FC = () => {
                     }
                   }
                 }
+                
+                console.log('Передача в модальное окно:', {
+                  bookingItem,
+                  serviceObj,
+                  startTime: startTimeStr,
+                  endTime: endTimeStr
+                });
               } else if (bookingData) {
                 // Если нет бронирования, но есть данные из location state
+                const hourlyRate = 800; // Базовая ставка за час
                 serviceObj = {
                   serviceName: bookingData.serviceName,
-                  price: totalCost
+                  price: hourlyRate // Передаем цену за час, не умноженную на количество часов
                 };
                 startTimeStr = bookingData.startTime;
                 endTimeStr = bookingData.endTime;
+                
+                console.log('Передача в модальное окно из bookingData:', {
+                  bookingData,
+                  serviceObj,
+                  startTime: startTimeStr,
+                  endTime: endTimeStr
+                });
               }
               
               // Устанавливаем время и сервис для модального окна
