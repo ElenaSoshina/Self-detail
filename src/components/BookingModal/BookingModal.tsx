@@ -209,13 +209,9 @@ const BookingModal: React.FC<BookingModalProps> = ({
         clientName: formData.name,
         clientPhone: formData.phone.replace(/\+/g, ''),
         clientEmail: formData.email,
-        start: hasService 
-          ? `${dateStr}T${startTime ? startTime.trim() : '00:00'}:00`
-          : `${dateStr}T00:00:00`,
-        end: hasService 
-          ? `${dateStr}T${endTime ? endTime.trim() : '01:00'}:00`
-          : `${dateStr}T01:00:00`,
-        service: hasService && service
+        start: `${dateStr}T${startTime ? startTime.trim() : '00:00'}:00`,
+        end: `${dateStr}T${endTime ? endTime.trim() : '01:00'}:00`,
+        services: hasService && service
           ? [{
               serviceName: service.serviceName,
               price: servicePrice
@@ -230,20 +226,23 @@ const BookingModal: React.FC<BookingModalProps> = ({
       };
 
       console.log(`Финальные данные для отправки:`, bookingData);
-
-      // Преобразуем объект в нужную структуру
-      const requestData = {
-        telegramUserId: bookingData.telegramUserId,
-        telegramUserName: bookingData.telegramUserName,
-        clientName: bookingData.clientName,
-        clientPhone: bookingData.clientPhone,
-        clientEmail: bookingData.clientEmail,
-        start: bookingData.start,
-        end: bookingData.end,
-        service: bookingData.service,
-        notes: bookingData.notes,
-        products: bookingData.products
-      };
+      
+      // Преобразуем объект в нужную структуру, явно создаем копию
+      const requestData = JSON.parse(JSON.stringify(bookingData));
+      
+      // Убедимся, что services и products - массивы
+      if (!Array.isArray(requestData.services)) {
+        requestData.services = [];
+      }
+      
+      if (!Array.isArray(requestData.products)) {
+        requestData.products = [];
+      }
+      
+      // Еще раз проверяем структуру JSON перед отправкой
+      console.log('Итоговая структура запроса:', requestData);
+      console.log('Структура services:', Array.isArray(requestData.services), requestData.services);
+      console.log('Структура products:', Array.isArray(requestData.products), requestData.products);
       
       const requestStr = JSON.stringify(requestData);
       console.log('JSON для отправки:', requestStr);
@@ -266,7 +265,58 @@ const BookingModal: React.FC<BookingModalProps> = ({
           const errorText = await response.text();
           console.error(`Ответ сервера (ошибка ${response.status}):`, errorText);
           console.error('Отправленные данные:', requestStr);
-          alert(`Ответ сервера: ${errorText}`);
+          
+          // Попробуем отправить запрос с измененной структурой
+          if (response.status === 400) {
+            console.log('Пробуем изменить структуру запроса...');
+            const simplifiedRequest = {
+              telegramUserId: requestData.telegramUserId,
+              telegramUserName: requestData.telegramUserName,
+              clientName: requestData.clientName,
+              clientPhone: requestData.clientPhone,
+              clientEmail: requestData.clientEmail,
+              start: requestData.start,
+              end: requestData.end,
+              services: Array.isArray(requestData.services) ? requestData.services : [],
+              notes: requestData.notes || "",
+              products: Array.isArray(requestData.products) ? requestData.products : []
+            };
+            
+            console.log('Новая структура:', simplifiedRequest);
+            alert('Пробуем другую структуру запроса: ' + JSON.stringify(simplifiedRequest));
+            
+            // Пробуем отправить запрос с новой структурой
+            const retry = await fetch('https://backend.self-detailing.duckdns.org/api/v1/calendar/booking', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+              },
+              body: JSON.stringify(simplifiedRequest),
+            });
+            
+            if (retry.ok) {
+              console.log('Повторный запрос успешен!');
+              const retryData = await retry.json();
+              console.log('Ответ на повторный запрос:', retryData);
+              
+              // Продолжаем обработку как если бы первый запрос был успешным
+              // Показываем попап успеха
+              setShowSuccess(true);
+              
+              // Закрываем модальное окно через 2 секунды
+              setTimeout(() => {
+                setShowSuccess(false);
+                onClose();
+              }, 2000);
+              
+              return; // Выходим из функции, чтобы не обрабатывать ошибку
+            } else {
+              const retryErrorText = await retry.text();
+              console.error('Повторный запрос также не удался:', retryErrorText);
+              alert('Повторный запрос тоже не удался: ' + retryErrorText);
+            }
+          }
           
           try {
             errorData = JSON.parse(errorText);
