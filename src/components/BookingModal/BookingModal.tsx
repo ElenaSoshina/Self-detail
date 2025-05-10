@@ -180,8 +180,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
         start: formatDateTime(startTime, 'start'),
         end: formatDateTime(startTime, 'end'),
         service: [{
-          serviceName: service.serviceName,
-          price: totalPrice
+          serviceName: service?.serviceName || 'Технические работы',
+          price: servicePrice
         }],
         notes: '',
         products: products,
