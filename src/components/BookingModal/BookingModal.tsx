@@ -200,11 +200,11 @@ const BookingModal: React.FC<BookingModalProps> = ({
         clientPhone: formData.phone.replace(/\+/g, ''),
         clientEmail: formData.email,
         start: hasService 
-          ? formatDateTime(displayTime.split(' - ')[0] || startTime, 'start')
-          : new Date().toISOString().replace(/\.\d{3}Z$/, ''),
+          ? `2025-05-11T${startTime.trim()}:00`
+          : `2025-05-11T00:00:00`,
         end: hasService 
-          ? formatDateTime(displayTime.split(' - ')[1] || displayTime.split(' - ')[0] || startTime, 'end')
-          : new Date().toISOString().replace(/\.\d{3}Z$/, ''),
+          ? `2025-05-11T${endTime.trim()}:00`
+          : `2025-05-11T01:00:00`,
         service: hasService && service
           ? [{
               serviceName: service.serviceName,
@@ -219,11 +219,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
         }))
       };
 
-      console.log(`Проверка структуры данных перед отправкой:`, {
-        service: bookingData.service,
-        hasService: hasService,
-        serviceObj: service
-      });
+      console.log(`Финальные данные для отправки:`, bookingData);
 
       alert(`Данные для отправки: ${JSON.stringify(bookingData, null, 2)}`);
 
@@ -234,7 +230,18 @@ const BookingModal: React.FC<BookingModalProps> = ({
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        body: JSON.stringify(bookingData),
+        body: JSON.stringify({
+          telegramUserId: bookingData.telegramUserId,
+          telegramUserName: bookingData.telegramUserName,
+          clientName: bookingData.clientName,
+          clientPhone: bookingData.clientPhone,
+          clientEmail: bookingData.clientEmail,
+          start: bookingData.start,
+          end: bookingData.end,
+          service: bookingData.service,
+          notes: bookingData.notes,
+          products: bookingData.products
+        }),
       });
 
       if (!response.ok) {
