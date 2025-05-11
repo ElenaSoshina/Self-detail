@@ -66,13 +66,13 @@ export const Header: React.FC = () => {
 
         {/* ──────── RIGHT: search + cart + profile ──────── */}
         <div className={styles.right}>
-          <button
+          {/* <button
             className={styles.searchBtn}
             onClick={() => setIsSearchOpen(!isSearchOpen)}
             aria-label="Поиск"
           >
             <div className={styles.searchIcon} />
-          </button>
+          </button> */}
           {/* <Cart /> */}
           <Link to="/profile" className={styles.profileBtn} aria-label="Личный кабинет">
             <div className={styles.profileIcon} />

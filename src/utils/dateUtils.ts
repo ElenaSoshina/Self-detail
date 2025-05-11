@@ -25,4 +25,16 @@ export const createISODateTime = (date: Date, timeStr: string): string => {
   const parsedTime = parseHourFromTime(timeStr);
   if (!parsedTime) return '';
   return `${dateIso}T${parsedTime}:00`;
+};
+
+/**
+ * Форматирует дату в читабельный вид для отображения
+ */
+export const formatDate = (dateString: string): string => {
+  const options: Intl.DateTimeFormatOptions = { 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
+  };
+  return new Date(dateString).toLocaleDateString('ru-RU', options);
 }; 
