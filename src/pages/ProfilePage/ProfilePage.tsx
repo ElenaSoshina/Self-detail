@@ -7,6 +7,7 @@ interface UserInfo {
   firstName: string;
   lastName: string;
   photoUrl: string | null;
+  telegramUserId?: number; // Добавляем ID пользователя Telegram
 }
 
 interface Booking {
@@ -17,6 +18,24 @@ interface Booking {
   service: string;
   cost: number;
   durationHours: number;
+}
+
+interface ApiBooking {
+  bookingId: number;
+  telegramUserId?: number;
+  telegramUserName?: string;
+  clientName: string;
+  clientPhone: string;
+  clientEmail?: string;
+  start: string;
+  end: string;
+  services: Array<{
+    id: number;
+    serviceName: string;
+    price: number;
+  }>;
+  notes?: string;
+  status?: string;
 }
 
 interface Purchase {
@@ -59,110 +78,8 @@ const ProfilePage: React.FC = () => {
   const [discount, setDiscount] = useState(0);
   const [nextDiscountThreshold, setNextDiscountThreshold] = useState(0);
   const [addedToCart, setAddedToCart] = useState<Record<string, boolean>>({});
+  const [bookingsError, setBookingsError] = useState<string | null>(null);
   const { addToCart } = useCart();
-
-  // Временные данные для бронирований (тарифы и цены из секции Pricing)
-  const mockBookings: Booking[] = [
-    { 
-      id: '1', 
-      date: '2023-10-15', 
-      timeStart: '10:00', 
-      timeEnd: '11:30', 
-      service: 'Мойка авто', 
-      cost: 2500,
-      durationHours: 1.5
-    },
-    { 
-      id: '2', 
-      date: '2023-11-20', 
-      timeStart: '14:00', 
-      timeEnd: '16:00', 
-      service: 'Сухой пост', 
-      cost: 4000,
-      durationHours: 2
-    },
-    { 
-      id: '3', 
-      date: '2023-12-05', 
-      timeStart: '12:00', 
-      timeEnd: '15:30', 
-      service: 'Химчистка', 
-      cost: 6000,
-      durationHours: 3.5
-    },
-    { 
-      id: '4', 
-      date: '2024-01-18', 
-      timeStart: '16:00', 
-      timeEnd: '17:00', 
-      service: 'Полировка', 
-      cost: 1500,
-      durationHours: 1
-    },
-    { 
-      id: '5', 
-      date: '2024-02-10', 
-      timeStart: '09:00', 
-      timeEnd: '12:00', 
-      service: 'Химчистка', 
-      cost: 8000,
-      durationHours: 3
-    },
-    { 
-      id: '6', 
-      date: '2024-03-01', 
-      timeStart: '13:00', 
-      timeEnd: '15:30', 
-      service: 'Мойка авто', 
-      cost: 4500,
-      durationHours: 2.5
-    },
-    { 
-      id: '7', 
-      date: '2024-04-05', 
-      timeStart: '11:00', 
-      timeEnd: '12:30', 
-      service: 'Эконом', 
-      cost: 2500,
-      durationHours: 1.5
-    },
-  ];
-
-  // Временные данные для покупок
-  const mockPurchases: Purchase[] = [
-    {
-      id: 'p1',
-      name: 'Полироль для пластика',
-      date: '2024-01-10',
-      price: 800,
-      quantity: 1,
-      image: 'https://via.placeholder.com/80'
-    },
-    {
-      id: 'p2',
-      name: 'Набор микрофибры',
-      date: '2024-02-15',
-      price: 1200,
-      quantity: 2,
-      image: 'https://via.placeholder.com/80'
-    },
-    {
-      id: 'p3',
-      name: 'Шампунь для автомобиля',
-      date: '2024-03-05',
-      price: 650,
-      quantity: 1,
-      image: 'https://via.placeholder.com/80'
-    },
-    {
-      id: 'p4',
-      name: 'Керамическое покрытие',
-      date: '2024-03-20',
-      price: 3500,
-      quantity: 1,
-      image: 'https://via.placeholder.com/80'
-    }
-  ];
 
   useEffect(() => {
     // Загружаем данные пользователя из Telegram WebApp
@@ -170,13 +87,19 @@ const ProfilePage: React.FC = () => {
       try {
         const tg = (window as any).Telegram?.WebApp;
         if (tg?.initDataUnsafe?.user) {
-          const { username, first_name, last_name, photo_url } = tg.initDataUnsafe.user;
+          const { username, first_name, last_name, photo_url, id } = tg.initDataUnsafe.user;
           setUserInfo({
             username: username || first_name?.toLowerCase() || 'user',
             firstName: first_name || '',
             lastName: last_name || '',
             photoUrl: photo_url || null,
+            telegramUserId: id, // Сохраняем ID пользователя Telegram
           });
+          
+          // Если получили telegramUserId, загружаем бронирования
+          if (id) {
+            fetchUserBookings(id);
+          }
         } else {
           // Если нет доступа к Telegram WebApp, устанавливаем пустые данные
           setUserInfo({
@@ -185,6 +108,9 @@ const ProfilePage: React.FC = () => {
             lastName: '',
             photoUrl: null,
           });
+          setIsLoading(false);
+          // Загружаем тестовые данные, если нет ID пользователя
+          setPurchases(mockPurchases);
         }
       } catch (error) {
         console.error('Ошибка при получении данных пользователя:', error);
@@ -194,28 +120,93 @@ const ProfilePage: React.FC = () => {
           lastName: '',
           photoUrl: null,
         });
-      } finally {
         setIsLoading(false);
       }
     };
 
-    // Загружаем временные данные 
-    const loadMockData = () => {
-      setBookings(mockBookings);
-      setPurchases(mockPurchases);
-      
-      // Считаем общее количество часов бронирования
-      const hours = mockBookings.reduce((total, booking) => total + booking.durationHours, 0);
-      setTotalHours(hours);
-      
-      // Рассчитываем скидку и следующий порог
-      const calculatedDiscount = calculateDiscount(hours);
-      setDiscount(calculatedDiscount);
-      setNextDiscountThreshold(getNextDiscountThreshold(hours));
+    // Получение бронирований пользователя по API
+    const fetchUserBookings = async (telegramUserId: number) => {
+      try {
+        const response = await fetch(`https://backend.self-detailing.duckdns.org/api/v1/calendar/user/${telegramUserId}/bookings`, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Ошибка API: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (!data.success) {
+          throw new Error(data.errorMessage || 'Ошибка при получении данных');
+        }
+        
+        console.log('Полученные бронирования:', data.data);
+        
+        // Преобразуем данные из API в нужный формат
+        const formattedBookings = data.data.bookings.map((booking: ApiBooking) => {
+          // Подсчет продолжительности в часах
+          const startTime = new Date(booking.start);
+          const endTime = new Date(booking.end);
+          const diffHours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
+          
+          // Получаем время в формате HH:MM
+          const startTimeStr = startTime.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+          const endTimeStr = endTime.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+          
+          // Определение стоимости и названия услуги
+          const serviceName = booking.services && booking.services.length > 0 
+            ? booking.services[0].serviceName 
+            : 'Услуга';
+            
+          const cost = booking.services && booking.services.length > 0 
+            ? booking.services[0].price 
+            : 0;
+            
+          return {
+            id: String(booking.bookingId),
+            date: booking.start,
+            timeStart: startTimeStr,
+            timeEnd: endTimeStr,
+            service: serviceName,
+            cost: cost,
+            durationHours: Math.round(diffHours * 10) / 10, // Округляем до 1 знака после запятой
+          };
+        });
+        
+        // Сортируем бронирования по дате (сначала самые новые)
+        formattedBookings.sort((a: Booking, b: Booking) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        
+        setBookings(formattedBookings);
+        
+        // Считаем общее количество часов бронирования
+        const hours = formattedBookings.reduce((total: number, booking: Booking) => total + booking.durationHours, 0);
+        setTotalHours(hours);
+        
+        // Рассчитываем скидку и следующий порог
+        const calculatedDiscount = calculateDiscount(hours);
+        setDiscount(calculatedDiscount);
+        setNextDiscountThreshold(getNextDiscountThreshold(hours));
+        
+        setIsLoading(false);
+        setBookingsError(null);
+        
+        // Автоматически раскрываем список бронирований, если они есть
+        if (formattedBookings.length > 0) {
+          setShowBookings(true);
+        }
+      } catch (error: any) {
+        console.error('Ошибка при загрузке бронирований:', error);
+        setBookingsError(`Не удалось загрузить бронирования: ${error.message}`);
+        setIsLoading(false);
+      }
     };
 
     fetchUserData();
-    loadMockData();
   }, []);
 
   // Форматирование даты в читаемый вид
@@ -297,7 +288,7 @@ const ProfilePage: React.FC = () => {
         </div>
       </div>
       
-      <div className={styles.bookingProgress}>
+      {/* <div className={styles.bookingProgress}>
         <h3 className={styles.progressTitle}>Прогресс заказов</h3>
         <div className={styles.discountInfo}>
           <span className={styles.currentDiscount}>
@@ -323,7 +314,7 @@ const ProfilePage: React.FC = () => {
             </div>
           )}
         </div>
-      </div>
+      </div> */}
 
       {/* Секция Мои бронирования */}
       <div className={styles.section}>
@@ -337,7 +328,9 @@ const ProfilePage: React.FC = () => {
         
         {showBookings && (
           <div className={styles.bookingsList}>
-            {bookings.length > 0 ? (
+            {bookingsError ? (
+              <div className={styles.error}>{bookingsError}</div>
+            ) : bookings.length > 0 ? (
               bookings.map(booking => (
                 <div key={booking.id} className={styles.bookingItem}>
                   <div className={styles.bookingDate}>
@@ -407,5 +400,25 @@ const ProfilePage: React.FC = () => {
     </div>
   );
 };
+
+// Заглушка для тестовых данных покупок (используется только если нет доступа к Telegram)
+const mockPurchases: Purchase[] = [
+  {
+    id: 'p1',
+    name: 'Шампунь для авто',
+    date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+    price: 350,
+    quantity: 1,
+    image: 'https://via.placeholder.com/60'
+  },
+  {
+    id: 'p2',
+    name: 'Микрофибра',
+    date: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
+    price: 200,
+    quantity: 2,
+    image: 'https://via.placeholder.com/60'
+  }
+];
 
 export default ProfilePage; 
