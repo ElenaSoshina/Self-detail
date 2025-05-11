@@ -54,7 +54,7 @@ export const Header: React.FC = () => {
             <a href="#hero" onClick={e => handleMenuClick(e, 'hero')}>Главная</a>
             <a href="#how-it-works" onClick={e => handleMenuClick(e, 'how-it-works')}>Как мы работаем</a>
             <a href="#pricing" onClick={e => handleMenuClick(e, 'pricing')}>Тарифы</a>
-            <a href="#products" onClick={e => handleMenuClick(e, 'products')}>Каталог товаров</a>
+            {/* <a href="#products" onClick={e => handleMenuClick(e, 'products')}>Каталог товаров</a> */}
             <a href="#faq" onClick={e => handleMenuClick(e, 'faq')}>FAQ</a>
           </nav>
         </div>

@@ -191,17 +191,17 @@ const CartPage: React.FC = () => {
     return <BookingSuccess bookingDetails={successBookingDetails} />;
   }
 
-  if (items.length === 0) {
-    return (
-      <div className={styles.cartPage}>
-        <h1 className={styles.pageTitle}>Корзина</h1>
-        <div className={styles.cartPageContainer}>
-          <p className={styles.emptyCartMsg}>Ваша корзина пуста</p>
-          <Link to="/products" className={styles.goToCatalogBtn}>Перейти в каталог</Link>
-        </div>
-      </div>
-    );
-  }
+  // if (items.length === 0) {
+  //   return (
+  //     <div className={styles.cartPage}>
+  //       <h1 className={styles.pageTitle}>Корзина</h1>
+  //       <div className={styles.cartPageContainer}>
+  //         <p className={styles.emptyCartMsg}>Ваша корзина пуста</p>
+  //         <Link to="/products" className={styles.goToCatalogBtn}>Перейти в каталог</Link>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   return (
     <div className={styles.cartPage}>
