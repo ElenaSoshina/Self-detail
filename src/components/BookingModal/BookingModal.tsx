@@ -172,10 +172,14 @@ const BookingModal: React.FC<BookingModalProps> = ({
       alert('Исходное время: startTime=' + startTime + ', endTime=' + endTime);
       
       // Извлекаем время для запроса
-      const timeFormatted = startTime.match(/\d{1,2}:\d{2}/);
-      if (!timeFormatted) {
+      const timeMatches = startTime.match(/\d{1,2}:\d{2}/g);
+      if (!timeMatches || timeMatches.length === 0) {
         throw new Error('Некорректный формат времени');
       }
+      
+      // Определяем начальное и конечное время
+      const startTimeFormatted = timeMatches[0];  // Первое найденное время
+      const endTimeFormatted = timeMatches.length > 1 ? timeMatches[1] : startTimeFormatted;  // Второе время или первое, если второго нет
       
       // Форматируем дату и время для API
       const year = selectedDate.getFullYear();
@@ -183,10 +187,10 @@ const BookingModal: React.FC<BookingModalProps> = ({
       const day = selectedDate.getDate().toString().padStart(2, '0');
       const dateStr = `${year}-${month}-${day}`;
       
-      const startISODate = `${dateStr}T${timeFormatted[0]}:00`;
-      const endISODate = startISODate; // Для простоты используем то же время
+      const startISODate = `${dateStr}T${startTimeFormatted}:00`;
+      const endISODate = `${dateStr}T${endTimeFormatted}:00`;
       
-      alert('Дата и время для API: ' + startISODate);
+      alert('Дата и время для API: start=' + startISODate + ', end=' + endISODate);
       
       // Формируем данные для API
       const apiData = {

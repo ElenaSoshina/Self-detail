@@ -56,10 +56,14 @@ const CartPage: React.FC = () => {
       alert('Выбранная дата: ' + formData.selectedDate.toLocaleDateString());
       
       // Извлекаем время для запроса
-      const timeFormatted = formData.startTime.match(/\d{1,2}:\d{2}/);
-      if (!timeFormatted) {
+      const timeMatches = formData.startTime.match(/\d{1,2}:\d{2}/g);
+      if (!timeMatches || timeMatches.length === 0) {
         throw new Error('Некорректный формат времени');
       }
+      
+      // Определяем начальное и конечное время
+      const startTimeFormatted = timeMatches[0];  // Первое найденное время
+      const endTimeFormatted = timeMatches.length > 1 ? timeMatches[1] : startTimeFormatted;  // Второе время или первое, если второго нет
       
       // Форматируем дату для API
       const year = formData.selectedDate.getFullYear();
@@ -68,10 +72,10 @@ const CartPage: React.FC = () => {
       const dateStr = `${year}-${month}-${day}`;
       
       // Создаем ISO строки для начала и конца бронирования
-      const startISODate = `${dateStr}T${timeFormatted[0]}:00`;
-      const endISODate = startISODate; // Используем то же время для простоты
+      const startISODate = `${dateStr}T${startTimeFormatted}:00`;
+      const endISODate = `${dateStr}T${endTimeFormatted}:00`;
       
-      alert('Данные для API: startDate=' + startISODate);
+      alert('Данные для API: start=' + startISODate + ', end=' + endISODate);
       
       // Вычисляем общую стоимость
       const bookingCost = formData.service?.price || 0;
