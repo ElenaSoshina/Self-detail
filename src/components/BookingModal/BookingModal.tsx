@@ -56,9 +56,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
   const [displayTime, setDisplayTime] = useState('');
 
   useEffect(() => {
-    alert('Время полученное в модальном окне: ' + startTime + ', ' + endTime);
     if (selectedDate) {
-      alert('Выбранная дата: ' + selectedDate.toLocaleDateString());
     }
     
     // Нормализуем время для отображения
@@ -96,7 +94,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
     'Полировка': 'Полировка',
   };
 
-  // Вычисление количества часов бронирования 
+  // Вычисление количества часов бронирования
   const getDurationHours = () => {
     try {
       const parts = startTime.split(/[—-]/).map(s => s.trim());
@@ -113,9 +111,28 @@ const BookingModal: React.FC<BookingModalProps> = ({
   };
   const durationHours = getDurationHours();
   
+  // Проверяем источник данных
+  const checkSource = () => {
+    if (startTime.includes(' - ') || startTime.includes(' — ')) {
+      // Если время имеет формат с разделителем, значит оно пришло из BookingSuccess
+      return 'BookingSuccess';
+    }
+    return 'Other';
+  };
+  const dataSource = checkSource();
+  
   // Упрощенные переменные для отображения
   const hasService = Boolean(service && service.serviceName && service.serviceName !== '');
-  const servicePrice = service?.price ?? 0;
+  const baseServicePrice = service?.price ?? 0; // Базовая стоимость из props
+  
+  // Проверка: данные из корзины или из календаря
+  const isFromCart = Boolean(window.location.href.includes('/cart'));
+  
+  // Определяем итоговую стоимость услуги
+  // Если пришли из корзины, цена уже включает длительность
+  // Если не из корзины, нужно умножить на длительность
+  const servicePrice = isFromCart ? baseServicePrice : baseServicePrice * durationHours;
+  
   const serviceRu = hasService && service?.serviceName ? (serviceNameMap[service.serviceName] || service.serviceName) : '';
   
   // Общая стоимость: услуга + товары
@@ -153,29 +170,22 @@ const BookingModal: React.FC<BookingModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    alert('Начало отправки формы');
     setIsLoading(true);
     setError(null);
     
     if (!validate()) {
-      alert('Валидация не пройдена');
       setIsLoading(false);
       return;
     }
     
     try {
       if (!chatId) {
-        alert('Нет chatId');
         throw new Error('Не удалось получить ID пользователя из Telegram');
       }
       
       if (!selectedDate) {
-        alert('Не выбрана дата бронирования');
         throw new Error('Не выбрана дата бронирования');
       }
-      
-      alert('Исходная дата: ' + selectedDate.toLocaleDateString());
-      alert('Исходное время: ' + startTime + ', ' + endTime);
       
       // Извлекаем время для запроса
       const timeMatches = startTime.match(/\d{1,2}:\d{2}/g);
@@ -192,18 +202,14 @@ const BookingModal: React.FC<BookingModalProps> = ({
       const month = selectedDate.getMonth() + 1; // JS месяцы от 0 до 11
       const year = selectedDate.getFullYear();
       
-      alert(`Компоненты выбранной даты: день=${day}, месяц=${month}, год=${year}`);
-      
       // Форматируем в строку даты в формате YYYY-MM-DD с ведущими нулями
       const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      
-      alert(`Форматированная дата: ${dateStr}`);
+
       
       // Собираем итоговые строки для API
       const startISODate = `${dateStr}T${startTimeFormatted}:00`;
       const endISODate = `${dateStr}T${endTimeFormatted}:00`;
-      
-      alert(`Итоговые строки для API: start=${startISODate}, end=${endISODate}`);
+
       
       // Формируем данные для API
       const apiData = {
@@ -219,17 +225,12 @@ const BookingModal: React.FC<BookingModalProps> = ({
         service: hasService && service
           ? [{
               serviceName: service.serviceName,
-              price: servicePrice
+              price: servicePrice // Используем корректную стоимость
             }]
           : [],
         notes: ''
       };
-      
-      alert('Данные для API: ' + JSON.stringify({
-        start: apiData.start,
-        end: apiData.end,
-        service: apiData.service
-      }));
+
       
       // Отправляем запрос на API для создания бронирования
       const response = await fetch('https://backend.self-detailing.duckdns.org/api/v1/calendar/booking', {
@@ -239,17 +240,16 @@ const BookingModal: React.FC<BookingModalProps> = ({
         },
         body: JSON.stringify(apiData),
       });
-      
-      alert('Получен ответ от сервера: ' + response.status);
+
       
       if (!response.ok) {
         const errorText = await response.text();
-        alert('Ошибка сервера: ' + errorText);
+
         throw new Error(`Ошибка сервера: ${response.status} ${errorText}`);
       }
       
       const result = await response.json();
-      alert('Успешный ответ сервера');
+
       
       // Отправляем уведомления в Telegram
       const isTech = (service?.serviceName || '').toLowerCase().includes('техничес');
@@ -288,16 +288,15 @@ const BookingModal: React.FC<BookingModalProps> = ({
             ),
           ]);
         }
-        alert('Уведомления в Telegram отправлены');
+
         
         // Закрываем Telegram WebApp после успешной отправки
         const tg = (window as any).Telegram?.WebApp;
         if (tg && typeof tg.close === 'function') {
-          alert('Закрытие Telegram WebApp');
+
           tg.close();
         }
       } catch (telegramError) {
-        alert('Ошибка при отправке уведомлений в Telegram: ' + telegramError);
       }
       
       // Формируем данные для onSubmit
@@ -318,12 +317,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
             : null
         };
         
-        alert('Данные для onSubmit: ' + JSON.stringify({
-          name: submittedData.name,
-          selectedDate: submittedData.selectedDate?.toLocaleDateString(),
-          startTime: submittedData.startTime,
-          endTime: submittedData.endTime
-        }));
+
         
         await onSubmit(submittedData);
       }
@@ -335,12 +329,10 @@ const BookingModal: React.FC<BookingModalProps> = ({
       setTimeout(() => {
         const tg = (window as any).Telegram?.WebApp;
         if (tg && typeof tg.close === 'function') {
-          alert('Закрытие Telegram WebApp с задержкой');
           tg.close();
         }
       }, 1000);
     } catch (error) {
-      alert('Ошибка при отправке формы: ' + (error instanceof Error ? error.message : String(error)));
       setError(error instanceof Error ? error.message : 'Произошла ошибка при отправке формы');
     } finally {
       setIsLoading(false);
@@ -389,6 +381,10 @@ const BookingModal: React.FC<BookingModalProps> = ({
                 <span className={styles.infoValue}>
                   {displayTime}
                 </span>
+              </div>
+              <div className={styles.infoRow}>
+                <span className={styles.infoLabel}>Длительность:</span>
+                <span className={styles.infoValue}>{durationHours} ч.</span>
               </div>
               <div className={styles.infoRow}>
                 <span className={styles.infoLabel}>Стоимость услуги: </span>
