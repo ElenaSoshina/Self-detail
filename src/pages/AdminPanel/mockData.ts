@@ -8,6 +8,7 @@ export interface Purchase {
 
 export interface BookingSlot {
   id: string;
+  bookingId?: number | string;
   start: string;
   end: string;
   isBooked: boolean;

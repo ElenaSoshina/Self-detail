@@ -476,13 +476,47 @@
 }
 
 .cancelButton:hover {
+  background: linear-gradient(to right, #FF7A7A, #FF5C5C);
   transform: translateY(-2px);
-  box-shadow: 0 7px 20px rgba(138, 110, 255, 0.6);
+  box-shadow: 0 6px 15px rgba(255, 92, 92, 0.5);
 }
 
 .cancelButton:active {
   transform: translateY(0);
   box-shadow: 0 3px 10px rgba(138, 110, 255, 0.4);
+}
+
+.error {
+  color: #d32f2f;
+  padding: 20px;
+  border-radius: 4px;
+  background-color: rgba(211, 47, 47, 0.1);
+  margin: 10px;
+  text-align: center;
+}
+
+.errorActions {
+  margin-top: 15px;
+}
+
+.closeErrorBtn {
+  padding: 8px 16px;
+  border: none;
+  background-color: #d32f2f;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.closeErrorBtn:hover {
+  background-color: #b71c1c;
+}
+
+.bookingId {
+  font-size: 12px;
+  color: #8A6EFF;
+  margin-top: 4px;
+  opacity: 0.8;
 }
 
 @media (max-width: 768px) {
@@ -650,4 +684,116 @@
     width: 28px;
     height: 28px;
   }
+}
+
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.85);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.modalContent {
+  background-color: #1A1A1A;
+  border-radius: 16px;
+  border: 1px solid rgba(138, 110, 255, 0.2);
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 25px rgba(138, 110, 255, 0.3);
+  animation: slideIn 0.3s ease;
+  padding: 0;
+  color: #fff;
+}
+
+.modalContent::-webkit-scrollbar {
+  width: 6px;
+}
+
+.modalContent::-webkit-scrollbar-track {
+  background: #2A2A2A;
+  border-radius: 8px;
+}
+
+.modalContent::-webkit-scrollbar-thumb {
+  background: rgba(138, 110, 255, 0.5);
+  border-radius: 8px;
+}
+
+.modalContent::-webkit-scrollbar-thumb:hover {
+  background: rgba(138, 110, 255, 0.8);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(-30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.successPopup {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+}
+
+.successPopupContent {
+  background-color: #1A1A1A;
+  border-radius: 16px;
+  padding: 30px 40px;
+  text-align: center;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.successIcon {
+  background: linear-gradient(to right, #4CAF50, #8BC34A);
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 15px;
+  color: white;
+  font-size: 30px;
+  font-weight: bold;
+}
+
+.successPopupContent p {
+  font-size: 18px;
+  color: white;
+  margin: 10px 0 0;
 } 

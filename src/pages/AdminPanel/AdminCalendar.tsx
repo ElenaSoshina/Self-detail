@@ -4,6 +4,7 @@ import { mockSlots, BookingSlot } from './mockData';
 import axios from 'axios';
 import TimeSlots from '../CalendarPage/TimeSlots';
 import CalendarPage from '../CalendarPage/CalendarPage';
+import BookingDetails from './BookingDetails';
 
 const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
@@ -22,10 +23,30 @@ interface TimeSlotData {
   available: boolean;
 }
 
+interface BookingDetail {
+  id: number;
+  start: string;
+  end: string;
+  serviceName: string;
+  clientName: string;
+  clientPhone: string;
+  telegramUserId?: number;
+  products?: any[];
+  price: number;
+  status?: string;
+  comment?: string;
+}
+
 const AdminCalendar: React.FC<{ onUserSelect: (userId: string) => void }> = ({ onUserSelect }) => {
   const [slots, setSlots] = useState<BookingSlot[]>([]);
   const [selectedSlot, setSelectedSlot] = useState<BookingSlot | null>(null);
+  const [selectedBookingId, setSelectedBookingId] = useState<number | string | null>(null);
+  const [showBookingDetails, setShowBookingDetails] = useState(false);
+  const [bookingDetail, setBookingDetail] = useState<BookingDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingBooking, setLoadingBooking] = useState(false);
+  const [bookingError, setBookingError] = useState<string | null>(null);
+  const [deleteSuccess, setDeleteSuccess] = useState<boolean>(false);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [calendarDate, setCalendarDate] = useState(new Date());
@@ -95,16 +116,108 @@ const AdminCalendar: React.FC<{ onUserSelect: (userId: string) => void }> = ({ o
   useEffect(() => {
     const fetchSlots = async () => {
       setLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 300));
-      const filtered = mockSlots
-        .filter(slot => {
-          const slotDate = new Date(slot.start);
-          return slotDate.toDateString() === currentDate.toDateString() && slot.isBooked;
-        })
-        .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
-      setSlots(filtered);
-      setLoading(false);
+      try {
+        // Форматирование даты для API запроса
+        const year = currentDate.getFullYear();
+        const month = (currentDate.getMonth() + 1).toString().padStart(2, '0');
+        const day = currentDate.getDate().toString().padStart(2, '0');
+        const startDate = `${year}-${month}-${day}T00:00:00`;
+        
+        // Следующий день для запроса
+        const nextDay = new Date(currentDate);
+        nextDay.setDate(nextDay.getDate() + 1);
+        const nextYear = nextDay.getFullYear();
+        const nextMonth = (nextDay.getMonth() + 1).toString().padStart(2, '0');
+        const nextDayNum = nextDay.getDate().toString().padStart(2, '0');
+        const endDate = `${nextYear}-${nextMonth}-${nextDayNum}T00:00:00`;
+        
+        // Запрос к API для получения бронирований
+        const response = await fetch(`https://backend.self-detailing.duckdns.org/api/v1/calendar/booking?start=${startDate}&end=${endDate}`, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Ошибка API: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('Ответ от API:', data);
+        
+        if (!data || !data.data) {
+          throw new Error('Неверный формат данных');
+        }
+        
+        console.log('Количество бронирований:', data.data.length);
+        console.log('Пример структуры первого бронирования:', data.data[0] ? {
+          bookingId: data.data[0].bookingId,
+          typeOfBookingId: typeof data.data[0].bookingId,
+          start: data.data[0].start,
+          end: data.data[0].end,
+          services: data.data[0].services
+        } : 'Нет бронирований');
+        
+        // Выводим для отладки все данные
+        for (const booking of data.data) {
+          console.log(`Бронирование ID=${booking.bookingId}, время: ${new Date(booking.start).toLocaleTimeString()} - ${new Date(booking.end).toLocaleTimeString()}`);
+        }
+        
+        // Маппинг бронирований
+        const bookedSlots = data.data.map((booking: any) => {
+          console.log('Данные бронирования из API:', booking);
+          
+          // Получаем информацию об услуге
+          const serviceName = booking.services && booking.services.length > 0 
+            ? booking.services[0].serviceName 
+            : 'Услуга';
+          
+          const servicePrice = booking.services && booking.services.length > 0 
+            ? booking.services[0].price 
+            : 0;
+            
+          // Очень важно: bookingId должен быть числом для API
+          const numericBookingId = Number(booking.bookingId);
+          
+          // Вспомогательная функция для расчета часов
+          const calcHours = (start: string, end: string) => {
+            const startDate = new Date(start);
+            const endDate = new Date(end);
+            const diffMs = endDate.getTime() - startDate.getTime();
+            const diffHours = diffMs / (1000 * 60 * 60);
+            return Math.max(1, Math.round(diffHours));
+          };
+          
+          return {
+            id: String(booking.bookingId), // id для React key
+            bookingId: numericBookingId, // числовой bookingId для API
+            start: booking.start,
+            end: booking.end,
+            isBooked: true,
+            bookingDetails: {
+              userId: String(booking.telegramUserId || ''),
+              userName: booking.clientName || 'Клиент',
+              phone: booking.clientPhone || 'Телефон не указан',
+              plan: { 
+                title: serviceName,
+                price: servicePrice
+              },
+              hours: calcHours(booking.start, booking.end)
+            }
+          };
+        });
+        
+        setSlots(bookedSlots);
+      } catch (error) {
+        console.error('Ошибка при загрузке бронирований:', error);
+        setSlots([]);
+      } finally {
+        setLoading(false);
+      }
     };
+    
     fetchSlots();
   }, [currentDate]);
 
@@ -123,9 +236,39 @@ const AdminCalendar: React.FC<{ onUserSelect: (userId: string) => void }> = ({ o
   }, [showDatePicker]);
 
   const handleSlotClick = (slot: BookingSlot) => {
+    console.log('Слот, на который нажали:', slot);
     setSelectedSlot(slot);
-    if (slot.isBooked && slot.bookingDetails?.userId) {
-      onUserSelect(slot.bookingDetails.userId);
+    
+    // Если слот забронирован, показываем детали бронирования
+    if (slot.isBooked) {
+      console.log('Слот забронирован. bookingId:', slot.bookingId, 'Тип:', typeof slot.bookingId);
+      
+      // Тут важно проверить наличие bookingId и передать его в числовом формате
+      if (slot.bookingId !== undefined) {
+        // Преобразуем bookingId в число для API
+        const numericBookingId = typeof slot.bookingId === 'string' ? 
+          parseInt(slot.bookingId, 10) : 
+          slot.bookingId;
+        
+        console.log('Устанавливаем selectedBookingId:', numericBookingId, 'Тип:', typeof numericBookingId);
+        
+        setSelectedBookingId(numericBookingId);
+        setShowBookingDetails(true);
+        
+        // ВАЖНО: Не вызываем onUserSelect, иначе произойдет переход на страницу пользователя
+        // Раскомментируйте, только если нужно переходить на профиль пользователя
+        /*
+        if (slot.bookingDetails?.userId) {
+          onUserSelect(slot.bookingDetails.userId);
+        }
+        */
+      } else {
+        console.error('bookingId не определен в данных слота:', slot);
+      }
+    } else {
+      // Если слот не забронирован, сбрасываем детали
+      setSelectedBookingId(null);
+      setShowBookingDetails(false);
     }
   };
 
@@ -268,6 +411,189 @@ const AdminCalendar: React.FC<{ onUserSelect: (userId: string) => void }> = ({ o
 
   const days = generateDaysForMonth(calendarDate.getFullYear(), calendarDate.getMonth());
 
+  // Получение детальной информации о бронировании
+  const fetchBookingDetail = async (bookingId: number | string) => {
+    setLoadingBooking(true);
+    setBookingError(null);
+    
+    try {
+      console.log('Загрузка деталей бронирования, ID:', bookingId);
+      
+      const response = await fetch(`https://backend.self-detailing.duckdns.org/api/v1/calendar/booking/${bookingId}`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Ошибка API: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (!data || !data.success) {
+        throw new Error(data.errorMessage || 'Неверный формат данных');
+      }
+      
+      console.log('Получены данные бронирования:', data.data);
+      setBookingDetail(data.data);
+    } catch (error: any) {
+      console.error('Ошибка при загрузке данных бронирования:', error);
+      setBookingError(`Не удалось загрузить данные: ${error.message}`);
+      setBookingDetail(null);
+    } finally {
+      setLoadingBooking(false);
+    }
+  };
+
+  const handleCloseBookingDetails = () => {
+    console.log('Закрытие панели деталей бронирования');
+    setShowBookingDetails(false);
+    setSelectedBookingId(null);
+  };
+
+  const handleModalOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Закрываем модальное окно при клике на внешнюю область
+    if (e.target === e.currentTarget) {
+      handleCloseBookingDetails();
+    }
+  };
+
+  // Добавляем эффект для отслеживания изменений состояний
+  useEffect(() => {
+    console.log('Состояние изменилось: showBookingDetails =', showBookingDetails, 'selectedBookingId =', selectedBookingId);
+  }, [showBookingDetails, selectedBookingId]);
+
+  // Функция для удаления бронирования
+  const deleteBooking = async (bookingId: number | string) => {
+    try {
+      const response = await fetch(`https://backend.self-detailing.duckdns.org/api/v1/calendar/booking/${bookingId}`, {
+        method: 'DELETE',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Ошибка API: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (!data || !data.success) {
+        throw new Error(data.errorMessage || 'Ошибка при удалении бронирования');
+      }
+      
+      console.log('Бронирование успешно удалено:', bookingId);
+      setDeleteSuccess(true);
+      
+      // Закрываем детали бронирования и обновляем список
+      setTimeout(() => {
+        setDeleteSuccess(false);
+        handleCloseBookingDetails();
+        
+        // Обновляем список бронирований
+        const fetchSlots = async () => {
+          setLoading(true);
+          try {
+            // Форматирование даты для API запроса
+            const year = currentDate.getFullYear();
+            const month = (currentDate.getMonth() + 1).toString().padStart(2, '0');
+            const day = currentDate.getDate().toString().padStart(2, '0');
+            const startDate = `${year}-${month}-${day}T00:00:00`;
+            
+            // Следующий день для запроса
+            const nextDay = new Date(currentDate);
+            nextDay.setDate(nextDay.getDate() + 1);
+            const nextYear = nextDay.getFullYear();
+            const nextMonth = (nextDay.getMonth() + 1).toString().padStart(2, '0');
+            const nextDayNum = nextDay.getDate().toString().padStart(2, '0');
+            const endDate = `${nextYear}-${nextMonth}-${nextDayNum}T00:00:00`;
+            
+            // Запрос к API для получения бронирований
+            const response = await fetch(`https://backend.self-detailing.duckdns.org/api/v1/calendar/booking?start=${startDate}&end=${endDate}`, {
+              method: 'GET',
+              headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+              }
+            });
+            
+            if (!response.ok) {
+              throw new Error(`Ошибка API: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (!data || !data.data) {
+              throw new Error('Неверный формат данных');
+            }
+            
+            // Маппинг бронирований
+            const bookedSlots = data.data.map((booking: any) => {
+              // Получаем информацию об услуге
+              const serviceName = booking.services && booking.services.length > 0 
+                ? booking.services[0].serviceName 
+                : 'Услуга';
+              
+              const servicePrice = booking.services && booking.services.length > 0 
+                ? booking.services[0].price 
+                : 0;
+                
+              // Очень важно: bookingId должен быть числом для API
+              const numericBookingId = Number(booking.bookingId);
+              
+              // Вспомогательная функция для расчета часов
+              const calcHours = (start: string, end: string) => {
+                const startDate = new Date(start);
+                const endDate = new Date(end);
+                const diffMs = endDate.getTime() - startDate.getTime();
+                const diffHours = diffMs / (1000 * 60 * 60);
+                return Math.max(1, Math.round(diffHours));
+              };
+              
+              return {
+                id: String(booking.bookingId), // id для React key
+                bookingId: numericBookingId, // числовой bookingId для API
+                start: booking.start,
+                end: booking.end,
+                isBooked: true,
+                bookingDetails: {
+                  userId: String(booking.telegramUserId || ''),
+                  userName: booking.clientName || 'Клиент',
+                  phone: booking.clientPhone || 'Телефон не указан',
+                  plan: { 
+                    title: serviceName,
+                    price: servicePrice
+                  },
+                  hours: calcHours(booking.start, booking.end)
+                }
+              };
+            });
+            
+            setSlots(bookedSlots);
+          } catch (error) {
+            console.error('Ошибка при загрузке бронирований:', error);
+            setSlots([]);
+          } finally {
+            setLoading(false);
+          }
+        };
+        
+        fetchSlots();
+      }, 2000);
+      
+      return true;
+    } catch (error: any) {
+      console.error('Ошибка при удалении бронирования:', error);
+      alert(`Ошибка при удалении бронирования: ${error.message}`);
+      return false;
+    }
+  };
+
   return (
     <div className={styles.container}>
       <div className={styles.calendar}>
@@ -319,7 +645,10 @@ const AdminCalendar: React.FC<{ onUserSelect: (userId: string) => void }> = ({ o
                 <div
                   key={slot.id}
                   className={`${styles.slot} ${slot.isBooked ? styles.booked : ''}`}
-                  onClick={() => handleSlotClick(slot)}
+                  onClick={() => {
+                    console.log('Клик по слоту:', slot.id, 'bookingId:', slot.bookingId);
+                    handleSlotClick(slot);
+                  }}
                 >
                   <div className={styles.time}>
                     {new Date(slot.start).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })} — {new Date(slot.end).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
@@ -327,6 +656,7 @@ const AdminCalendar: React.FC<{ onUserSelect: (userId: string) => void }> = ({ o
                   <div className={styles.bookingInfo}>
                     <b>{slot.bookingDetails?.userName}</b><br/>
                     {slot.bookingDetails?.plan.title}
+                    <div className={styles.bookingId}>ID: {slot.bookingId}</div>
                   </div>
                 </div>
               ))}
@@ -366,24 +696,38 @@ const AdminCalendar: React.FC<{ onUserSelect: (userId: string) => void }> = ({ o
           </div>
         )}
       </div>
-      {selectedSlot && selectedSlot.bookingDetails && (
-        <div className={styles.slotDetails}>
-          <h3>Информация о пользователе</h3>
-          <div className={styles.detailItem}>
-            <span>Имя:</span>
-            <span>{selectedSlot.bookingDetails.userName}</span>
+      
+      {/* Используем новый компонент для отображения деталей бронирования */}
+      {showBookingDetails && selectedBookingId !== null && (() => {
+        console.log('Рендеринг BookingDetails с ID:', selectedBookingId, 'тип:', typeof selectedBookingId);
+        return (
+          <div className={styles.modalOverlay} onClick={handleModalOverlayClick}>
+            <div className={styles.modalContent}>
+              <BookingDetails 
+                bookingId={selectedBookingId} 
+                onClose={handleCloseBookingDetails} 
+                onEdit={(bookingId) => {
+                  console.log('Редактирование бронирования:', bookingId);
+                  // Здесь будет логика редактирования бронирования
+                  alert(`Редактирование бронирования #${bookingId} (в разработке)`);
+                }}
+                onCancel={(bookingId) => {
+                  console.log('Отмена бронирования:', bookingId);
+                  if (window.confirm(`Вы уверены, что хотите отменить бронирование #${bookingId}?`)) {
+                    deleteBooking(bookingId);
+                  }
+                }}
+              />
+            </div>
           </div>
-          <div className={styles.detailItem}>
-            <span>Телефон:</span>
-            <span>{selectedSlot.bookingDetails.phone}</span>
-          </div>
-          <div className={styles.detailItem}>
-            <span>Услуга:</span>
-            <span>{selectedSlot.bookingDetails.plan.title}</span>
-          </div>
-          <div className={styles.detailItem}>
-            <span>Время:</span>
-            <span>{new Date(selectedSlot.start).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })} — {new Date(selectedSlot.end).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}</span>
+        );
+      })()}
+      
+      {deleteSuccess && (
+        <div className={styles.successPopup}>
+          <div className={styles.successPopupContent}>
+            <div className={styles.successIcon}>✓</div>
+            <p>Бронирование успешно удалено</p>
           </div>
         </div>
       )}

@@ -60,7 +60,7 @@ const HomePage: React.FC = () => {
       <Hero />
       <HowItWorks />
       <Pricing />
-      <ProductPreviewSection />
+      {/* <ProductPreviewSection /> */}
       <FAQ />
     </div>
   );
