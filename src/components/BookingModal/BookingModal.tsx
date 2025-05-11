@@ -6,25 +6,6 @@ import PhoneInput from 'react-phone-number-input/input';
 import 'react-phone-number-input/style.css';
 import { useCart } from '../../context/CartContex';
 import './BookingModal.css';
-import DateSelector from '../DateSelector/DateSelector';
-import TimeSelector from '../TimeSelector/TimeSelector';
-import { Service } from '../../types/types';
-import { motion, AnimatePresence } from 'framer-motion';
-import CloseIcon from '../../assets/icons/close.svg';
-import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
-import {
-  ModalContent,
-  Form,
-  CloseButton,
-  Title,
-  GroupTitle,
-  ServiceSelector,
-  SelectorButton,
-  DropdownMenu,
-  ServiceOption,
-  ContactInput,
-  SubmitButton
-} from './BookingModal.styles';
 
 interface BookingModalProps {
   isOpen: boolean;
