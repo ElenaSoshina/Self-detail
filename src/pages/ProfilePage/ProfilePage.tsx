@@ -360,7 +360,7 @@ const ProfilePage: React.FC = () => {
       </div>
 
       {/* Секция Мои покупки */}
-      <div className={styles.section}>
+      {/* <div className={styles.section}>
         <div 
           className={styles.sectionHeader} 
           onClick={() => setShowPurchases(!showPurchases)}
@@ -403,7 +403,7 @@ const ProfilePage: React.FC = () => {
             )}
           </div>
         )}
-      </div>
+      </div> */}
     </div>
   );
 };
