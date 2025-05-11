@@ -196,19 +196,68 @@ const BookingModal: React.FC<BookingModalProps> = ({
       const startTimeFormatted = timeMatches[0];
       const endTimeFormatted = timeMatches.length > 1 ? timeMatches[1] : startTimeFormatted;
       
-      // Создаем сегодняшнюю дату для API
-      const today = new Date();
-      const year = today.getFullYear();
-      const month = today.getMonth();
-      const day = today.getDate();
+      // РАДИКАЛЬНОЕ РЕШЕНИЕ - установка даты только из timestamp
+      // Получаем timestamp прямо сейчас
+      const timestamp = Date.now(); 
+      console.log('TIMESTAMP NOW:', timestamp);
       
-      // Форматируем в строку даты в формате YYYY-MM-DD с ведущими нулями
-      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      // Создаем новый объект Date из текущего timestamp
+      const current = new Date(timestamp);
       
-      // Собираем итоговые строки для API
+      // Используем toLocaleDateString для получения компонентов даты в нашей локали
+      const dateParts = current.toLocaleDateString('en-CA').split('-'); // формат yyyy-mm-dd
+      console.log('DATE PARTS:', dateParts);
+      
+      if (dateParts.length !== 3) {
+        // Если не удалось получить части даты, используем ручные вычисления
+        const y = current.getFullYear();
+        const m = current.getMonth() + 1;
+        const d = current.getDate();
+        
+        // Форматируем в строку даты в формате YYYY-MM-DD с ведущими нулями
+        var dateStr = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      } else {
+        // Используем полученные части
+        var dateStr = `${dateParts[0]}-${dateParts[1]}-${dateParts[2]}`;
+      }
+      
+      alert(`ИТОГОВАЯ ДАТА ДЛЯ API: ${dateStr}`);
+      console.log('FINAL DATE STRING:', dateStr);
+      
+      // Собираем итоговые строки для API с гарантированно сегодняшней датой
       const startISODate = `${dateStr}T${startTimeFormatted}:00`;
       const endISODate = `${dateStr}T${endTimeFormatted}:00`;
-
+      
+      console.log('DEBUG ISO даты:', startISODate, endISODate);
+      
+      // Проверяем на жестко закодированную дату 2025-05-11 и исправляем ее
+      if (startISODate.includes('2025-05-11') || endISODate.includes('2025-05-11')) {
+        // Если обнаружена проблемная дата, принудительно заменяем на сегодняшнюю
+        console.warn('Обнаружена проблемная дата 2025-05-11! Исправляем на сегодняшнюю');
+        
+        // Получаем сегодняшнюю дату напрямую из timestamp
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = now.getMonth() + 1;
+        const d = now.getDate();
+        const fixedDateStr = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        
+        // Заменяем проблемную дату
+        const fixedStartISODate = startISODate.replace('2025-05-11', fixedDateStr);
+        const fixedEndISODate = endISODate.replace('2025-05-11', fixedDateStr);
+        
+        alert(`Исправлена дата:
+          Было: ${startISODate}
+          Стало: ${fixedStartISODate}`);
+        
+        // Используем исправленную дату
+        var apiStartISODate = fixedStartISODate;
+        var apiEndISODate = fixedEndISODate;
+      } else {
+        // Используем исходную дату
+        var apiStartISODate = startISODate;
+        var apiEndISODate = endISODate;
+      }
       
       // Формируем данные для API
       const apiData = {
@@ -219,8 +268,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
         clientName: formData.name,
         clientPhone: formData.phone.replace(/\+/g, ''),
         clientEmail: formData.email,
-        start: startISODate,
-        end: endISODate,
+        start: apiStartISODate,
+        end: apiEndISODate,
         service: hasService && service
           ? [{
               serviceName: service.serviceName,
@@ -244,7 +293,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
         clientName: apiData.clientName,
         start: apiData.start,
         end: apiData.end,
-        service: apiData.service,
+        service: apiData.service[0],
         productsCount: products.length,
         products: products.map(p => `${p.name} x${p.quantity}`)
       }));
@@ -338,7 +387,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
           phone: formData.phone,
           email: formData.email,
           telegramUserName: formData.telegramUserName,
-          selectedDate: today,  // Используем сегодняшнюю дату вместо selectedDate
+          selectedDate: current,  // Используем сегодняшнюю дату вместо selectedDate
           startTime: startTime, 
           endTime: endTime,
           service: hasService && service 
