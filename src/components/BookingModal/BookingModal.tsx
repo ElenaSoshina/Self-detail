@@ -16,7 +16,7 @@ interface BookingModalProps {
     price: number;
   } | null;
   onSubmit: (formData: any) => void;
-  selectedDate: Date;
+  selectedDate: Date | null;
   isAdmin?: boolean;
 }
 
@@ -37,6 +37,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
   selectedDate,
   isAdmin
 }) => {
+  console.log('BookingModal received selectedDate:', selectedDate, typeof selectedDate, selectedDate instanceof Date);
+  
   const [formData, setFormData] = useState<FormData>({
     name: '',
     phone: '',
@@ -55,10 +57,18 @@ const BookingModal: React.FC<BookingModalProps> = ({
   // Нормализуем отображение времени
   const [displayTime, setDisplayTime] = useState('');
 
+  // Получаем chatId пользователя из Telegram WebApp
   useEffect(() => {
-    if (selectedDate) {
+    const tg = (window as any).Telegram?.WebApp;
+    if (tg?.initDataUnsafe?.user?.id) {
+      const userId = tg.initDataUnsafe.user.id.toString();
+      setChatId(userId);
+      tg.ready?.();
     }
-    
+  }, []);
+
+  // Корректная обработка даты в useEffect без зависимости от selectedDate
+  useEffect(() => {
     // Нормализуем время для отображения
     if (startTime) {
       // Ищем все числа формата ЧЧ:ММ
@@ -74,17 +84,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
         setDisplayTime(startTime);
       }
     }
-  }, [startTime, endTime, selectedDate]);
-
-  // Получаем chatId пользователя из Telegram WebApp
-  useEffect(() => {
-    const tg = (window as any).Telegram?.WebApp;
-    if (tg?.initDataUnsafe?.user?.id) {
-      const userId = tg.initDataUnsafe.user.id.toString();
-      setChatId(userId);
-      tg.ready?.();
-    }
-  }, []);
+  }, [startTime, endTime]);
 
   // Соответствие serviceName <-> serviceRu
   const serviceNameMap: Record<string, string> = {
@@ -183,32 +183,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
         throw new Error('Не удалось получить ID пользователя из Telegram');
       }
       
-      if (!selectedDate) {
-        throw new Error('Не выбрана дата бронирования');
-      }
-      
-      // Получаем компоненты даты из selectedDate
-      const selectedDateObj = typeof selectedDate === 'string' 
-        ? new Date(selectedDate) 
-        : selectedDate instanceof Date 
-          ? new Date(selectedDate) 
-          : new Date();
-          
-      // Диагностический алерт по дате
-      alert(`Диагностика даты в BookingModal:
-        Исходная дата: ${String(selectedDate)}
-        Тип исходной даты: ${typeof selectedDate}
-        Является Date? ${selectedDate instanceof Date}
-        
-        Новая дата: ${selectedDateObj}
-        День: ${selectedDateObj.getDate()}
-        Месяц: ${selectedDateObj.getMonth() + 1}
-        Год: ${selectedDateObj.getFullYear()}
-      `);
-      
-      const day = selectedDateObj.getDate();
-      const month = selectedDateObj.getMonth() + 1; // JS месяцы от 0 до 11
-      const year = selectedDateObj.getFullYear();
+      // Дата не обязательна, используем текущую если не указана
+      // Но не показываем в интерфейсе, когда создаем запрос к API
       
       // Извлекаем время для запроса
       const timeMatches = startTime.match(/\d{1,2}:\d{2}/g);
@@ -220,11 +196,14 @@ const BookingModal: React.FC<BookingModalProps> = ({
       const startTimeFormatted = timeMatches[0];
       const endTimeFormatted = timeMatches.length > 1 ? timeMatches[1] : startTimeFormatted;
       
-      // Форматируем в строку даты в формате YYYY-MM-DD с ведущими нулями
-      const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      // Создаем сегодняшнюю дату для API
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = today.getMonth();
+      const day = today.getDate();
       
-      // Проверяем правильность даты
-      alert(`Итоговая дата для API: ${dateStr}`);
+      // Форматируем в строку даты в формате YYYY-MM-DD с ведущими нулями
+      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
       
       // Собираем итоговые строки для API
       const startISODate = `${dateStr}T${startTimeFormatted}:00`;
@@ -359,7 +338,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
           phone: formData.phone,
           email: formData.email,
           telegramUserName: formData.telegramUserName,
-          selectedDate: selectedDate,
+          selectedDate: today,  // Используем сегодняшнюю дату вместо selectedDate
           startTime: startTime, 
           endTime: endTime,
           service: hasService && service 
@@ -550,4 +529,4 @@ const BookingModal: React.FC<BookingModalProps> = ({
   );
 };
 
-export default BookingModal; 
+export default BookingModal;

@@ -365,7 +365,7 @@ const CartPage: React.FC = () => {
           endTime={selectedTime.end}
           service={selectedService}
           onSubmit={handleBooking}
-          selectedDate={bookingData?.selectedDate ? new Date(bookingData.selectedDate) : new Date()}
+          selectedDate={bookingData?.selectedDate || null}
           isAdmin={false}
         />
       )}
