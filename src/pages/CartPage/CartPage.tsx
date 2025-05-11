@@ -9,31 +9,13 @@ import BookingModal from '../../components/BookingModal/BookingModal';
 import BookingSuccess from '../BookingSuccess/BookingSuccess';
 import { BookingDetails } from '../CalendarPage/calendarTypes';
 import { sendTelegramMessage, formatAdminMessage, ADMIN_CHAT_ID } from '../../api/telegram';
+import { parseHourFromTime, formatDateToISO } from '../../utils/dateUtils';
 
 // Функция для получения изображения продукта по ID
 const getProductImage = (id: string | number): string => {
   const productId = typeof id === 'string' ? parseInt(id as string) : id;
   const product = products.find(p => p.id === productId);
   return product?.image || defaultImage;
-};
-
-// Извлечение часов из строки времени
-const parseHourFromTime = (timeStr: string): string => {
-  const timeMatches = timeStr.match(/\d{1,2}:\d{2}/g);
-  if (!timeMatches || timeMatches.length === 0) return '';
-  return timeMatches[0];
-};
-
-// Форматирование даты в ISO формат YYYY-MM-DD
-const formatDateToISO = (date: Date): string => {
-  // Получаем дату с учетом часового пояса пользователя
-  const year = date.getFullYear();
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-  
-  // Используем getDate для получения числа месяца
-  const day = date.getDate().toString().padStart(2, '0');
-  
-  return `${year}-${month}-${day}`;
 };
 
 const CartPage: React.FC = () => {
@@ -82,21 +64,8 @@ const CartPage: React.FC = () => {
         throw new Error('Некорректный формат времени');
       }
       
-      // Создаем даты для начала и конца бронирования
-      const selectedDate = new Date(formData.selectedDate);
-      const year = selectedDate.getFullYear();
-      const month = selectedDate.getMonth() + 1; // JS месяцы с 0
-      const day = selectedDate.getDate();
-      
-      // Конвертируем всё в строки с ведущими нулями
-      const yearStr = year.toString();
-      const monthStr = month.toString().padStart(2, '0');
-      const dayStr = day.toString().padStart(2, '0');
-      
-      // Создаем ISO строки для API
-      const dateStr = `${yearStr}-${monthStr}-${dayStr}`;
-      alert('Форматированная дата: ' + dateStr);
-      
+      // Форматируем дату и создаем ISO строки для API
+      const dateStr = formatDateToISO(formData.selectedDate);
       const startISODate = `${dateStr}T${startTimeStr}:00`;
       const endISODate = `${dateStr}T${endTimeStr}:00`;
       

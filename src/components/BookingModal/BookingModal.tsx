@@ -5,7 +5,7 @@ import { sendTelegramMessage, sendTelegramMessageByUsername, formatUserMessage, 
 import PhoneInput from 'react-phone-number-input/input';
 import 'react-phone-number-input/style.css';
 import { useCart } from '../../context/CartContex';
-import './BookingModal.css';
+import { parseHourFromTime, formatDateToISO, createISODateTime } from '../../utils/dateUtils';
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -182,22 +182,12 @@ const BookingModal: React.FC<BookingModalProps> = ({
         throw new Error('Некорректный формат времени');
       }
       
-      // Создаем даты для начала и конца бронирования
-      const year = selectedDate.getFullYear();
-      const month = selectedDate.getMonth() + 1; // JS месяцы с 0
-      const day = selectedDate.getDate();
-      
-      // Конвертируем всё в строки с ведущими нулями
-      const yearStr = year.toString();
-      const monthStr = month.toString().padStart(2, '0');
-      const dayStr = day.toString().padStart(2, '0');
-      
       // Создаем ISO строки для API
-      const dateStr = `${yearStr}-${monthStr}-${dayStr}`;
+      const dateIso = formatDateToISO(selectedDate);
+      const startISODate = `${dateIso}T${startTimeStr}:00`;
+      const endISODate = `${dateIso}T${endTimeStr}:00`;
       
-      alert('Выбранная дата в ISO: ' + dateStr);
-      const startISODate = `${dateStr}T${startTimeStr}:00`;
-      const endISODate = `${dateStr}T${endTimeStr}:00`;
+      alert('Выбранная дата в ISO: ' + dateIso);
       
       // Формируем данные для API
       const apiData = {
@@ -314,13 +304,6 @@ const BookingModal: React.FC<BookingModalProps> = ({
     } finally {
       setIsLoading(false);
     }
-  };
-  
-  // Парсинг времени из формата "01:00 — 03:00"
-  const parseHourFromTime = (timeStr: string): string => {
-    const timeMatches = timeStr.match(/\d{1,2}:\d{2}/g);
-    if (!timeMatches || timeMatches.length === 0) return '';
-    return timeMatches[0];
   };
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
