@@ -56,16 +56,9 @@ const BookingModal: React.FC<BookingModalProps> = ({
   const [displayTime, setDisplayTime] = useState('');
 
   useEffect(() => {
-    console.log('Время полученное в модальном окне:', { startTime, endTime });
-    console.log('Выбранная дата в модальном окне:', selectedDate);
-    
+    alert('Время полученное в модальном окне: ' + startTime + ', ' + endTime);
     if (selectedDate) {
-      const localDate = new Date(selectedDate);
-      console.log('Компоненты даты:', {
-        day: localDate.getDate(),
-        month: localDate.getMonth() + 1,
-        year: localDate.getFullYear()
-      });
+      alert('Выбранная дата: ' + selectedDate.toLocaleDateString());
     }
     
     // Нормализуем время для отображения
@@ -75,15 +68,12 @@ const BookingModal: React.FC<BookingModalProps> = ({
       if (timeMatches && timeMatches.length >= 2) {
         // Если в startTime найдены два времени, используем их
         setDisplayTime(`${timeMatches[0]} - ${timeMatches[1]}`);
-        console.log('Время нормализовано из startTime:', `${timeMatches[0]} - ${timeMatches[1]}`);
       } else if (startTime && endTime) {
         // Если есть отдельные startTime и endTime
         setDisplayTime(`${startTime} - ${endTime}`);
-        console.log('Время составлено из startTime и endTime:', `${startTime} - ${endTime}`);
       } else {
         // Если найдено только одно время в startTime
         setDisplayTime(startTime);
-        console.log('Используется исходное время:', startTime);
       }
     }
   }, [startTime, endTime, selectedDate]);
@@ -163,26 +153,29 @@ const BookingModal: React.FC<BookingModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Начало отправки формы');
+    alert('Начало отправки формы');
     setIsLoading(true);
     setError(null);
     
     if (!validate()) {
-      console.log('Валидация не пройдена');
+      alert('Валидация не пройдена');
       setIsLoading(false);
       return;
     }
     
     try {
       if (!chatId) {
+        alert('Нет chatId');
         throw new Error('Не удалось получить ID пользователя из Telegram');
       }
       
       if (!selectedDate) {
+        alert('Не выбрана дата бронирования');
         throw new Error('Не выбрана дата бронирования');
       }
       
-      console.log('Исходное время:', { startTime, endTime });
+      alert('Исходная дата: ' + selectedDate.toLocaleDateString());
+      alert('Исходное время: ' + startTime + ', ' + endTime);
       
       // Извлекаем время для запроса
       const timeMatches = startTime.match(/\d{1,2}:\d{2}/g);
@@ -191,28 +184,26 @@ const BookingModal: React.FC<BookingModalProps> = ({
       }
       
       // Определяем начальное и конечное время
-      const startTimeFormatted = timeMatches[0];  // Первое найденное время
-      const endTimeFormatted = timeMatches.length > 1 ? timeMatches[1] : startTimeFormatted;  // Второе время или первое, если второго нет
+      const startTimeFormatted = timeMatches[0];
+      const endTimeFormatted = timeMatches.length > 1 ? timeMatches[1] : startTimeFormatted;
       
-      // Создаем копию выбранной даты, чтобы не изменять оригинал
-      const bookingDate = new Date(selectedDate);
+      // УПРОЩЁННЫЙ ПОДХОД: Используем компоненты даты напрямую, без дополнительных преобразований
+      const year = selectedDate.getFullYear();
+      const month = selectedDate.getMonth() + 1; // JS месяцы от 0 до 11
+      const day = selectedDate.getDate();
       
-      // Работаем с локальными компонентами даты
-      const year = bookingDate.getFullYear();
-      const month = bookingDate.getMonth() + 1;
-      const day = bookingDate.getDate();
-      
-      console.log(`Выбранная дата: ${day}.${month}.${year}`);
+      alert(`Компоненты даты: день=${day}, месяц=${month}, год=${year}`);
       
       // Формируем строку даты в формате YYYY-MM-DD
-      // Добавляем лидирующие нули для месяца и дня при необходимости
       const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
       
-      // Формируем итоговые строки даты и времени для API
+      alert(`Сформированная строка даты: ${dateStr}`);
+      
+      // Итоговые строки для API
       const startISODate = `${dateStr}T${startTimeFormatted}:00`;
       const endISODate = `${dateStr}T${endTimeFormatted}:00`;
       
-      console.log(`Итоговые строки для API: start=${startISODate}, end=${endISODate}`);
+      alert(`Итоговые строки для API: start=${startISODate}, end=${endISODate}`);
       
       // Формируем данные для API
       const apiData = {
@@ -234,7 +225,11 @@ const BookingModal: React.FC<BookingModalProps> = ({
         notes: ''
       };
       
-      console.log('Данные для API:', apiData);
+      alert('Данные для API: ' + JSON.stringify({
+        start: apiData.start,
+        end: apiData.end,
+        service: apiData.service
+      }));
       
       // Отправляем запрос на API для создания бронирования
       const response = await fetch('https://backend.self-detailing.duckdns.org/api/v1/calendar/booking', {
@@ -245,16 +240,16 @@ const BookingModal: React.FC<BookingModalProps> = ({
         body: JSON.stringify(apiData),
       });
       
-      console.log('Получен ответ от сервера:', response.status);
+      alert('Получен ответ от сервера: ' + response.status);
       
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Ошибка сервера:', errorText);
+        alert('Ошибка сервера: ' + errorText);
         throw new Error(`Ошибка сервера: ${response.status} ${errorText}`);
       }
       
       const result = await response.json();
-      console.log('Успешный ответ сервера:', result);
+      alert('Успешный ответ сервера');
       
       // Отправляем уведомления в Telegram
       const isTech = (service?.serviceName || '').toLowerCase().includes('техничес');
@@ -293,16 +288,16 @@ const BookingModal: React.FC<BookingModalProps> = ({
             ),
           ]);
         }
-        console.log('Уведомления в Telegram отправлены');
+        alert('Уведомления в Telegram отправлены');
         
         // Закрываем Telegram WebApp после успешной отправки
         const tg = (window as any).Telegram?.WebApp;
         if (tg && typeof tg.close === 'function') {
-          console.log('Закрытие Telegram WebApp');
+          alert('Закрытие Telegram WebApp');
           tg.close();
         }
       } catch (telegramError) {
-        console.error('Ошибка при отправке уведомлений в Telegram:', telegramError);
+        alert('Ошибка при отправке уведомлений в Telegram: ' + telegramError);
       }
       
       // Формируем данные для onSubmit
@@ -323,7 +318,13 @@ const BookingModal: React.FC<BookingModalProps> = ({
             : null
         };
         
-        console.log('Данные для onSubmit:', submittedData);
+        alert('Данные для onSubmit: ' + JSON.stringify({
+          name: submittedData.name,
+          selectedDate: submittedData.selectedDate?.toLocaleDateString(),
+          startTime: submittedData.startTime,
+          endTime: submittedData.endTime
+        }));
+        
         await onSubmit(submittedData);
       }
       
@@ -334,12 +335,12 @@ const BookingModal: React.FC<BookingModalProps> = ({
       setTimeout(() => {
         const tg = (window as any).Telegram?.WebApp;
         if (tg && typeof tg.close === 'function') {
-          console.log('Закрытие Telegram WebApp с задержкой');
+          alert('Закрытие Telegram WebApp с задержкой');
           tg.close();
         }
       }, 1000);
     } catch (error) {
-      console.error('Ошибка при отправке формы:', error);
+      alert('Ошибка при отправке формы: ' + (error instanceof Error ? error.message : String(error)));
       setError(error instanceof Error ? error.message : 'Произошла ошибка при отправке формы');
     } finally {
       setIsLoading(false);
