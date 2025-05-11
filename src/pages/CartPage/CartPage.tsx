@@ -52,9 +52,6 @@ const CartPage: React.FC = () => {
 
   const handleBooking = async (formData: any) => {
     try {
-      alert('Создание бронирования');
-      alert('Выбранная дата: ' + formData.selectedDate.toLocaleDateString());
-      
       // Извлекаем время для запроса
       const timeMatches = formData.startTime.match(/\d{1,2}:\d{2}/g);
       if (!timeMatches || timeMatches.length === 0) {
@@ -66,15 +63,10 @@ const CartPage: React.FC = () => {
       const endTimeFormatted = timeMatches.length > 1 ? timeMatches[1] : startTimeFormatted;  // Второе время или первое, если второго нет
       
       // Форматируем дату для API
-      alert('Изначальная дата: ' + formData.selectedDate.toLocaleDateString());
-
       // Получаем данные напрямую, без изменений
       const actualDay = formData.selectedDate.getDate(); // Текущий день месяца (1-31)
       const actualMonth = formData.selectedDate.getMonth() + 1; // Месяц (1-12)
       const actualYear = formData.selectedDate.getFullYear(); // Год в 4-х значном формате
-
-      // Проверяем, что у нас правильная дата
-      alert(`Правильная дата: День=${actualDay}, Месяц=${actualMonth}, Год=${actualYear}`);
 
       // Форматируем с ведущими нулями
       const year = actualYear.toString();
@@ -86,8 +78,6 @@ const CartPage: React.FC = () => {
       // Создаем ISO строки для начала и конца бронирования
       const startISODate = `${dateStr}T${startTimeFormatted}:00`;
       const endISODate = `${dateStr}T${endTimeFormatted}:00`;
-      
-      alert('Данные для API: start=' + startISODate + ', end=' + endISODate);
       
       // Вычисляем общую стоимость
       const bookingCost = formData.service?.price || 0;
@@ -148,34 +138,36 @@ const CartPage: React.FC = () => {
       
       if (!response.ok) {
         const errorText = await response.text();
-        alert('Ошибка сервера: ' + errorText);
         throw new Error(`Ошибка сервера: ${response.status} ${errorText}`);
       }
       
       // Получаем результат
       const result = await response.json();
-      alert('Бронирование успешно создано');
       
       // Отправляем сообщения в Telegram
-      const isTech = (formData.service?.serviceName || '').toLowerCase().includes('техничес');
-      
       try {
         // Обычный пользователь — отправляем админу
         await sendTelegramMessage(
           formatAdminMessage(apiData, formData.service || { price: 0 }, formData.service?.serviceName || ''),
           ADMIN_CHAT_ID
         );
-
-        alert('Уведомления в Telegram отправлены');
+        
+        // После успешного запроса устанавливаем данные
+        setSuccessBookingDetails(bookingDetails);
+        
+        // Закрываем Telegram WebApp после успешной отправки
+        const tg = (window as any).Telegram?.WebApp;
+        if (tg) {
+          // Небольшая задержка, чтобы пользователь успел увидеть успешное сообщение
+          setTimeout(() => {
+            tg.close();
+          }, 1500);
+        }
       } catch (telegramError) {
         console.error('Ошибка при отправке уведомлений в Telegram:', telegramError);
       }
-      
-      // После успешного запроса устанавливаем данные
-      setSuccessBookingDetails(bookingDetails);
     } catch (error) {
       console.error('Ошибка при бронировании:', error);
-      alert(`Ошибка при бронировании: ${error}`);
     }
   };
 

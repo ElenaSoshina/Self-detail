@@ -153,23 +153,18 @@ const BookingModal: React.FC<BookingModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    alert('Начало отправки формы');
     setIsLoading(true);
     setError(null);
     
     if (!validate()) {
-      alert('Валидация не пройдена');
       setIsLoading(false);
       return;
     }
     
     try {
       if (!chatId) {
-        alert('Нет chatId');
         throw new Error('Не удалось получить ID пользователя из Telegram');
       }
-      
-      alert('Исходное время: startTime=' + startTime + ', endTime=' + endTime);
       
       // Извлекаем время для запроса
       const timeMatches = startTime.match(/\d{1,2}:\d{2}/g);
@@ -182,8 +177,6 @@ const BookingModal: React.FC<BookingModalProps> = ({
       const endTimeFormatted = timeMatches.length > 1 ? timeMatches[1] : startTimeFormatted;  // Второе время или первое, если второго нет
       
       // Форматируем дату и время для API
-      alert('Изначальная дата: ' + selectedDate.toLocaleDateString());  // Проверка исходной даты
-
       // Получаем данные напрямую, без изменений
       const actualDay = selectedDate.getDate(); // Текущий день месяца (1-31)
       const actualMonth = selectedDate.getMonth() + 1; // Месяц (1-12)
@@ -194,14 +187,10 @@ const BookingModal: React.FC<BookingModalProps> = ({
       const month = actualMonth.toString().padStart(2, '0');
       const day = actualDay.toString().padStart(2, '0');
 
-      alert(`Правильная дата: День=${actualDay}, Месяц=${actualMonth}, Год=${actualYear}`);
-
       const dateStr = `${year}-${month}-${day}`;
       
       const startISODate = `${dateStr}T${startTimeFormatted}:00`;
       const endISODate = `${dateStr}T${endTimeFormatted}:00`;
-      
-      alert('Дата и время для API: start=' + startISODate + ', end=' + endISODate);
       
       // Формируем данные для API
       const apiData = {
@@ -223,8 +212,6 @@ const BookingModal: React.FC<BookingModalProps> = ({
         notes: ''
       };
       
-      alert('Данные для API: ' + JSON.stringify(apiData));
-      
       // Отправляем запрос на API для создания бронирования
       const response = await fetch('https://backend.self-detailing.duckdns.org/api/v1/calendar/booking', {
         method: 'POST',
@@ -234,16 +221,12 @@ const BookingModal: React.FC<BookingModalProps> = ({
         body: JSON.stringify(apiData),
       });
       
-      alert('Получен ответ от сервера: ' + response.status);
-      
       if (!response.ok) {
         const errorText = await response.text();
-        alert('Ошибка сервера: ' + errorText);
         throw new Error(`Ошибка сервера: ${response.status} ${errorText}`);
       }
       
       const result = await response.json();
-      alert('Успешный ответ сервера: ' + JSON.stringify(result));
       
       // Отправляем уведомления в Telegram
       const isTech = (service?.serviceName || '').toLowerCase().includes('техничес');
@@ -282,38 +265,43 @@ const BookingModal: React.FC<BookingModalProps> = ({
             ),
           ]);
         }
-        alert('Уведомления в Telegram отправлены');
+        
+        // Формируем данные для onSubmit
+        if (onSubmit) {
+          const submittedData = {
+            name: formData.name,
+            phone: formData.phone,
+            email: formData.email,
+            telegramUserName: formData.telegramUserName,
+            selectedDate: selectedDate,
+            startTime: startTime, 
+            endTime: endTime,
+            service: hasService && service 
+              ? { 
+                  serviceName: service.serviceName,
+                  price: servicePrice
+                }
+              : null
+          };
+          
+          await onSubmit(submittedData);
+        }
+        
+        setShowSuccess(true);
+        onClose();
+        
+        // Закрываем Telegram WebApp после успешной отправки
+        const tg = (window as any).Telegram?.WebApp;
+        if (tg) {
+          // Небольшая задержка, чтобы пользователь успел увидеть успешное сообщение
+          setTimeout(() => {
+            tg.close();
+          }, 1500);
+        }
       } catch (telegramError) {
-        alert('Ошибка при отправке уведомлений в Telegram: ' + telegramError);
         console.error('Ошибка при отправке уведомлений в Telegram:', telegramError);
       }
-      
-      // Формируем данные для onSubmit
-      if (onSubmit) {
-        const submittedData = {
-          name: formData.name,
-          phone: formData.phone,
-          email: formData.email,
-          telegramUserName: formData.telegramUserName,
-          selectedDate: selectedDate,
-          startTime: startTime, 
-          endTime: endTime,
-          service: hasService && service 
-            ? { 
-                serviceName: service.serviceName,
-                price: servicePrice
-              }
-            : null
-        };
-        
-        alert('Данные для onSubmit: ' + JSON.stringify(submittedData));
-        await onSubmit(submittedData);
-      }
-      
-      setShowSuccess(true);
-      onClose();
     } catch (error) {
-      alert('Ошибка при отправке формы: ' + error);
       setError(error instanceof Error ? error.message : 'Произошла ошибка при отправке формы');
     } finally {
       setIsLoading(false);
