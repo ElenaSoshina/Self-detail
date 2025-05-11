@@ -47,10 +47,16 @@ export const formatUserMessage = (bookingData: any, service: any, serviceRu: str
     return date.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
   const formatTime = (iso: string) => {
-    const date = new Date(iso);
-    const h = String(date.getUTCHours()).padStart(2, '0');
-    const m = String(date.getUTCMinutes()).padStart(2, '0');
-    return `${h}:${m}`;
+    const timePart = iso.split('T')[1];
+    if (!timePart) return '00:00';
+    
+    const [hoursMinutes] = timePart.split(':');
+    if (!hoursMinutes) return '00:00';
+    
+    const hours = hoursMinutes.padStart(2, '0');
+    const minutes = (timePart.split(':')[1] || '00').padStart(2, '0');
+    
+    return `${hours}:${minutes}`;
   };
   const dateStr = formatDate(bookingData.start);
   const timeStr = `${formatTime(bookingData.start)} - ${formatTime(bookingData.end)}`;
@@ -71,10 +77,16 @@ export const formatAdminMessage = (bookingData: any, service: any, serviceRu: st
     return date.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
   const formatTime = (iso: string) => {
-    const date = new Date(iso);
-    const h = String(date.getUTCHours()).padStart(2, '0');
-    const m = String(date.getUTCMinutes()).padStart(2, '0');
-    return `${h}:${m}`;
+    const timePart = iso.split('T')[1];
+    if (!timePart) return '00:00';
+    
+    const [hoursMinutes] = timePart.split(':');
+    if (!hoursMinutes) return '00:00';
+    
+    const hours = hoursMinutes.padStart(2, '0');
+    const minutes = (timePart.split(':')[1] || '00').padStart(2, '0');
+    
+    return `${hours}:${minutes}`;
   };
   const dateStr = formatDate(bookingData.start);
   const timeStr = `${formatTime(bookingData.start)} - ${formatTime(bookingData.end)}`;
