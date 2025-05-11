@@ -169,17 +169,23 @@ const BookingModal: React.FC<BookingModalProps> = ({
         throw new Error('Не удалось получить ID пользователя из Telegram');
       }
 
+      alert('Исходное время: startTime=' + startTime + ', endTime=' + endTime);
+      
       // Разбираем времена начала и окончания
       const startTimeStr = parseTimeValue(startTime, 'start');
-      const endTimeStr = parseTimeValue(endTime, 'end');
+      const endTimeStr = parseTimeValue(endTime || startTime, 'end');
+      
+      alert('Распарсенное время: startTimeStr=' + startTimeStr + ', endTimeStr=' + endTimeStr);
       
       if (!startTimeStr || !endTimeStr) {
         throw new Error('Некорректный формат времени');
       }
       
       // Создаем корректные даты ISO для API
-      const startDate = createDateWithTime(selectedDate, startTimeStr);
-      const endDate = createDateWithTime(selectedDate, endTimeStr);
+      const startISODate = createDateWithTime(selectedDate, startTimeStr);
+      const endISODate = createDateWithTime(selectedDate, endTimeStr);
+      
+      alert('Созданные ISO даты: startDate=' + startISODate + ', endDate=' + endISODate);
 
       // Формируем данные для API
       const apiData = {
@@ -190,8 +196,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
         clientName: formData.name,
         clientPhone: formData.phone.replace(/\+/g, ''),
         clientEmail: formData.email,
-        start: startDate.toISOString(),
-        end: endDate.toISOString(),
+        start: startISODate,
+        end: endISODate,
         service: hasService && service
           ? [{
               serviceName: service.serviceName,
@@ -203,6 +209,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
 
       alert('Данные для API: ' + JSON.stringify(apiData));
       
+      // Отправляем запрос на API для создания бронирования
       const response = await fetch('https://backend.self-detailing.duckdns.org/api/v1/calendar/booking', {
         method: 'POST',
         headers: {
@@ -221,6 +228,49 @@ const BookingModal: React.FC<BookingModalProps> = ({
 
       const result = await response.json();
       alert('Успешный ответ сервера: ' + JSON.stringify(result));
+      
+      // Отправляем уведомления в Telegram
+      const isTech = (service?.serviceName || '').toLowerCase().includes('техничес');
+      
+      try {
+        if (isAdmin) {
+          if (isTech) {
+            // Только админу
+            await sendTelegramMessage(
+              formatAdminMessage(apiData, service || { price: 0 }, service?.serviceName || ''),
+              ADMIN_CHAT_ID
+            );
+          } else {
+            // Пользователю по username через endpoint и админу
+            await Promise.all([
+              sendTelegramMessageByUsername(
+                formatUserMessage(apiData, service || { price: 0 }, service?.serviceName || ''),
+                formData.telegramUserName
+              ),
+              sendTelegramMessage(
+                formatAdminMessage(apiData, service || { price: 0 }, service?.serviceName || ''),
+                ADMIN_CHAT_ID
+              ),
+            ]);
+          }
+        } else {
+          // Обычный пользователь — по chatId и админу
+          await Promise.all([
+            sendTelegramMessage(
+              formatUserMessage(apiData, service || { price: 0 }, service?.serviceName || ''),
+              chatId
+            ),
+            sendTelegramMessage(
+              formatAdminMessage(apiData, service || { price: 0 }, service?.serviceName || ''),
+              ADMIN_CHAT_ID
+            ),
+          ]);
+        }
+        alert('Уведомления в Telegram отправлены');
+      } catch (telegramError) {
+        alert('Ошибка при отправке уведомлений в Telegram: ' + telegramError);
+        console.error('Ошибка при отправке уведомлений в Telegram:', telegramError);
+      }
       
       // Формируем данные для onSubmit
       if (onSubmit) {
@@ -259,20 +309,34 @@ const BookingModal: React.FC<BookingModalProps> = ({
     try {
       if (!timeStr) return '';
       
-      if (timeStr.includes('—') || timeStr.includes('-')) {
-        const parts = timeStr.split(/[—-]/).map(s => s.trim());
-        return type === 'start' ? parts[0] : (parts[1] || parts[0]);
+      alert(`Разбор времени (${type}): ${timeStr}`);
+      
+      // Используем регулярные выражения для извлечения всех времен в формате HH:MM
+      const timeMatches = timeStr.match(/\d{1,2}:\d{2}/g);
+      alert(`Найденные времена: ${JSON.stringify(timeMatches)}`);
+      
+      if (!timeMatches || timeMatches.length === 0) {
+        return '';
       }
       
-      return timeStr.trim();
+      // Если нашли два времени, берем первое для начала, второе для конца
+      if (timeMatches.length >= 2) {
+        const result = type === 'start' ? timeMatches[0] : timeMatches[1];
+        alert(`Итоговое время (${type}): ${result}`);
+        return result;
+      }
+      
+      // Если нашли только одно время, используем его для обоих случаев
+      alert(`Итоговое время (${type}): ${timeMatches[0]}`);
+      return timeMatches[0];
     } catch (error) {
       alert(`Ошибка при парсинге времени: ${error}`);
       return '';
     }
   };
   
-  // Создание даты с указанным временем
-  const createDateWithTime = (baseDate: Date, timeStr: string): Date => {
+  // Создание ISO строки даты с указанным временем
+  const createDateWithTime = (baseDate: Date, timeStr: string): string => {
     try {
       if (!timeStr.match(/^\d{1,2}:\d{2}$/)) {
         throw new Error(`Неверный формат времени: ${timeStr}`);
@@ -284,14 +348,19 @@ const BookingModal: React.FC<BookingModalProps> = ({
         throw new Error(`Неверное значение времени: ${hours}:${minutes}`);
       }
       
-      const result = new Date(baseDate);
-      result.setHours(hours, minutes, 0, 0);
+      // Клонируем базовую дату
+      const date = new Date(baseDate.getTime());
+      // Устанавливаем часы и минуты
+      date.setHours(hours, minutes, 0, 0);
       
-      if (isNaN(result.getTime())) {
-        throw new Error(`Невалидная дата: ${result}`);
+      if (isNaN(date.getTime())) {
+        throw new Error(`Невалидная дата: ${date}`);
       }
       
-      return result;
+      // Форматируем дату в ISO строку без миллисекунд
+      const isoDate = date.toISOString().split('.')[0];
+      alert(`Созданная ISO дата: ${isoDate}`);
+      return isoDate;
     } catch (error) {
       alert(`Ошибка при создании даты: ${error}`);
       throw error;

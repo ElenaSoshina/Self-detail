@@ -6,9 +6,9 @@ import { products } from '../../data/products';
 import defaultImage from '../../assets/shampoo.jpg';
 import { CartItem } from '../../types';
 import BookingModal from '../../components/BookingModal/BookingModal';
-import { createBooking } from '../../api/booking';
 import BookingSuccess from '../BookingSuccess/BookingSuccess';
 import { BookingDetails } from '../CalendarPage/calendarTypes';
+import { sendTelegramMessage, formatAdminMessage, ADMIN_CHAT_ID } from '../../api/telegram';
 
 // Функция для получения изображения продукта по ID
 const getProductImage = (id: string | number): string => {
@@ -52,38 +52,20 @@ const CartPage: React.FC = () => {
 
   const handleBooking = async (formData: any) => {
     try {
-      alert(`Получены данные от модального окна: ${JSON.stringify(formData, null, 2)}`);
+      alert('Создание бронирования');
       
-      // Получаем бронируемую услугу и товары
-      const bookingItem = items.find(item => item.type === 'booking');
-      const products = items.filter(item => item.type !== 'booking');
-      
-      console.log('Данные формы бронирования:', formData);
-      console.log('Элемент бронирования в корзине:', bookingItem);
-      console.log('Товары в корзине:', products);
-      
-      // Разбираем формат времени
-      let startTime = formData.startTime || '';
-      let endTime = formData.endTime || '';
-      
-      console.log('Исходные значения времени:', { startTime, endTime });
-      
-      // Ищем все числа формата ЧЧ:ММ
+      // Извлекаем время
       let timePattern = '';
-      if (startTime) {
-        const timeMatches = startTime.match(/\d{1,2}:\d{2}/g);
-        if (timeMatches && timeMatches.length >= 2) {
-          timePattern = `${timeMatches[0]} - ${timeMatches[1]}`;
-          console.log('Нормализованное время из startTime:', timePattern);
-        } else if (startTime && endTime) {
-          // Если у нас есть отдельные startTime и endTime
-          timePattern = `${startTime} - ${endTime}`;
-          console.log('Составленное время из startTime и endTime:', timePattern);
-        } else {
-          timePattern = startTime;
-          console.log('Использование исходного времени:', timePattern);
-        }
+      if (formData.startTime && formData.endTime) {
+        timePattern = `${formData.startTime} - ${formData.endTime}`;
+      } else if (formData.startTime) {
+        timePattern = formData.startTime;
       }
+      
+      // Вычисляем общую стоимость
+      const bookingCost = formData.service?.price || 0;
+      const productsTotal = items.reduce((sum, item) => sum + (item.type === 'product' ? item.price * item.quantity : 0), 0);
+      const totalCost = bookingCost + productsTotal;
       
       // Создаем объект для BookingSuccess
       const bookingDetails: BookingDetails = {
@@ -103,23 +85,145 @@ const CartPage: React.FC = () => {
       console.log('Отправка данных бронирования:', formData);
       console.log('Объект bookingDetails:', bookingDetails);
       
+      // Разбираем времена начала и окончания
+      const parseTimeValue = (timeStr: string, type: 'start' | 'end'): string => {
+        try {
+          if (!timeStr) return '';
+          
+          // Используем регулярные выражения для извлечения всех времен в формате HH:MM
+          const timeMatches = timeStr.match(/\d{1,2}:\d{2}/g);
+          
+          if (!timeMatches || timeMatches.length === 0) {
+            return '';
+          }
+          
+          // Если нашли два времени, берем первое для начала, второе для конца
+          if (timeMatches.length >= 2) {
+            return type === 'start' ? timeMatches[0] : timeMatches[1];
+          }
+          
+          // Если нашли только одно время, используем его для обоих случаев
+          return timeMatches[0];
+        } catch (error) {
+          console.error(`Ошибка при парсинге времени:`, error);
+          return '';
+        }
+      };
+      
+      // Создание ISO строки даты с указанным временем
+      const createDateWithTime = (baseDate: Date, timeStr: string): string => {
+        try {
+          if (!timeStr.match(/^\d{1,2}:\d{2}$/)) {
+            throw new Error(`Неверный формат времени: ${timeStr}`);
+          }
+          
+          const [hours, minutes] = timeStr.split(':').map(Number);
+          
+          if (isNaN(hours) || isNaN(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+            throw new Error(`Неверное значение времени: ${hours}:${minutes}`);
+          }
+          
+          // Клонируем базовую дату
+          const date = new Date(baseDate.getTime());
+          // Устанавливаем часы и минуты
+          date.setHours(hours, minutes, 0, 0);
+          
+          if (isNaN(date.getTime())) {
+            throw new Error(`Невалидная дата: ${date}`);
+          }
+          
+          // Форматируем дату в ISO строку без миллисекунд
+          const isoDate = date.toISOString().split('.')[0];
+          return isoDate;
+        } catch (error) {
+          console.error(`Ошибка при создании даты:`, error);
+          throw error;
+        }
+      };
+      
+      const startTimeStr = parseTimeValue(formData.startTime, 'start');
+      const endTimeStr = parseTimeValue(formData.endTime || formData.startTime, 'end');
+      
+      if (!startTimeStr || !endTimeStr) {
+        throw new Error('Некорректный формат времени');
+      }
+      
+      // Создаем корректные даты ISO для API
+      const startISODate = createDateWithTime(formData.selectedDate, startTimeStr);
+      const endISODate = createDateWithTime(formData.selectedDate, endTimeStr);
+      
+      // Формируем данные для API
+      const chatId = '0';
+      const apiData = {
+        telegramUserId: parseInt(chatId || '0'),
+        telegramUserName: formData.telegramUserName?.startsWith('@') 
+          ? formData.telegramUserName 
+          : `@${formData.telegramUserName || ''}`,
+        clientName: formData.name || '',
+        clientPhone: (formData.phone || '').replace(/\+/g, ''),
+        clientEmail: formData.email || '',
+        start: startISODate,
+        end: endISODate,
+        service: formData.service 
+          ? [{
+              serviceName: formData.service.serviceName || '',
+              price: formData.service.price || 0
+            }]
+          : [],
+        notes: '',
+        products: items
+          .filter(item => item.type === 'product')
+          .map(item => ({
+            productName: item.name,
+            price: item.price,
+            quantity: item.quantity
+          }))
+      };
+      
+      // Отправляем запрос на API для создания бронирования
+      const response = await fetch('https://backend.self-detailing.duckdns.org/api/v1/calendar/booking', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(apiData),
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        alert('Ошибка сервера: ' + errorText);
+        throw new Error(`Ошибка сервера: ${response.status} ${errorText}`);
+      }
+      
+      // Получаем результат
+      const result = await response.json();
+      alert('Бронирование успешно создано');
+      
+      // Отправляем сообщения в Telegram
+      const isTech = (formData.service?.serviceName || '').toLowerCase().includes('техничес');
+      
       try {
-        // Вызываем API для создания бронирования
-        const response = await createBooking(formData);
-        alert(`Успешный ответ от сервера: ${JSON.stringify(response, null, 2)}`);
-      } catch (apiError) {
-        alert(`Ошибка от API createBooking: ${apiError}`);
-        throw apiError;
+        // Обычный пользователь — отправляем админу
+        await sendTelegramMessage(
+          formatAdminMessage(apiData, formData.service || { price: 0 }, formData.service?.serviceName || ''),
+          ADMIN_CHAT_ID
+        );
+
+        alert('Уведомления в Telegram отправлены');
+      } catch (telegramError) {
+        console.error('Ошибка при отправке уведомлений в Telegram:', telegramError);
       }
       
       // После успешного запроса устанавливаем данные
       setSuccessBookingDetails(bookingDetails);
     } catch (error) {
       console.error('Ошибка при бронировании:', error);
-      alert(`Полная ошибка при бронировании: ${error}`);
-      alert('Произошла ошибка при оформлении бронирования. Попробуйте еще раз.');
+      alert(`Ошибка при бронировании: ${error}`);
     }
   };
+
+  // Находим бронируемую услугу
+  const bookingItem = items.find(item => item.type === 'booking');
 
   if (successBookingDetails) {
     return <BookingSuccess bookingDetails={successBookingDetails} />;
