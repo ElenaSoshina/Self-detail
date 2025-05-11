@@ -228,9 +228,27 @@ const BookingModal: React.FC<BookingModalProps> = ({
               price: servicePrice // Используем корректную стоимость
             }]
           : [],
-        notes: ''
+        notes: '',
+        // Добавляем информацию о товарах, если они есть
+        products: products.length > 0 
+          ? products.map(product => ({
+              name: product.name,
+              price: product.price,
+              quantity: product.quantity
+            }))
+          : undefined
       };
 
+      // Диагностический алерт с данными для отправки
+      alert('Данные для отправки на сервер: ' + JSON.stringify({
+        telegramUserId: apiData.telegramUserId,
+        clientName: apiData.clientName,
+        start: apiData.start,
+        end: apiData.end,
+        service: apiData.service,
+        productsCount: products.length,
+        products: products.map(p => `${p.name} x${p.quantity}`)
+      }));
       
       // Отправляем запрос на API для создания бронирования
       const response = await fetch('https://backend.self-detailing.duckdns.org/api/v1/calendar/booking', {
@@ -259,18 +277,27 @@ const BookingModal: React.FC<BookingModalProps> = ({
           if (isTech) {
             // Только админу
             await sendTelegramMessage(
-              formatAdminMessage(apiData, service || { price: 0 }, service?.serviceName || ''),
+              formatAdminMessage(apiData, 
+                service ? { ...service, price: servicePrice } : { price: 0 }, 
+                service?.serviceName || ''
+              ),
               ADMIN_CHAT_ID
             );
           } else {
             // Пользователю по username через endpoint и админу
             await Promise.all([
               sendTelegramMessageByUsername(
-                formatUserMessage(apiData, service || { price: 0 }, service?.serviceName || ''),
+                formatUserMessage(apiData, 
+                  service ? { ...service, price: servicePrice } : { price: 0 }, 
+                  service?.serviceName || ''
+                ),
                 formData.telegramUserName
               ),
               sendTelegramMessage(
-                formatAdminMessage(apiData, service || { price: 0 }, service?.serviceName || ''),
+                formatAdminMessage(apiData, 
+                  service ? { ...service, price: servicePrice } : { price: 0 }, 
+                  service?.serviceName || ''
+                ),
                 ADMIN_CHAT_ID
               ),
             ]);
@@ -279,11 +306,17 @@ const BookingModal: React.FC<BookingModalProps> = ({
           // Обычный пользователь — по chatId и админу
           await Promise.all([
             sendTelegramMessage(
-              formatUserMessage(apiData, service || { price: 0 }, service?.serviceName || ''),
+              formatUserMessage(apiData, 
+                service ? { ...service, price: servicePrice } : { price: 0 }, 
+                service?.serviceName || ''
+              ),
               chatId
             ),
             sendTelegramMessage(
-              formatAdminMessage(apiData, service || { price: 0 }, service?.serviceName || ''),
+              formatAdminMessage(apiData, 
+                service ? { ...service, price: servicePrice } : { price: 0 }, 
+                service?.serviceName || ''
+              ),
               ADMIN_CHAT_ID
             ),
           ]);
