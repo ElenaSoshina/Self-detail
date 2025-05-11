@@ -187,6 +187,29 @@ const BookingModal: React.FC<BookingModalProps> = ({
         throw new Error('Не выбрана дата бронирования');
       }
       
+      // Получаем компоненты даты из selectedDate
+      const selectedDateObj = typeof selectedDate === 'string' 
+        ? new Date(selectedDate) 
+        : selectedDate instanceof Date 
+          ? new Date(selectedDate) 
+          : new Date();
+          
+      // Диагностический алерт по дате
+      alert(`Диагностика даты в BookingModal:
+        Исходная дата: ${String(selectedDate)}
+        Тип исходной даты: ${typeof selectedDate}
+        Является Date? ${selectedDate instanceof Date}
+        
+        Новая дата: ${selectedDateObj}
+        День: ${selectedDateObj.getDate()}
+        Месяц: ${selectedDateObj.getMonth() + 1}
+        Год: ${selectedDateObj.getFullYear()}
+      `);
+      
+      const day = selectedDateObj.getDate();
+      const month = selectedDateObj.getMonth() + 1; // JS месяцы от 0 до 11
+      const year = selectedDateObj.getFullYear();
+      
       // Извлекаем время для запроса
       const timeMatches = startTime.match(/\d{1,2}:\d{2}/g);
       if (!timeMatches || timeMatches.length === 0) {
@@ -197,14 +220,11 @@ const BookingModal: React.FC<BookingModalProps> = ({
       const startTimeFormatted = timeMatches[0];
       const endTimeFormatted = timeMatches.length > 1 ? timeMatches[1] : startTimeFormatted;
       
-      // Простое форматирование выбранной даты без модификаций
-      const day = selectedDate.getDate();
-      const month = selectedDate.getMonth() + 1; // JS месяцы от 0 до 11
-      const year = selectedDate.getFullYear();
-      
       // Форматируем в строку даты в формате YYYY-MM-DD с ведущими нулями
       const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-
+      
+      // Проверяем правильность даты
+      alert(`Итоговая дата для API: ${dateStr}`);
       
       // Собираем итоговые строки для API
       const startISODate = `${dateStr}T${startTimeFormatted}:00`;

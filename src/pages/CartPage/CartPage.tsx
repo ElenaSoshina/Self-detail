@@ -66,12 +66,17 @@ const CartPage: React.FC = () => {
       const endTimeFormatted = timeMatches.length > 1 ? timeMatches[1] : startTimeFormatted;  // Второе время или первое, если второго нет
       
       // Форматируем дату для API
-      alert('Изначальная дата: ' + formData.selectedDate.toLocaleDateString());
+      alert('Изначальная дата: ' + (formData.selectedDate instanceof Date ? formData.selectedDate.toISOString() : String(formData.selectedDate)));
 
-      // Получаем данные напрямую, без изменений
-      const actualDay = formData.selectedDate.getDate(); // Текущий день месяца (1-31)
-      const actualMonth = formData.selectedDate.getMonth() + 1; // Месяц (1-12)
-      const actualYear = formData.selectedDate.getFullYear(); // Год в 4-х значном формате
+      // Гарантируем, что у нас есть валидный объект Date
+      const selectedDateObj = formData.selectedDate instanceof Date 
+        ? new Date(formData.selectedDate) 
+        : new Date(formData.selectedDate);
+        
+      // Получаем данные напрямую
+      const actualDay = selectedDateObj.getDate(); // Текущий день месяца (1-31)
+      const actualMonth = selectedDateObj.getMonth() + 1; // Месяц (1-12)
+      const actualYear = selectedDateObj.getFullYear(); // Год в 4-х значном формате
 
       // Проверяем, что у нас правильная дата
       alert(`Правильная дата: День=${actualDay}, Месяц=${actualMonth}, Год=${actualYear}`);
@@ -320,6 +325,21 @@ const CartPage: React.FC = () => {
                 });
               }
               
+              // Диагностика данных о дате
+              if (bookingData?.selectedDate) {
+                const dateObj = bookingData.selectedDate;
+                alert(`Диагностика даты в CartPage:
+                  Тип: ${typeof dateObj}
+                  Является Date? ${dateObj instanceof Date}
+                  Значение: ${dateObj.toString()}
+                  Компоненты: День=${dateObj.getDate()}, Месяц=${dateObj.getMonth() + 1}, Год=${dateObj.getFullYear()}
+                  ISO строка: ${dateObj.toISOString()}
+                  JSON: ${JSON.stringify(dateObj)}
+                `);
+              } else {
+                alert('Дата отсутствует в bookingData или bookingData не определен');
+              }
+              
               // Устанавливаем время и сервис для модального окна
               setSelectedTime({ 
                 start: startTimeStr, 
@@ -345,7 +365,7 @@ const CartPage: React.FC = () => {
           endTime={selectedTime.end}
           service={selectedService}
           onSubmit={handleBooking}
-          selectedDate={bookingData?.selectedDate || new Date()}
+          selectedDate={bookingData?.selectedDate ? new Date(bookingData.selectedDate) : new Date()}
           isAdmin={false}
         />
       )}
