@@ -187,19 +187,19 @@ const BookingModal: React.FC<BookingModalProps> = ({
       const startTimeFormatted = timeMatches[0];
       const endTimeFormatted = timeMatches.length > 1 ? timeMatches[1] : startTimeFormatted;
       
-      // УПРОЩЁННЫЙ ПОДХОД: Используем компоненты даты напрямую, без дополнительных преобразований
-      const year = selectedDate.getFullYear();
-      const month = selectedDate.getMonth() + 1; // JS месяцы от 0 до 11
+      // Простое форматирование выбранной даты без модификаций
       const day = selectedDate.getDate();
+      const month = selectedDate.getMonth() + 1; // JS месяцы от 0 до 11
+      const year = selectedDate.getFullYear();
       
-      alert(`Компоненты даты: день=${day}, месяц=${month}, год=${year}`);
+      alert(`Компоненты выбранной даты: день=${day}, месяц=${month}, год=${year}`);
       
-      // Формируем строку даты в формате YYYY-MM-DD
+      // Форматируем в строку даты в формате YYYY-MM-DD с ведущими нулями
       const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
       
-      alert(`Сформированная строка даты: ${dateStr}`);
+      alert(`Форматированная дата: ${dateStr}`);
       
-      // Итоговые строки для API
+      // Собираем итоговые строки для API
       const startISODate = `${dateStr}T${startTimeFormatted}:00`;
       const endISODate = `${dateStr}T${endTimeFormatted}:00`;
       
