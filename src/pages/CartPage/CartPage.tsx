@@ -17,6 +17,25 @@ const getProductImage = (id: string | number): string => {
   return product?.image || defaultImage;
 };
 
+// Извлечение часов из строки времени
+const parseHourFromTime = (timeStr: string): string => {
+  const timeMatches = timeStr.match(/\d{1,2}:\d{2}/g);
+  if (!timeMatches || timeMatches.length === 0) return '';
+  return timeMatches[0];
+};
+
+// Форматирование даты в ISO формат YYYY-MM-DD
+const formatDateToISO = (date: Date): string => {
+  // Получаем дату с учетом часового пояса пользователя
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  
+  // Используем getDate для получения числа месяца
+  const day = date.getDate().toString().padStart(2, '0');
+  
+  return `${year}-${month}-${day}`;
+};
+
 const CartPage: React.FC = () => {
   const { items, updateQuantity, removeFromCart } = useCart();
   const navigate = useNavigate();
@@ -53,14 +72,35 @@ const CartPage: React.FC = () => {
   const handleBooking = async (formData: any) => {
     try {
       alert('Создание бронирования');
+      alert('Выбранная дата: ' + formData.selectedDate.toLocaleDateString());
       
-      // Извлекаем время
-      let timePattern = '';
-      if (formData.startTime && formData.endTime) {
-        timePattern = `${formData.startTime} - ${formData.endTime}`;
-      } else if (formData.startTime) {
-        timePattern = formData.startTime;
+      // Получаем времена начала и окончания
+      const startTimeStr = parseHourFromTime(formData.startTime);
+      const endTimeStr = parseHourFromTime(formData.endTime || formData.startTime);
+      
+      if (!startTimeStr || !endTimeStr) {
+        throw new Error('Некорректный формат времени');
       }
+      
+      // Создаем даты для начала и конца бронирования
+      const selectedDate = new Date(formData.selectedDate);
+      const year = selectedDate.getFullYear();
+      const month = selectedDate.getMonth() + 1; // JS месяцы с 0
+      const day = selectedDate.getDate();
+      
+      // Конвертируем всё в строки с ведущими нулями
+      const yearStr = year.toString();
+      const monthStr = month.toString().padStart(2, '0');
+      const dayStr = day.toString().padStart(2, '0');
+      
+      // Создаем ISO строки для API
+      const dateStr = `${yearStr}-${monthStr}-${dayStr}`;
+      alert('Форматированная дата: ' + dateStr);
+      
+      const startISODate = `${dateStr}T${startTimeStr}:00`;
+      const endISODate = `${dateStr}T${endTimeStr}:00`;
+      
+      alert('Созданные ISO даты: startDate=' + startISODate + ', endDate=' + endISODate);
       
       // Вычисляем общую стоимость
       const bookingCost = formData.service?.price || 0;
@@ -70,7 +110,7 @@ const CartPage: React.FC = () => {
       // Создаем объект для BookingSuccess
       const bookingDetails: BookingDetails = {
         date: formData.selectedDate,
-        timeRange: timePattern,
+        timeRange: `${startTimeStr} - ${endTimeStr}`,
         duration: 1, // или вычисли из времени
         plan: {
           id: bookingItem?.id || 'custom',
@@ -84,71 +124,6 @@ const CartPage: React.FC = () => {
       
       console.log('Отправка данных бронирования:', formData);
       console.log('Объект bookingDetails:', bookingDetails);
-      
-      // Разбираем времена начала и окончания
-      const parseTimeValue = (timeStr: string, type: 'start' | 'end'): string => {
-        try {
-          if (!timeStr) return '';
-          
-          // Используем регулярные выражения для извлечения всех времен в формате HH:MM
-          const timeMatches = timeStr.match(/\d{1,2}:\d{2}/g);
-          
-          if (!timeMatches || timeMatches.length === 0) {
-            return '';
-          }
-          
-          // Если нашли два времени, берем первое для начала, второе для конца
-          if (timeMatches.length >= 2) {
-            return type === 'start' ? timeMatches[0] : timeMatches[1];
-          }
-          
-          // Если нашли только одно время, используем его для обоих случаев
-          return timeMatches[0];
-        } catch (error) {
-          console.error(`Ошибка при парсинге времени:`, error);
-          return '';
-        }
-      };
-      
-      // Создание ISO строки даты с указанным временем с учетом локального часового пояса
-      const createDateWithTime = (baseDate: Date, timeStr: string): string => {
-        try {
-          if (!timeStr.match(/^\d{1,2}:\d{2}$/)) {
-            throw new Error(`Неверный формат времени: ${timeStr}`);
-          }
-          
-          const [hours, minutes] = timeStr.split(':').map(Number);
-          
-          if (isNaN(hours) || isNaN(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
-            throw new Error(`Неверное значение времени: ${hours}:${minutes}`);
-          }
-          
-          // Получаем год, месяц и день из базовой даты
-          const year = baseDate.getFullYear();
-          const month = baseDate.getMonth() + 1; // +1 потому что месяцы начинаются с 0
-          const day = baseDate.getDate();
-          
-          // Форматируем дату в ISO строку без конвертации в UTC
-          // Используем формат YYYY-MM-DDTHH:MM:SS
-          const isoDate = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}T${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:00`;
-          
-          return isoDate;
-        } catch (error) {
-          console.error(`Ошибка при создании даты:`, error);
-          throw error;
-        }
-      };
-      
-      const startTimeStr = parseTimeValue(formData.startTime, 'start');
-      const endTimeStr = parseTimeValue(formData.endTime || formData.startTime, 'end');
-      
-      if (!startTimeStr || !endTimeStr) {
-        throw new Error('Некорректный формат времени');
-      }
-      
-      // Создаем корректные даты ISO для API
-      const startISODate = createDateWithTime(formData.selectedDate, startTimeStr);
-      const endISODate = createDateWithTime(formData.selectedDate, endTimeStr);
       
       // Формируем данные для API
       const chatId = '0';

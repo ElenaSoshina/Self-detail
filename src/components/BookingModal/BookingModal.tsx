@@ -5,6 +5,26 @@ import { sendTelegramMessage, sendTelegramMessageByUsername, formatUserMessage, 
 import PhoneInput from 'react-phone-number-input/input';
 import 'react-phone-number-input/style.css';
 import { useCart } from '../../context/CartContex';
+import './BookingModal.css';
+import DateSelector from '../DateSelector/DateSelector';
+import TimeSelector from '../TimeSelector/TimeSelector';
+import { Service } from '../../types/types';
+import { motion, AnimatePresence } from 'framer-motion';
+import CloseIcon from '../../assets/icons/close.svg';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import {
+  ModalContent,
+  Form,
+  CloseButton,
+  Title,
+  GroupTitle,
+  ServiceSelector,
+  SelectorButton,
+  DropdownMenu,
+  ServiceOption,
+  ContactInput,
+  SubmitButton
+} from './BookingModal.styles';
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -156,24 +176,24 @@ const BookingModal: React.FC<BookingModalProps> = ({
     alert('Начало отправки формы');
     setIsLoading(true);
     setError(null);
-
+    
     if (!validate()) {
       alert('Валидация не пройдена');
       setIsLoading(false);
       return;
     }
-
+    
     try {
       if (!chatId) {
         alert('Нет chatId');
         throw new Error('Не удалось получить ID пользователя из Telegram');
       }
-
+      
       alert('Исходное время: startTime=' + startTime + ', endTime=' + endTime);
       
-      // Разбираем времена начала и окончания
-      const startTimeStr = parseTimeValue(startTime, 'start');
-      const endTimeStr = parseTimeValue(endTime || startTime, 'end');
+      // Получаем времена начала и окончания
+      const startTimeStr = parseHourFromTime(startTime);
+      const endTimeStr = parseHourFromTime(endTime || startTime);
       
       alert('Распарсенное время: startTimeStr=' + startTimeStr + ', endTimeStr=' + endTimeStr);
       
@@ -181,12 +201,23 @@ const BookingModal: React.FC<BookingModalProps> = ({
         throw new Error('Некорректный формат времени');
       }
       
-      // Создаем корректные даты ISO для API
-      const startISODate = createDateWithTime(selectedDate, startTimeStr);
-      const endISODate = createDateWithTime(selectedDate, endTimeStr);
+      // Создаем даты для начала и конца бронирования
+      const year = selectedDate.getFullYear();
+      const month = selectedDate.getMonth() + 1; // JS месяцы с 0
+      const day = selectedDate.getDate();
       
-      alert('Созданные ISO даты: startDate=' + startISODate + ', endDate=' + endISODate);
-
+      // Конвертируем всё в строки с ведущими нулями
+      const yearStr = year.toString();
+      const monthStr = month.toString().padStart(2, '0');
+      const dayStr = day.toString().padStart(2, '0');
+      
+      // Создаем ISO строки для API
+      const dateStr = `${yearStr}-${monthStr}-${dayStr}`;
+      
+      alert('Выбранная дата в ISO: ' + dateStr);
+      const startISODate = `${dateStr}T${startTimeStr}:00`;
+      const endISODate = `${dateStr}T${endTimeStr}:00`;
+      
       // Формируем данные для API
       const apiData = {
         telegramUserId: parseInt(chatId || '0'),
@@ -206,7 +237,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
           : [],
         notes: ''
       };
-
+      
       alert('Данные для API: ' + JSON.stringify(apiData));
       
       // Отправляем запрос на API для создания бронирования
@@ -217,7 +248,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
         },
         body: JSON.stringify(apiData),
       });
-
+      
       alert('Получен ответ от сервера: ' + response.status);
       
       if (!response.ok) {
@@ -225,7 +256,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
         alert('Ошибка сервера: ' + errorText);
         throw new Error(`Ошибка сервера: ${response.status} ${errorText}`);
       }
-
+      
       const result = await response.json();
       alert('Успешный ответ сервера: ' + JSON.stringify(result));
       
@@ -305,66 +336,12 @@ const BookingModal: React.FC<BookingModalProps> = ({
   };
   
   // Парсинг времени из формата "01:00 — 03:00"
-  const parseTimeValue = (timeStr: string, type: 'start' | 'end'): string => {
-    try {
-      if (!timeStr) return '';
-      
-      alert(`Разбор времени (${type}): ${timeStr}`);
-      
-      // Используем регулярные выражения для извлечения всех времен в формате HH:MM
-      const timeMatches = timeStr.match(/\d{1,2}:\d{2}/g);
-      alert(`Найденные времена: ${JSON.stringify(timeMatches)}`);
-      
-      if (!timeMatches || timeMatches.length === 0) {
-        return '';
-      }
-      
-      // Если нашли два времени, берем первое для начала, второе для конца
-      if (timeMatches.length >= 2) {
-        const result = type === 'start' ? timeMatches[0] : timeMatches[1];
-        alert(`Итоговое время (${type}): ${result}`);
-        return result;
-      }
-      
-      // Если нашли только одно время, используем его для обоих случаев
-      alert(`Итоговое время (${type}): ${timeMatches[0]}`);
-      return timeMatches[0];
-    } catch (error) {
-      alert(`Ошибка при парсинге времени: ${error}`);
-      return '';
-    }
+  const parseHourFromTime = (timeStr: string): string => {
+    const timeMatches = timeStr.match(/\d{1,2}:\d{2}/g);
+    if (!timeMatches || timeMatches.length === 0) return '';
+    return timeMatches[0];
   };
   
-  // Создание ISO строки даты с указанным временем с учетом локального часового пояса
-  const createDateWithTime = (baseDate: Date, timeStr: string): string => {
-    try {
-      if (!timeStr.match(/^\d{1,2}:\d{2}$/)) {
-        throw new Error(`Неверный формат времени: ${timeStr}`);
-      }
-      
-      const [hours, minutes] = timeStr.split(':').map(Number);
-      
-      if (isNaN(hours) || isNaN(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
-        throw new Error(`Неверное значение времени: ${hours}:${minutes}`);
-      }
-      
-      // Получаем год, месяц и день из базовой даты
-      const year = baseDate.getFullYear();
-      const month = baseDate.getMonth() + 1; // +1 потому что месяцы начинаются с 0
-      const day = baseDate.getDate();
-      
-      // Форматируем дату в ISO строку без конвертации в UTC
-      // Используем формат YYYY-MM-DDTHH:MM:SS
-      const isoDate = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}T${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:00`;
-      
-      alert(`Созданная ISO дата: ${isoDate}`);
-      return isoDate;
-    } catch (error) {
-      alert(`Ошибка при создании даты: ${error}`);
-      throw error;
-    }
-  };
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     // Авто-добавление @ для Telegram
