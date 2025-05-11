@@ -66,9 +66,21 @@ const CartPage: React.FC = () => {
       const endTimeFormatted = timeMatches.length > 1 ? timeMatches[1] : startTimeFormatted;  // Второе время или первое, если второго нет
       
       // Форматируем дату для API
-      const year = formData.selectedDate.getFullYear();
-      const month = (formData.selectedDate.getMonth() + 1).toString().padStart(2, '0');
-      const day = formData.selectedDate.getDate().toString().padStart(2, '0');
+      alert('Изначальная дата: ' + formData.selectedDate.toLocaleDateString());
+
+      // Получаем данные напрямую, без изменений
+      const actualDay = formData.selectedDate.getDate(); // Текущий день месяца (1-31)
+      const actualMonth = formData.selectedDate.getMonth() + 1; // Месяц (1-12)
+      const actualYear = formData.selectedDate.getFullYear(); // Год в 4-х значном формате
+
+      // Проверяем, что у нас правильная дата
+      alert(`Правильная дата: День=${actualDay}, Месяц=${actualMonth}, Год=${actualYear}`);
+
+      // Форматируем с ведущими нулями
+      const year = actualYear.toString();
+      const month = actualMonth.toString().padStart(2, '0');
+      const day = actualDay.toString().padStart(2, '0');
+
       const dateStr = `${year}-${month}-${day}`;
       
       // Создаем ISO строки для начала и конца бронирования

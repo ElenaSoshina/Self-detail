@@ -182,9 +182,20 @@ const BookingModal: React.FC<BookingModalProps> = ({
       const endTimeFormatted = timeMatches.length > 1 ? timeMatches[1] : startTimeFormatted;  // Второе время или первое, если второго нет
       
       // Форматируем дату и время для API
-      const year = selectedDate.getFullYear();
-      const month = (selectedDate.getMonth() + 1).toString().padStart(2, '0');
-      const day = selectedDate.getDate().toString().padStart(2, '0');
+      alert('Изначальная дата: ' + selectedDate.toLocaleDateString());  // Проверка исходной даты
+
+      // Получаем данные напрямую, без изменений
+      const actualDay = selectedDate.getDate(); // Текущий день месяца (1-31)
+      const actualMonth = selectedDate.getMonth() + 1; // Месяц (1-12)
+      const actualYear = selectedDate.getFullYear(); // Год в 4-х значном формате
+
+      // Форматируем с ведущими нулями
+      const year = actualYear.toString();
+      const month = actualMonth.toString().padStart(2, '0');
+      const day = actualDay.toString().padStart(2, '0');
+
+      alert(`Правильная дата: День=${actualDay}, Месяц=${actualMonth}, Год=${actualYear}`);
+
       const dateStr = `${year}-${month}-${day}`;
       
       const startISODate = `${dateStr}T${startTimeFormatted}:00`;
