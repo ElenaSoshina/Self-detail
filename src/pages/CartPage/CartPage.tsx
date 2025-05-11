@@ -328,16 +328,7 @@ const CartPage: React.FC = () => {
               // Диагностика данных о дате
               if (bookingData?.selectedDate) {
                 const dateObj = bookingData.selectedDate;
-                alert(`Диагностика даты в CartPage:
-                  Тип: ${typeof dateObj}
-                  Является Date? ${dateObj instanceof Date}
-                  Значение: ${dateObj.toString()}
-                  Компоненты: День=${dateObj.getDate()}, Месяц=${dateObj.getMonth() + 1}, Год=${dateObj.getFullYear()}
-                  ISO строка: ${dateObj.toISOString()}
-                  JSON: ${JSON.stringify(dateObj)}
-                `);
-              } else {
-                alert('Дата отсутствует в bookingData или bookingData не определен');
+                console.log('Выбранная дата для бронирования:', dateObj);
               }
               
               // Устанавливаем время и сервис для модального окна
@@ -365,7 +356,7 @@ const CartPage: React.FC = () => {
           endTime={selectedTime.end}
           service={selectedService}
           onSubmit={handleBooking}
-          selectedDate={bookingData?.selectedDate || null}
+          selectedDate={bookingData?.selectedDate}
           isAdmin={false}
         />
       )}
