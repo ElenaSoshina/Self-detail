@@ -83,13 +83,13 @@ const BookingSuccess: React.FC<BookingSuccessProps> = ({ bookingDetails, formatD
         <button className={styles.gradientBorderButton} onClick={onBack}>
           Изменить
         </button>
-        <h3 className={styles.productsTitle}>Хотите добавить товары для бокса?</h3>
+        {/* <h3 className={styles.productsTitle}>Хотите добавить товары для бокса?</h3>
         <p className={styles.productsDescription}>
           Вы можете выбрать дополнительные средства, которые будут вас ждать в боксе.
         </p>
         <button className={styles.gradientBorderButton} onClick={goToProducts}>
           Добавить товары
-        </button>
+        </button> */}
         <button 
           className={styles.confirmButtonWide} 
           onClick={() => setIsModalOpen(true)}
