@@ -5,7 +5,6 @@ import { sendTelegramMessage, sendTelegramMessageByUsername, formatUserMessage, 
 import PhoneInput from 'react-phone-number-input/input';
 import 'react-phone-number-input/style.css';
 import { useCart } from '../../context/CartContex';
-import { parseHourFromTime, formatDateToISO, createISODateTime } from '../../utils/dateUtils';
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -172,22 +171,22 @@ const BookingModal: React.FC<BookingModalProps> = ({
       
       alert('Исходное время: startTime=' + startTime + ', endTime=' + endTime);
       
-      // Получаем времена начала и окончания
-      const startTimeStr = parseHourFromTime(startTime);
-      const endTimeStr = parseHourFromTime(endTime || startTime);
-      
-      alert('Распарсенное время: startTimeStr=' + startTimeStr + ', endTimeStr=' + endTimeStr);
-      
-      if (!startTimeStr || !endTimeStr) {
+      // Извлекаем время для запроса
+      const timeFormatted = startTime.match(/\d{1,2}:\d{2}/);
+      if (!timeFormatted) {
         throw new Error('Некорректный формат времени');
       }
       
-      // Создаем ISO строки для API
-      const dateIso = formatDateToISO(selectedDate);
-      const startISODate = `${dateIso}T${startTimeStr}:00`;
-      const endISODate = `${dateIso}T${endTimeStr}:00`;
+      // Форматируем дату и время для API
+      const year = selectedDate.getFullYear();
+      const month = (selectedDate.getMonth() + 1).toString().padStart(2, '0');
+      const day = selectedDate.getDate().toString().padStart(2, '0');
+      const dateStr = `${year}-${month}-${day}`;
       
-      alert('Выбранная дата в ISO: ' + dateIso);
+      const startISODate = `${dateStr}T${timeFormatted[0]}:00`;
+      const endISODate = startISODate; // Для простоты используем то же время
+      
+      alert('Дата и время для API: ' + startISODate);
       
       // Формируем данные для API
       const apiData = {

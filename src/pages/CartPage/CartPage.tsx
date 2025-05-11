@@ -9,7 +9,6 @@ import BookingModal from '../../components/BookingModal/BookingModal';
 import BookingSuccess from '../BookingSuccess/BookingSuccess';
 import { BookingDetails } from '../CalendarPage/calendarTypes';
 import { sendTelegramMessage, formatAdminMessage, ADMIN_CHAT_ID } from '../../api/telegram';
-import { parseHourFromTime, formatDateToISO } from '../../utils/dateUtils';
 
 // Функция для получения изображения продукта по ID
 const getProductImage = (id: string | number): string => {
@@ -56,20 +55,23 @@ const CartPage: React.FC = () => {
       alert('Создание бронирования');
       alert('Выбранная дата: ' + formData.selectedDate.toLocaleDateString());
       
-      // Получаем времена начала и окончания
-      const startTimeStr = parseHourFromTime(formData.startTime);
-      const endTimeStr = parseHourFromTime(formData.endTime || formData.startTime);
-      
-      if (!startTimeStr || !endTimeStr) {
+      // Извлекаем время для запроса
+      const timeFormatted = formData.startTime.match(/\d{1,2}:\d{2}/);
+      if (!timeFormatted) {
         throw new Error('Некорректный формат времени');
       }
       
-      // Форматируем дату и создаем ISO строки для API
-      const dateStr = formatDateToISO(formData.selectedDate);
-      const startISODate = `${dateStr}T${startTimeStr}:00`;
-      const endISODate = `${dateStr}T${endTimeStr}:00`;
+      // Форматируем дату для API
+      const year = formData.selectedDate.getFullYear();
+      const month = (formData.selectedDate.getMonth() + 1).toString().padStart(2, '0');
+      const day = formData.selectedDate.getDate().toString().padStart(2, '0');
+      const dateStr = `${year}-${month}-${day}`;
       
-      alert('Созданные ISO даты: startDate=' + startISODate + ', endDate=' + endISODate);
+      // Создаем ISO строки для начала и конца бронирования
+      const startISODate = `${dateStr}T${timeFormatted[0]}:00`;
+      const endISODate = startISODate; // Используем то же время для простоты
+      
+      alert('Данные для API: startDate=' + startISODate);
       
       // Вычисляем общую стоимость
       const bookingCost = formData.service?.price || 0;
@@ -79,7 +81,7 @@ const CartPage: React.FC = () => {
       // Создаем объект для BookingSuccess
       const bookingDetails: BookingDetails = {
         date: formData.selectedDate,
-        timeRange: `${startTimeStr} - ${endTimeStr}`,
+        timeRange: formData.startTime,
         duration: 1, // или вычисли из времени
         plan: {
           id: bookingItem?.id || 'custom',
@@ -90,9 +92,6 @@ const CartPage: React.FC = () => {
         },
         totalPrice: totalCost
       };
-      
-      console.log('Отправка данных бронирования:', formData);
-      console.log('Объект bookingDetails:', bookingDetails);
       
       // Формируем данные для API
       const chatId = '0';
