@@ -335,7 +335,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
     }
   };
   
-  // Создание ISO строки даты с указанным временем
+  // Создание ISO строки даты с указанным временем с учетом локального часового пояса
   const createDateWithTime = (baseDate: Date, timeStr: string): string => {
     try {
       if (!timeStr.match(/^\d{1,2}:\d{2}$/)) {
@@ -348,17 +348,15 @@ const BookingModal: React.FC<BookingModalProps> = ({
         throw new Error(`Неверное значение времени: ${hours}:${minutes}`);
       }
       
-      // Клонируем базовую дату
-      const date = new Date(baseDate.getTime());
-      // Устанавливаем часы и минуты
-      date.setHours(hours, minutes, 0, 0);
+      // Получаем год, месяц и день из базовой даты
+      const year = baseDate.getFullYear();
+      const month = baseDate.getMonth() + 1; // +1 потому что месяцы начинаются с 0
+      const day = baseDate.getDate();
       
-      if (isNaN(date.getTime())) {
-        throw new Error(`Невалидная дата: ${date}`);
-      }
+      // Форматируем дату в ISO строку без конвертации в UTC
+      // Используем формат YYYY-MM-DDTHH:MM:SS
+      const isoDate = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}T${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:00`;
       
-      // Форматируем дату в ISO строку без миллисекунд
-      const isoDate = date.toISOString().split('.')[0];
       alert(`Созданная ISO дата: ${isoDate}`);
       return isoDate;
     } catch (error) {
