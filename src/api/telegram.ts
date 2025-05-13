@@ -3,7 +3,7 @@ export const ADMIN_CHAT_ID = '522814078'; // ID чата администрат�
 
 export const sendTelegramMessage = async (message: string, chatId: string) => {
   try {
-    const response = await fetch(`${API_URL}/chat/send-message/${chatId}`, {
+    const response = await fetch(`${API_URL}/chats/send-message/${chatId}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
