@@ -168,7 +168,7 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({
       await Promise.all(
         adminChatIds.map(id =>
           axios.post(
-            `https://backend.self-detailing.duckdns.org/api/v1/chat/send-message/${id}`,
+            `https://backend.self-detailing.duckdns.org/api/v1/chats/send-message/${id}`,
             { message: adminMessage }
           )
         )
@@ -177,7 +177,7 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({
       // Отправляем сообщение пользователю, если известен его chatId
       if (chatId) {
         await axios.post(
-          `https://backend.self-detailing.duckdns.org/api/v1/chat/send-message/${chatId}`,
+          `https://backend.self-detailing.duckdns.org/api/v1/chats/send-message/${chatId}`,
           { message: userMessage }
         );
       }

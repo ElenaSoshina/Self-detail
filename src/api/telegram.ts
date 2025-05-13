@@ -27,7 +27,7 @@ export const sendTelegramMessage = async (message: string, chatId: string) => {
 export const sendTelegramMessageByUsername = async (message: string, username: string) => {
   if (!username) throw new Error('Username is required');
   const cleanUsername = username.startsWith('@') ? username.slice(1) : username;
-  const url = `https://backend.self-detailing.duckdns.org/api/v1/chat/send-message/${encodeURIComponent(cleanUsername)}`;
+  const url = `https://backend.self-detailing.duckdns.org/api/v1/chats/send-message/${encodeURIComponent(cleanUsername)}`;
   const response = await fetch(url, {
     method: 'POST',
     headers: {
