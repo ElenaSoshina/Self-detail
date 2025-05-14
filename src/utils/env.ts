@@ -1,46 +1,31 @@
 /**
- * Утилита для работы с переменными окружения и определения типа окружения
+ * utils/env.ts
+ * -----------------------------------------
+ * Утилиты для доступа к переменным окружения,
+ * а также функции‑помощники для Telegram WebApp.
+ *
+ * ⚠️  Переменные с учётками «впекает» Vite
+ *     при сборке, поэтому читаем ТОЛЬКО из
+ *     import.meta.env.VITE_*.
  */
 
-// Получение переменной окружения с проверкой наличия в import.meta.env
-export const getEnvVariable = (key: string): string => {
-  // В Vite переменные окружения доступны через import.meta.env.VITE_*
-  // Пробуем искать и с префиксом VITE_ и без него
-  const valueWithVitePrefix = import.meta.env[`VITE_${key}`];
-  const value = valueWithVitePrefix || import.meta.env[key] || process.env[key];
-  
-  if (!value) {
-    console.warn(`Переменная окружения ${key} не найдена`);
-    return '';
-  }
-  
-  return value;
-};
+/* =========  BACKEND CREDENTIALS  ========= */
 
-// Получение имени пользователя для авторизации
-export const getBackendUsername = (): string => {
-  const value = getEnvVariable('BACKEND_USERNAME');
-  if (!value) {
-    console.error('BACKEND_USERNAME не найден в переменных окружения');
-  }
-  return value;
-};
+/** Логин, заданный через VITE_BACKEND_USERNAME */
+export const getBackendUsername = (): string =>
+  import.meta.env.VITE_BACKEND_USERNAME ?? '';
 
-// Получение пароля для авторизации
-export const getBackendPassword = (): string => {
-  const value = getEnvVariable('BACKEND_PASSWORD');
-  if (!value) {
-    console.error('BACKEND_PASSWORD не найден в переменных окружения');
-  }
-  return value;
-};
+/** Пароль, заданный через VITE_BACKEND_PASSWORD */
+export const getBackendPassword = (): string =>
+  import.meta.env.VITE_BACKEND_PASSWORD ?? '';
 
-// Проверка, запущено ли приложение в Telegram WebApp
-export const isTelegramWebApp = (): boolean => {
-  return !!(window as any).Telegram?.WebApp;
-};
+/* ============  TELEGRAM WEBAPP  =========== */
 
-// Получение объекта Telegram WebApp, если доступен
+/** Проверка, запущено ли приложение внутри Telegram WebApp */
+export const isTelegramWebApp = (): boolean =>
+  !!(window as any).Telegram?.WebApp;
+
+/** Возвращает объект Telegram WebApp, если он доступен */
 export const getTelegramWebApp = () => {
   if (isTelegramWebApp()) {
     return (window as any).Telegram.WebApp;
@@ -48,19 +33,17 @@ export const getTelegramWebApp = () => {
   return null;
 };
 
-// Инициализация Telegram WebApp
+/** Инициализация Telegram WebApp: ready, тема, expand */
 export const initTelegramWebApp = (): void => {
   const tg = getTelegramWebApp();
   if (tg) {
-    // Сообщаем Telegram, что мы готовы показать WebApp
-    tg.ready();
-    
-    // Устанавливаем тему в соответствии с темой Telegram
-    document.documentElement.classList.toggle('dark-theme', tg.colorScheme === 'dark');
-    
-    // Расширяем WebApp на полный экран, если возможно
+    tg.ready(); // сообщаем Telegram, что WebApp готов
+    document.documentElement.classList.toggle(
+      'dark-theme',
+      tg.colorScheme === 'dark'
+    );
     if (tg.expand) {
       tg.expand();
     }
   }
-}; 
+};

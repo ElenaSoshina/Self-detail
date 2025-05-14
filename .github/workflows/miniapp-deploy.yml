@@ -25,6 +25,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+        # 2) Создать .env.production из GitHub Secrets (Vite увидит при сборке)
+      - name: Create production env file
+        run: |
+          cat <<EOL > .env.production
+          VITE_BACKEND_USERNAME=${{ secrets.BACKEND_USERNAME }}
+          VITE_BACKEND_PASSWORD=${{ secrets.BACKEND_PASSWORD }}
+          VITE_API_URL=https://backend.self-detailing.duckdns.org/api/v1
+          EOL
+
       # 2) Cache NPM
       - name: Cache node modules
         uses: actions/cache@v3
@@ -57,15 +66,15 @@ jobs:
             echo "VERSION=latest" >> $GITHUB_ENV
           fi
 
-      # 6) Create dotenv for production
-      - name: Create production env file
-        run: |
-          echo "REACT_APP_API_URL=https://backend.self-detailing.duckdns.org/api/v1" > .env.production
+      # # 6) Create dotenv for production
+      # - name: Create production env file
+      #   run: |
+      #     echo "REACT_APP_API_URL=https://backend.self-detailing.duckdns.org/api/v1" > .env.production
 
-      # 7) (Re)build bundle with .env.production
-      - name: Build production bundle
-        run: |
-          CI=false npm run build
+      # # 7) (Re)build bundle with .env.production
+      # - name: Build production bundle
+      #   run: |
+      #     CI=false npm run build
 
       # 8) Generate nginx.conf for SPA
       - name: Create nginx.conf
