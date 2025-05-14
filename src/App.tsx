@@ -1,5 +1,5 @@
 import './App.css'
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, useLocation } from 'react-router-dom'
 import { Header } from './components/Header/Header'
 import { CartProvider } from './context/CartContex';
 import { AuthProvider } from './context/AuthContext';
@@ -11,13 +11,27 @@ import ProductPage from './pages/ProductPage/ProductPage';
 import ProfilePage from './pages/ProfilePage/ProfilePage';
 import CalendarPage from './pages/CalendarPage/CalendarPage';
 import AdminPanel from './pages/AdminPanel/AdminPanel';
+import { isTelegramWebApp, initTelegramWebApp } from './utils/env';
+import { useEffect } from 'react';
 
 function App() {
+  const location = useLocation();
+  
+  useEffect(() => {
+    // Инициализация Telegram WebApp при загрузке
+    if (isTelegramWebApp()) {
+      initTelegramWebApp();
+    }
+  }, []);
+  
+  // Определяем, нужно ли показывать заголовок
+  const showHeader = !isTelegramWebApp() || location.pathname === '/';
+
   return (
     <AuthProvider>
       <CartProvider>
         <div className="app">
-          <Header />
+          {showHeader && <Header />}
           <AuthStatus />
           <main>
             <Routes>

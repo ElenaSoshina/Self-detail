@@ -20,4 +20,93 @@
 .auth-success {
   background-color: #e9ffe9;
   color: #006600;
+}
+
+/* Стили для Telegram WebApp версии */
+.auth-telegram-status {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 16px;
+  border-radius: 8px;
+  z-index: 9999;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  max-width: 90%;
+  min-width: 250px;
+  animation: fadeIn 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-telegram-status.loading {
+  background-color: #f5f5f5;
+  color: #333;
+}
+
+.auth-telegram-status.success {
+  background-color: #389e0d;
+  color: white;
+}
+
+.auth-telegram-status.error {
+  background-color: #cf1322;
+  color: white;
+}
+
+.auth-telegram-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+.auth-telegram-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.auth-telegram-checkmark {
+  font-weight: bold;
+  font-size: 18px;
+}
+
+.auth-telegram-error-icon {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: white;
+  color: #cf1322;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 12px;
+}
+
+.auth-telegram-retry {
+  background-color: white;
+  color: #cf1322;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 8px;
+  margin-left: 10px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translate(-50%, 10px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
 } 

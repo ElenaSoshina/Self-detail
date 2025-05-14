@@ -1,5 +1,5 @@
 /**
- * Утилита для работы с переменными окружения
+ * Утилита для работы с переменными окружения и определения типа окружения
  */
 
 // Получение переменной окружения с проверкой наличия в import.meta.env
@@ -33,4 +33,34 @@ export const getBackendPassword = (): string => {
     console.error('BACKEND_PASSWORD не найден в переменных окружения');
   }
   return value;
+};
+
+// Проверка, запущено ли приложение в Telegram WebApp
+export const isTelegramWebApp = (): boolean => {
+  return !!(window as any).Telegram?.WebApp;
+};
+
+// Получение объекта Telegram WebApp, если доступен
+export const getTelegramWebApp = () => {
+  if (isTelegramWebApp()) {
+    return (window as any).Telegram.WebApp;
+  }
+  return null;
+};
+
+// Инициализация Telegram WebApp
+export const initTelegramWebApp = (): void => {
+  const tg = getTelegramWebApp();
+  if (tg) {
+    // Сообщаем Telegram, что мы готовы показать WebApp
+    tg.ready();
+    
+    // Устанавливаем тему в соответствии с темой Telegram
+    document.documentElement.classList.toggle('dark-theme', tg.colorScheme === 'dark');
+    
+    // Расширяем WebApp на полный экран, если возможно
+    if (tg.expand) {
+      tg.expand();
+    }
+  }
 }; 
