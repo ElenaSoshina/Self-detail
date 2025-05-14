@@ -1,0 +1,23 @@
+.auth-loading,
+.auth-error,
+.auth-success {
+  padding: 10px;
+  margin: 10px 0;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.auth-loading {
+  background-color: #e9f5ff;
+  color: #0066cc;
+}
+
+.auth-error {
+  background-color: #ffebeb;
+  color: #cc0000;
+}
+
+.auth-success {
+  background-color: #e9ffe9;
+  color: #006600;
+} 
