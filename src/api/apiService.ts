@@ -20,6 +20,7 @@ export const login = async () => {
     const password = getBackendPassword();
     
     if (!username || !password) {
+      console.error('Учетные данные не найдены в переменных окружения');
       throw new Error('Учетные данные не найдены в переменных окружения');
     }
     
@@ -55,7 +56,7 @@ api.interceptors.request.use(
       try {
         token = await login();
       } catch (error) {
-        console.error('Не удалось авторизоваться автоматически');
+        console.error('Не удалось авторизоваться автоматически:', error);
       }
     }
     
@@ -82,6 +83,9 @@ api.interceptors.response.use(
       originalRequest._retry = true;
       
       try {
+        // Сначала удаляем старый токен
+        localStorage.removeItem('jwt_token');
+        
         // Получаем новый токен
         const token = await login();
         
@@ -99,5 +103,10 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+// При импорте модуля сразу выполняем авторизацию
+login().catch(error => {
+  console.error('Ошибка начальной авторизации:', error);
+});
 
 export default api; 
