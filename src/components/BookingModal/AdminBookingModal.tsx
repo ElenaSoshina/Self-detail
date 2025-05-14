@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import styles from './AdminBookingModal.module.css';
-import axios from 'axios';
+import api from '../../api/apiService';
 
 interface AdminBookingModalProps {
   isOpen: boolean;
@@ -48,7 +48,7 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      axios.get('https://backend.self-detailing.duckdns.org/api/v1/plans')
+      api.get('/plans')
         .then(response => setPlans(response.data.data))
         .catch(() => setPlans([]));
     }
@@ -75,7 +75,7 @@ const AdminBookingModal: React.FC<AdminBookingModalProps> = ({
         ...formData,
         date: defaultDate.toISOString().split('T')[0],
       };
-      await axios.post('https://backend.self-detailing.duckdns.org/api/v1/calendar/booking', bookingData);
+      await api.post('/calendar/booking', bookingData);
       onSubmit(bookingData);
     } catch (error) {
       console.error('Error submitting booking:', error);

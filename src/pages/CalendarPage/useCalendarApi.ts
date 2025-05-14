@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { fetchAvailableTimeSlotsApi } from './calendarApiService';
-import axios from 'axios';
+import api from '../../api/apiService';
 
 export function useCalendarApi() {
   const [loading, setLoading] = useState(false);
@@ -21,12 +21,12 @@ export function useCalendarApi() {
       const nextMonth = (nextDay.getMonth() + 1).toString().padStart(2, '0');
       const nextDayNum = nextDay.getDate().toString().padStart(2, '0');
       const end = `${nextYear}-${nextMonth}-${nextDayNum}T00:00:00`;
-      const apiUrl = 'https://backend.self-detailing.duckdns.org/api/v1/calendar/available';
-      const response = await axios.get(apiUrl, {
+      
+      // Используем api вместо axios для добавления токена
+      const response = await api.get('/calendar/available', {
         params: { start, end },
-        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-        timeout: 10000,
       });
+      
       setLoading(false);
       return response.data.data;
     } catch (e: any) {

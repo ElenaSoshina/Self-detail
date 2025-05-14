@@ -9,6 +9,7 @@ import BookingModal from '../../components/BookingModal/BookingModal';
 import BookingSuccess from '../BookingSuccess/BookingSuccess';
 import { BookingDetails } from '../CalendarPage/calendarTypes';
 import { sendTelegramMessage, formatAdminMessage, ADMIN_CHAT_ID } from '../../api/telegram';
+import api from '../../api/apiService';
 
 // Функция для получения изображения продукта по ID
 const getProductImage = (id: string | number): string => {
@@ -143,22 +144,10 @@ const CartPage: React.FC = () => {
       };
       
       // Отправляем запрос на API для создания бронирования
-      const response = await fetch('https://backend.self-detailing.duckdns.org/api/v1/calendar/booking', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(apiData),
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        alert('Ошибка сервера: ' + errorText);
-        throw new Error(`Ошибка сервера: ${response.status} ${errorText}`);
-      }
+      const response = await api.post('/calendar/booking', apiData);
       
       // Получаем результат
-      const result = await response.json();
+      const result = response.data;
       alert('Бронирование успешно создано');
       
       // Отправляем сообщения в Telegram

@@ -3,6 +3,7 @@ import { Routes, Route, useNavigate } from 'react-router-dom';
 import styles from './AdminPanel.module.css';
 import AdminCalendar from './AdminCalendar';
 import UserProfile from './UserProfile';
+import api from '../../api/apiService';
 
 // Интерфейс для пользователя
 interface User {
@@ -32,19 +33,11 @@ const AdminPanel: React.FC = () => {
     setError(null);
     
     try {
-      const response = await fetch(`https://backend.self-detailing.duckdns.org/api/v1/users?page=${page}&size=${size}&sort=${sort}`, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        }
+      const response = await api.get(`/users`, {
+        params: { page, size, sort }
       });
       
-      if (!response.ok) {
-        throw new Error(`Ошибка API: ${response.status}`);
-      }
-      
-      const data = await response.json();
+      const data = response.data;
       
       if (!data || !data.data) {
         throw new Error('Неверный формат данных');

@@ -5,6 +5,7 @@ import { sendTelegramMessage, sendTelegramMessageByUsername, formatUserMessage, 
 import PhoneInput from 'react-phone-number-input/input';
 import 'react-phone-number-input/style.css';
 import { useCart } from '../../context/CartContex';
+import api from '../../api/apiService';
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -237,21 +238,9 @@ const BookingModal: React.FC<BookingModalProps> = ({
       };
 
       // Отправляем запрос на API для создания бронирования
-      const response = await fetch('https://backend.self-detailing.duckdns.org/api/v1/calendar/booking', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(apiData),
-      });
+      const response = await api.post('/calendar/booking', apiData);
 
-      if (!response.ok) {
-        const errorText = await response.text();
-
-        throw new Error(`Ошибка сервера: ${response.status} ${errorText}`);
-      }
-      
-      const result = await response.json();
+      const result = response.data;
 
       
       // Отправляем уведомления в Telegram

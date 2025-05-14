@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styles from './AdminCalendar.module.css';
 import { mockSlots, BookingSlot } from './mockData';
-import axios from 'axios';
+import api from '../../api/apiService';
 import TimeSlots from '../CalendarPage/TimeSlots';
 import CalendarPage from '../CalendarPage/CalendarPage';
 import BookingDetails from './BookingDetails';
@@ -74,9 +74,8 @@ const AdminCalendar: React.FC<{ onUserSelect: (userId: string) => void }> = ({ o
       const nextDayNum = nextDay.getDate().toString().padStart(2, '0');
       const end = `${nextYear}-${nextMonth}-${nextDayNum}T00:00:00`;
 
-      const response = await axios.get('https://backend.self-detailing.duckdns.org/api/v1/calendar/available', {
-        params: { start, end },
-        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+      const response = await api.get('/calendar/available', {
+        params: { start, end }
       });
 
       if (!response.data || !response.data.data) {
@@ -132,19 +131,11 @@ const AdminCalendar: React.FC<{ onUserSelect: (userId: string) => void }> = ({ o
         const endDate = `${nextYear}-${nextMonth}-${nextDayNum}T00:00:00`;
         
         // Запрос к API для получения бронирований
-        const response = await fetch(`https://backend.self-detailing.duckdns.org/api/v1/calendar/booking?start=${startDate}&end=${endDate}`, {
-          method: 'GET',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-          }
+        const response = await api.get('/calendar/booking', {
+          params: { start: startDate, end: endDate }
         });
         
-        if (!response.ok) {
-          throw new Error(`Ошибка API: ${response.status}`);
-        }
-        
-        const data = await response.json();
+        const data = response.data;
         console.log('Ответ от API:', data);
         
         if (!data || !data.data) {
@@ -419,26 +410,15 @@ const AdminCalendar: React.FC<{ onUserSelect: (userId: string) => void }> = ({ o
     try {
       console.log('Загрузка деталей бронирования, ID:', bookingId);
       
-      const response = await fetch(`https://backend.self-detailing.duckdns.org/api/v1/calendar/booking/${bookingId}`, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await api.get(`/calendar/booking/${bookingId}`);
       
-      if (!response.ok) {
-        throw new Error(`Ошибка API: ${response.status}`);
+      if (!response.data) {
+        throw new Error('Неверный формат данных');
       }
       
-      const data = await response.json();
-      
-      if (!data || !data.success) {
-        throw new Error(data.errorMessage || 'Неверный формат данных');
-      }
-      
-      console.log('Получены данные бронирования:', data.data);
-      setBookingDetail(data.data);
+      const bookingData = response.data.data;
+      console.log('Получены данные бронирования:', bookingData);
+      setBookingDetail(bookingData);
     } catch (error: any) {
       console.error('Ошибка при загрузке данных бронирования:', error);
       setBookingError(`Не удалось загрузить данные: ${error.message}`);
@@ -469,24 +449,7 @@ const AdminCalendar: React.FC<{ onUserSelect: (userId: string) => void }> = ({ o
   // Функция для удаления бронирования
   const deleteBooking = async (bookingId: number | string) => {
     try {
-      const response = await fetch(`https://backend.self-detailing.duckdns.org/api/v1/calendar/booking/${bookingId}`, {
-        method: 'DELETE',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`Ошибка API: ${response.status}`);
-      }
-
-      const data = await response.json();
-      
-      if (!data || !data.success) {
-        throw new Error(data.errorMessage || 'Ошибка при удалении бронирования');
-      }
-      
+      await api.delete(`/calendar/booking/${bookingId}`);
       console.log('Бронирование успешно удалено:', bookingId);
       setDeleteSuccess(true);
       
@@ -514,19 +477,11 @@ const AdminCalendar: React.FC<{ onUserSelect: (userId: string) => void }> = ({ o
             const endDate = `${nextYear}-${nextMonth}-${nextDayNum}T00:00:00`;
             
             // Запрос к API для получения бронирований
-            const response = await fetch(`https://backend.self-detailing.duckdns.org/api/v1/calendar/booking?start=${startDate}&end=${endDate}`, {
-              method: 'GET',
-              headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-              }
+            const response = await api.get('/calendar/booking', {
+              params: { start: startDate, end: endDate }
             });
             
-            if (!response.ok) {
-              throw new Error(`Ошибка API: ${response.status}`);
-            }
-            
-            const data = await response.json();
+            const data = response.data;
             
             if (!data || !data.data) {
               throw new Error('Неверный формат данных');

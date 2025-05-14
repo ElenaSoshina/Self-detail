@@ -3,6 +3,7 @@ import styles from './ProfilePage.module.css';
 import { useCart } from '../../context/CartContex';
 import BookingDetails from '../AdminPanel/BookingDetails';
 import { formatDate } from '../../utils/dateUtils';
+import api from '../../api/apiService';
 
 interface UserInfo {
   username: string;
@@ -134,19 +135,9 @@ const ProfilePage: React.FC = () => {
       setIsLoading(true);
       setBookingsError(null);
       
-      const response = await fetch(`https://backend.self-detailing.duckdns.org/api/v1/calendar/user/${telegramUserId}/bookings`, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await api.get(`/calendar/user/${telegramUserId}/bookings`);
       
-      if (!response.ok) {
-        throw new Error(`Ошибка API: ${response.status}`);
-      }
-      
-      const data = await response.json();
+      const data = response.data;
       
       if (!data.success) {
         throw new Error(data.errorMessage || 'Ошибка при получении данных');
@@ -224,19 +215,9 @@ const ProfilePage: React.FC = () => {
   // Функция для удаления бронирования
   const deleteBooking = async (bookingId: number | string) => {
     try {
-      const response = await fetch(`https://backend.self-detailing.duckdns.org/api/v1/calendar/booking/${bookingId}`, {
-        method: 'DELETE',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await api.delete(`/calendar/booking/${bookingId}`);
 
-      if (!response.ok) {
-        throw new Error(`Ошибка API: ${response.status}`);
-      }
-
-      const data = await response.json();
+      const data = response.data;
       
       if (!data || !data.success) {
         throw new Error(data.errorMessage || 'Ошибка при удалении бронирования');

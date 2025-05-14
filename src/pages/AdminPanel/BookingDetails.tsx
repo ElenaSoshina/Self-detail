@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import styles from './AdminPanel.module.css';
+import api from '../../api/apiService';
 
 interface BookingDetailsProps {
   bookingId: number | string;
@@ -46,26 +47,14 @@ const BookingDetails: React.FC<BookingDetailsProps> = ({ bookingId, onClose, onE
         setLoading(true);
         setError(null);
         
-        console.log('Загрузка данных бронирования, ID:', bookingId, 'Тип:', typeof bookingId);
+        console.log('Загрузка данных бронирования с ID:', bookingId, typeof bookingId);
         
         const bookingIdValue = typeof bookingId === 'string' ? parseInt(bookingId, 10) : bookingId;
-        const apiUrl = `https://backend.self-detailing.duckdns.org/api/v1/calendar/booking/${bookingIdValue}`;
-        console.log('Запрос к API:', apiUrl);
+        console.log('Запрос к API:', `/calendar/booking/${bookingIdValue}`);
         
-        const response = await fetch(apiUrl, {
-          method: 'GET',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-          }
-        });
+        const response = await api.get(`/calendar/booking/${bookingIdValue}`);
         
-        if (!response.ok) {
-          console.error('Ошибка API ответа:', response.status, response.statusText);
-          throw new Error(`Ошибка API: ${response.status} ${response.statusText}`);
-        }
-        
-        const data = await response.json();
+        const data = response.data;
         console.log('Полный ответ API:', data);
         
         if (!data) {
