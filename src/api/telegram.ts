@@ -1,23 +1,18 @@
-const API_URL = 'https://backend.self-detailing.duckdns.org/api/v1';
+import api from './apiService';
+
 export const ADMIN_CHAT_ID = '522814078'; // ID чата администратора
 
 export const sendTelegramMessage = async (message: string, chatId: string) => {
   try {
-    const response = await fetch(`${API_URL}/chats/send-message/${chatId}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        message: message
-      }),
+    const response = await api.post(`/chats/send-message/${chatId}`, {
+      message: message
     });
 
-    if (!response.ok) {
+    if (!response.data) {
       throw new Error('Ошибка при отправке сообщения');
     }
 
-    return await response.json();
+    return response.data;
   } catch (error) {
     console.error('Ошибка при отправке сообщения:', error);
     throw error;
@@ -27,17 +22,20 @@ export const sendTelegramMessage = async (message: string, chatId: string) => {
 export const sendTelegramMessageByUsername = async (message: string, username: string) => {
   if (!username) throw new Error('Username is required');
   const cleanUsername = username.startsWith('@') ? username.slice(1) : username;
-  const url = `https://backend.self-detailing.duckdns.org/api/v1/chats/send-message/${encodeURIComponent(cleanUsername)}`;
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-    },
-    body: JSON.stringify({ message }),
-  });
-  if (!response.ok) {
-    throw new Error('Ошибка при отправке сообщения по username');
+  
+  try {
+    const response = await api.post(`/chats/send-message/${encodeURIComponent(cleanUsername)}`, { 
+      message 
+    });
+    
+    if (!response.data) {
+      throw new Error('Ошибка при отправке сообщения по username');
+    }
+    
+    return response.data;
+  } catch (error) {
+    console.error('Ошибка при отправке сообщения по username:', error);
+    throw error;
   }
 };
 
