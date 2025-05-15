@@ -16,7 +16,13 @@ const api = axios.create({
 // Переменная для отслеживания выполнения запроса токена
 let tokenPromise: Promise<string> | null = null;
 
-// Функция для авторизации и получения токена
+// Флаг для определения состояния первичной авторизации
+let isInitialAuthComplete = false;
+
+/**
+ * Функция для авторизации и получения токена
+ * @returns Promise с токеном авторизации
+ */
 export const login = async (): Promise<string> => {
   // Если запрос за токеном уже выполняется, возвращаем его результат
   if (tokenPromise) {
@@ -30,6 +36,7 @@ export const login = async (): Promise<string> => {
       const existingToken = localStorage.getItem('jwt_token');
       if (existingToken) {
         console.log('Используем существующий токен из localStorage');
+        isInitialAuthComplete = true;
         return existingToken;
       }
       
@@ -41,23 +48,32 @@ export const login = async (): Promise<string> => {
         throw new Error('Учетные данные не найдены в переменных окружения');
       }
       
+      console.log('Выполняем запрос на авторизацию');
       const response = await axios.post(`${API_URL}/auth/login`, {
         username,
         password
       });
       
       // Извлечение токена из ответа
+      let token: string;
       if (response.data?.success && response.data?.data?.token) {
-        // Сохраняем токен
-        localStorage.setItem('jwt_token', response.data.data.token);
-        return response.data.data.token;
+        // Сохраняем токен из нового формата ответа
+        token = response.data.data.token;
       } else if (response.data && response.data.token) {
         // Для обратной совместимости со старым форматом
-        localStorage.setItem('jwt_token', response.data.token);
-        return response.data.token;
+        token = response.data.token;
+      } else {
+        throw new Error('Не удалось получить токен');
       }
       
-      throw new Error('Не удалось получить токен');
+      // Сохраняем токен в localStorage
+      localStorage.setItem('jwt_token', token);
+      console.log('Токен успешно получен и сохранен');
+      
+      // Отмечаем, что первичная авторизация выполнена
+      isInitialAuthComplete = true;
+      
+      return token;
     } catch (error) {
       // Сбрасываем промис при ошибке, чтобы можно было повторить запрос
       tokenPromise = null;
@@ -83,15 +99,49 @@ export const login = async (): Promise<string> => {
   }
 };
 
-// Получение токена из хранилища
+/**
+ * Получение токена из хранилища
+ * @returns Токен или null, если токен не найден
+ */
 export const getToken = () => {
   return localStorage.getItem('jwt_token');
 };
 
-// Функция сброса токена (для выхода или при ошибках)
+/**
+ * Функция сброса токена (для выхода или при ошибках)
+ */
 export const resetToken = () => {
   localStorage.removeItem('jwt_token');
   tokenPromise = null;
+  isInitialAuthComplete = false;
+};
+
+/**
+ * Инициализация авторизации
+ * Выполняет проверку токена и запрос на авторизацию при необходимости
+ * @returns Promise, который завершается когда инициализация завершена
+ */
+export const initAuth = async (): Promise<void> => {
+  if (isInitialAuthComplete) {
+    return;
+  }
+  
+  const token = getToken();
+  
+  // Если есть сохраненный токен, считаем инициализацию завершенной
+  if (token) {
+    isInitialAuthComplete = true;
+    return;
+  }
+  
+  // Если токена нет, запрашиваем новый
+  try {
+    await login();
+    isInitialAuthComplete = true;
+  } catch (error) {
+    console.error('Ошибка при инициализации авторизации:', error);
+    throw error;
+  }
 };
 
 // Перехватчик запросов для добавления токена
@@ -102,6 +152,17 @@ api.interceptors.request.use(
       return config;
     }
     
+    // Проверяем, завершена ли инициализация
+    if (!isInitialAuthComplete) {
+      // Выполняем инициализацию перед отправкой запроса
+      try {
+        await initAuth();
+      } catch (error) {
+        console.error('Не удалось выполнить инициализацию авторизации:', error);
+      }
+    }
+    
+    // Получаем токен
     let token = getToken();
     
     // Если токена нет, пытаемся авторизоваться

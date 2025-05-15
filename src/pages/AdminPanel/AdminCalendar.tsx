@@ -63,6 +63,8 @@ const AdminCalendar: React.FC<{ onUserSelect: (userId: string) => void }> = ({ o
 
   const fetchAvailableSlots = async () => {
     setLoadingSlots(true);
+    setSlotsError(null);
+    
     try {
       // Используем общую функцию для получения данных слотов
       const apiData = await fetchAvailableTimeSlotsApi(currentDate);
@@ -73,7 +75,6 @@ const AdminCalendar: React.FC<{ onUserSelect: (userId: string) => void }> = ({ o
       // Обновляем состояние
       setAvailableTimeSlots(formattedTimeSlots);
       setTimeSlotData(timeSlotsWithData);
-      setSlotsError(null);
     } catch (error) {
       console.error('Error fetching available slots:', error);
       setSlotsError('Ошибка загрузки слотов.');

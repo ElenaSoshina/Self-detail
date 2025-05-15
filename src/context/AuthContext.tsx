@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { login, getToken, resetToken } from '../api/apiService';
+import { login, getToken, resetToken, initAuth } from '../api/apiService';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -31,17 +31,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(true);
       setError(null);
       
-      // Проверяем есть ли уже токен
-      const currentToken = getToken();
-      if (currentToken) {
-        setToken(currentToken);
-        setLoading(false);
-        return;
-      }
+      // Используем функцию инициализации авторизации
+      await initAuth();
       
-      // Если нет, получаем новый
-      const newToken = await login();
-      setToken(newToken);
+      // Установим токен из localStorage после инициализации
+      const currentToken = getToken();
+      setToken(currentToken);
     } catch (err) {
       console.error('Ошибка в AuthContext:', err);
       setToken(null);

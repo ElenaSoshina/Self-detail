@@ -1,5 +1,6 @@
 import api from '../../api/apiService';
 import axios from 'axios';
+import { login, getToken, initAuth } from '../../api/apiService';
 
 const API_PATH = '/calendar/available';
 
@@ -24,14 +25,20 @@ function toMoscowISOString(date: Date): string {
  * @returns Promise с массивом данных слотов из API
  */
 export async function fetchAvailableTimeSlotsApi(date: Date) {
+  // Сначала убедимся, что авторизация выполнена
+  await initAuth();
+  
   // Проверяем, является ли запрашиваемая дата текущим днем
   const now = new Date();
   const isToday = date.toDateString() === now.toDateString();
   
   // Создаем даты для диапазона запроса
   const startDate = new Date(date);
+  
+  // Создаем дату для следующего дня (00:00:00)
   const endDate = new Date(date);
-  endDate.setHours(23, 59, 59, 999);
+  endDate.setDate(endDate.getDate() + 1);
+  endDate.setHours(0, 0, 0, 0);
   
   // Если это сегодняшний день, устанавливаем startDate на текущее время + 2 минуты
   if (isToday) {
@@ -56,21 +63,10 @@ export async function fetchAvailableTimeSlotsApi(date: Date) {
   console.log('Запрашиваем слоты для диапазона:', { startDateISO, endDateISO, isToday });
   
   try {
-    // Получаем токен из хранилища
-    const token = localStorage.getItem('jwt_token');
-    
-    if (!token) {
-      console.error('Токен отсутствует при запросе слотов');
-      throw new Error('Токен авторизации отсутствует');
-    }
-
-    // Выполняем запрос с токеном без Bearer
-    console.log('Отправляем запрос с токеном');
+    // Используем экземпляр API, который уже имеет логику добавления токена
+    console.log('Отправляем запрос');
     const response = await api.get(API_PATH, {
-      params: { start: startDateISO, end: endDateISO },
-      headers: {
-        Authorization: token
-      }
+      params: { start: startDateISO, end: endDateISO }
     });
     
     console.log('Успешный ответ от API слотов:', response.status);
@@ -78,29 +74,7 @@ export async function fetchAvailableTimeSlotsApi(date: Date) {
   } catch (error) {
     console.error('Ошибка при запросе слотов:', error);
     
-    // Если получили ошибку, пробуем с Bearer
-    if (axios.isAxiosError(error)) {
-      try {
-        const token = localStorage.getItem('jwt_token');
-        if (!token) {
-          throw new Error('Токен отсутствует');
-        }
-        
-        console.log('Пробуем с префиксом Bearer');
-        const response = await api.get(API_PATH, {
-          params: { start: startDateISO, end: endDateISO },
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
-        
-        console.log('Успешный ответ с Bearer токеном:', response.status);
-        return response.data.data;
-      } catch (bearerError) {
-        console.error('Ошибка и при использовании Bearer:', bearerError);
-      }
-    }
-    
+    // В случае ошибок перебрасываем их дальше
     throw error;
   }
 }
