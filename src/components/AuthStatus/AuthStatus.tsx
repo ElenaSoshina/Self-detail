@@ -3,14 +3,26 @@ import { useAuth } from '../../context/AuthContext';
 import './AuthStatus.css';
 
 export const AuthStatus: React.FC = () => {
-  const { loading, error, isAuthenticated, token } = useAuth();
+  const { loading, error, isAuthenticated, token, retryAuth } = useAuth();
   const [showSuccessStatus, setShowSuccessStatus] = useState(false);
   const [isTelegramMode, setIsTelegramMode] = useState(false);
+  const [detailedError, setDetailedError] = useState<string | null>(null);
 
   // Определяем при инициализации, работаем ли в Telegram WebApp
   useEffect(() => {
     setIsTelegramMode(!!(window as any).Telegram?.WebApp);
   }, []);
+
+  useEffect(() => {
+    // Проверяем ошибку и устанавливаем подробную информацию
+    if (error) {
+      setDetailedError(error.message);
+      // Добавляем алерт с подробностями ошибки
+      alert(`Подробности ошибки авторизации:\n${error.message}\n\nПроверьте консоль разработчика для дополнительной информации.`);
+    } else {
+      setDetailedError(null);
+    }
+  }, [error]);
 
   useEffect(() => {
     // Проверка на успешную авторизацию
@@ -28,6 +40,11 @@ export const AuthStatus: React.FC = () => {
       }, 3000);
     }
   }, [isAuthenticated, token, loading, error, isTelegramMode]);
+
+  const handleRetry = async () => {
+    alert('Выполняется повторная попытка авторизации...');
+    await retryAuth();
+  };
 
   // Для Telegram WebApp всегда показываем индикатор
   if (isTelegramMode) {
@@ -50,12 +67,15 @@ export const AuthStatus: React.FC = () => {
           {status === 'success' && <div className="auth-telegram-checkmark">✓</div>}
           {status === 'error' && <div className="auth-telegram-error-icon">!</div>}
           <span>{message}</span>
+          {status === 'error' && detailedError && (
+            <div className="auth-telegram-error-details">{detailedError}</div>
+          )}
           {status === 'error' && (
             <button 
               className="auth-telegram-retry" 
-              onClick={() => window.location.reload()}
+              onClick={handleRetry}
             >
-              Обновить
+              Повторить
             </button>
           )}
         </div>
@@ -69,7 +89,18 @@ export const AuthStatus: React.FC = () => {
   }
 
   if (error) {
-    return <div className="auth-error">Ошибка авторизации: {error.message}</div>;
+    return (
+      <div className="auth-error">
+        <div>Ошибка авторизации: {error.message}</div>
+        {detailedError && <div className="auth-error-details">{detailedError}</div>}
+        <button 
+          className="auth-retry-button" 
+          onClick={handleRetry}
+        >
+          Повторить
+        </button>
+      </div>
+    );
   }
 
   if (showSuccessStatus) {

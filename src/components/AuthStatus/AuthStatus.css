@@ -15,6 +15,39 @@
 .auth-error {
   background-color: #ffebeb;
   color: #cc0000;
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.auth-error-details {
+  background-color: #fff4f4;
+  border: 1px solid #ffcccc;
+  border-radius: 4px;
+  padding: 8px;
+  margin-top: 5px;
+  font-size: 14px;
+  text-align: left;
+  word-break: break-word;
+  white-space: pre-wrap;
+  font-family: monospace;
+}
+
+.auth-retry-button {
+  background-color: #cc0000;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 5px 10px;
+  cursor: pointer;
+  font-size: 14px;
+  margin-top: 5px;
+  align-self: center;
+}
+
+.auth-retry-button:hover {
+  background-color: #aa0000;
 }
 
 .auth-success {
@@ -89,6 +122,19 @@
   justify-content: center;
   font-weight: bold;
   font-size: 12px;
+}
+
+.auth-telegram-error-details {
+  width: 100%;
+  background-color: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  padding: 8px;
+  margin-top: 5px;
+  font-size: 13px;
+  text-align: left;
+  word-break: break-word;
+  white-space: pre-wrap;
+  font-family: monospace;
 }
 
 .auth-telegram-retry {

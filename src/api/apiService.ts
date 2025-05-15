@@ -19,24 +19,43 @@ export const login = async () => {
     const username = getBackendUsername();
     const password = getBackendPassword();
     
+    // Добавляем алерт для проверки учетных данных
+    alert(`Попытка авторизации:\nИмя пользователя: ${username ? 'Получено' : 'Отсутствует'}\nПароль: ${password ? 'Получен' : 'Отсутствует'}`);
+    
     if (!username || !password) {
       console.error('Учетные данные не найдены в переменных окружения');
+      alert('Ошибка: Учетные данные не найдены в переменных окружения');
       throw new Error('Учетные данные не найдены в переменных окружения');
     }
+    
+    // Алерт перед отправкой запроса
+    alert(`Отправка запроса на ${API_URL}/auth/login с данными:\nusername: ${username}\npassword: ${password.substring(0, 3)}...`);
     
     const response = await axios.post(`${API_URL}/auth/login`, {
       username,
       password
     });
     
+    // Алерт с информацией об ответе
+    alert(`Ответ от сервера:\nСтатус: ${response.status}\nИмеет токен: ${response.data && response.data.token ? 'Да' : 'Нет'}`);
+    
     if (response.data && response.data.token) {
       localStorage.setItem('jwt_token', response.data.token);
       return response.data.token;
     }
     
+    alert('Ошибка: Не удалось получить токен из ответа сервера');
     throw new Error('Не удалось получить токен');
   } catch (error) {
-    console.error('Ошибка авторизации:', error);
+    // Расширенный вывод информации об ошибке
+    if (axios.isAxiosError(error)) {
+      const errorMessage = `Ошибка авторизации (${error.code}): ${error.message}\nСтатус: ${error.response?.status}\nДанные: ${JSON.stringify(error.response?.data || {})}`;
+      console.error(errorMessage);
+      alert(errorMessage);
+    } else {
+      console.error('Ошибка авторизации:', error);
+      alert(`Ошибка авторизации: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
+    }
     throw error;
   }
 };
