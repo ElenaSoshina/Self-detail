@@ -1,7 +1,10 @@
 import axios from 'axios';
 import { getBackendUsername, getBackendPassword } from '../utils/env';
 
-const API_URL = 'https://backend.self-detailing.duckdns.org/api/v1';
+// Определяем правильный API URL в зависимости от среды выполнения
+const API_URL = import.meta.env.DEV 
+  ? '/api/v1' // В режиме разработки используем прокси
+  : 'https://backend.self-detailing.duckdns.org/api/v1';
 
 // Создаем экземпляр axios с базовыми настройками
 const api = axios.create({
@@ -180,13 +183,9 @@ api.interceptors.request.use(
       if (config.headers.Authorization) {
         console.log('Заголовок Authorization уже установлен');
       } else {
-        // Для запросов слотов пробуем без Bearer
-        if (config.url && config.url.includes('available')) {
-          config.headers.Authorization = token;
-        } else {
-          // Для остальных запросов добавляем с Bearer
-          config.headers.Authorization = `Bearer ${token}`;
-        }
+        // Используем Bearer для всех запросов
+        config.headers.Authorization = `Bearer ${token}`;
+        console.log('Добавлен токен авторизации:', `Bearer ${token.substring(0, 10)}...`);
       }
     } else {
       console.warn('Токен не добавлен к заголовкам, запрос будет отправлен без авторизации');

@@ -89,17 +89,30 @@ export async function fetchAvailableTimeSlotsApi(date: Date) {
   try {
     // Показываем параметры запроса в алерте (только в Telegram)
     if (isTelegram) {
-      const apiUrl = `https://backend.self-detailing.duckdns.org/api/v1${API_PATH}?start=${encodeURIComponent(startDateISO)}&end=${encodeURIComponent(endDateISO)}`;
+      // Формируем URL с учетом окружения (разработка или продакшн)
+      const baseUrl = import.meta.env.DEV 
+        ? window.location.origin + '/api/v1' 
+        : 'https://backend.self-detailing.duckdns.org/api/v1';
+      
+      const apiUrl = `${baseUrl}${API_PATH}?start=${encodeURIComponent(startDateISO)}&end=${encodeURIComponent(endDateISO)}`;
       alert(`[DEBUG] Отправка запроса:\nURL: ${apiUrl}`);
     }
     
     // Используем экземпляр API, который уже имеет логику добавления токена
     console.log('Отправляем запрос');
+    console.log('Параметры запроса:', { 
+      url: API_PATH, 
+      start: startDateISO, 
+      end: endDateISO,
+      token: getToken() ? 'Есть токен' : 'Нет токена'
+    });
+    
     const response = await api.get(API_PATH, {
       params: { start: startDateISO, end: endDateISO }
     });
     
     console.log('Успешный ответ от API слотов:', response.status);
+    console.log('Данные ответа:', response.data);
     
     // Отображаем результат запроса в алерте (только в Telegram)
     if (isTelegram) {
