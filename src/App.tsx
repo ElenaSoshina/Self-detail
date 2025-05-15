@@ -23,15 +23,12 @@ function App() {
       initTelegramWebApp();
     }
   }, []);
-  
-  // Определяем, нужно ли показывать заголовок
-  const showHeader = !isTelegramWebApp() || location.pathname === '/';
 
   return (
     <AuthProvider>
       <CartProvider>
         <div className="app">
-          {showHeader && <Header />}
+          <Header />
           <AuthStatus />
           <main>
             <Routes>
