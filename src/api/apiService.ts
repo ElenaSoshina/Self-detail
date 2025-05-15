@@ -133,9 +133,4 @@ api.interceptors.response.use(
   }
 );
 
-// При импорте модуля сразу выполняем авторизацию
-login().catch(error => {
-  console.error('Ошибка начальной авторизации:', error);
-});
-
 export default api; 
