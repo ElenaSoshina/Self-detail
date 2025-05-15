@@ -191,6 +191,15 @@ api.interceptors.request.use(
       console.warn('Токен не добавлен к заголовкам, запрос будет отправлен без авторизации');
     }
     
+    // Для отладки выводим полные параметры запроса
+    if (config.url && config.url.includes('available')) {
+      console.log('[API] Отправка запроса слотов:', {
+        url: config.url,
+        headers: config.headers,
+        params: config.params
+      });
+    }
+    
     return config;
   },
   (error) => {
