@@ -1,6 +1,6 @@
 import api from '../../api/apiService';
 import axios from 'axios';
-import { login, getToken, initAuth } from '../../api/apiService';
+import { login, getToken, initAuth, isOfflineMode } from '../../api/apiService';
 import { isTelegramWebApp } from '../../utils/env';
 
 const API_PATH = '/calendar/available';
@@ -27,11 +27,19 @@ function toMoscowISOString(date: Date): string {
  */
 export async function fetchAvailableTimeSlotsApi(date: Date) {
   const isTelegram = isTelegramWebApp();
+  const requestId = Math.random().toString(36).substring(2, 8); // Уникальный ID запроса для логов
   
   // Отображаем алерт в Telegram о начале процесса
   if (isTelegram) {
     alert(`[DEBUG] Начало запроса слотов для даты: ${date.toLocaleDateString()}`);
+    
+    // Проверка на оффлайн-режим
+    if (isOfflineMode()) {
+      alert(`[DEBUG] Работаем в оффлайн-режиме. Будут использованы тестовые данные`);
+    }
   }
+  
+  console.log(`[API:${requestId}] Запрос слотов для даты ${date.toLocaleDateString()}`);
   
   // Сначала убедимся, что авторизация выполнена
   try {
@@ -95,8 +103,8 @@ export async function fetchAvailableTimeSlotsApi(date: Date) {
     }
     
     // Используем экземпляр API, который уже имеет логику добавления токена
-    console.log('Отправляем запрос');
-    console.log('Параметры запроса:', { 
+    console.log(`[API:${requestId}] Отправляем запрос`);
+    console.log(`[API:${requestId}] Параметры запроса:`, { 
       url: API_PATH, 
       start: startDateISO, 
       end: endDateISO,
@@ -130,8 +138,8 @@ export async function fetchAvailableTimeSlotsApi(date: Date) {
       });
     }
     
-    console.log('Успешный ответ от API слотов:', response.status);
-    console.log('Данные ответа:', response.data);
+    console.log(`[API:${requestId}] Успешный ответ от API слотов:`, response.status);
+    console.log(`[API:${requestId}] Данные ответа:`, response.data);
     
     // Отображаем результат запроса в алерте (только в Telegram)
     if (isTelegram) {

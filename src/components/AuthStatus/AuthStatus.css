@@ -155,4 +155,49 @@
 @keyframes fadeIn {
   from { opacity: 0; transform: translate(-50%, 10px); }
   to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+.auth-status {
+  display: flex;
+  gap: 8px;
+  padding: 5px;
+  position: fixed;
+  bottom: 10px;
+  right: 10px;
+  z-index: 1000;
+  font-size: 12px;
+  opacity: 0.8;
+  transition: opacity 0.2s;
+}
+
+.auth-status:hover {
+  opacity: 1;
+}
+
+.auth-indicator, .api-indicator {
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.auth-indicator.authorized {
+  background-color: #caf1ca;
+  color: #188618;
+}
+
+.auth-indicator.unauthorized {
+  background-color: #ffcaca;
+  color: #cc3535;
+}
+
+.api-indicator.online {
+  background-color: #cae6f8;
+  color: #1868aa;
+}
+
+.api-indicator.offline {
+  background-color: #e6e6e6;
+  color: #666666;
 } 

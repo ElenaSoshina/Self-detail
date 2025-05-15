@@ -1,6 +1,27 @@
 import axios from 'axios';
 import { getBackendUsername, getBackendPassword } from '../utils/env';
 
+// Расширяем тип конфигурации axios для добавления нашего поля
+declare module 'axios' {
+  interface InternalAxiosRequestConfig {
+    __offlineMode?: boolean;
+  }
+}
+
+// Флаг для работы в оффлайн-режиме
+let offlineMode = false;
+
+// Функция установки/проверки оффлайн-режима
+export const isOfflineMode = () => offlineMode;
+export const setOfflineMode = (value: boolean) => {
+  offlineMode = value;
+  if (value) {
+    console.log('API переключен в оффлайн-режим');
+  } else {
+    console.log('API переключен в онлайн-режим');
+  }
+};
+
 // Определяем правильный API URL в зависимости от среды выполнения
 const API_URL = import.meta.env.DEV 
   ? '/api/v1' // В режиме разработки используем прокси
@@ -150,6 +171,14 @@ export const initAuth = async (): Promise<void> => {
 // Перехватчик запросов для добавления токена
 api.interceptors.request.use(
   async (config) => {
+    // Проверка на оффлайн-режим
+    if (offlineMode && config.url && !config.url.includes('/auth/login')) {
+      console.log(`[API] Запрос ${config.url} отменен (оффлайн режим)`);
+      // Возвращаем отмененный запрос с отметкой для имитации ответа
+      config.__offlineMode = true;
+      return config;
+    }
+    
     // Пропускаем добавление токена для запроса авторизации
     if (config.url && config.url.includes('/auth/login')) {
       return config;
@@ -212,7 +241,56 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const originalRequest = error.config;
+    // Проверяем, был ли запрос в оффлайн-режиме
+    if (error.config && error.config.__offlineMode) {
+      console.log('[API] Имитация ответа в оффлайн режиме');
+      
+      // Имитируем успешный ответ для разных типов запросов
+      const url = error.config.url || '';
+      
+      if (url.includes('available')) {
+        // Для календаря возвращаем пустой список слотов
+        return {
+          data: {
+            success: true,
+            data: []
+          },
+          status: 200,
+          statusText: 'OK (OFFLINE)'
+        };
+      }
+      
+      // Для других запросов просто успешный ответ
+      return {
+        data: { success: true, data: {} },
+        status: 200,
+        statusText: 'OK (OFFLINE)'
+      };
+    }
+    
+    // Проверка на DNS ошибки и другие сетевые проблемы
+    if (!error.response && (error.code === 'ENOTFOUND' || error.message.includes('getaddrinfo'))) {
+      console.error('DNS-ошибка при подключении к API:', error.message);
+      
+      // Автоматически включаем оффлайн-режим
+      if (!offlineMode) {
+        setOfflineMode(true);
+        console.warn('Автоматически включен оффлайн-режим из-за проблем с соединением');
+      }
+      
+      // Если это запрос календаря, возвращаем пустой список
+      const url = error.config?.url || '';
+      if (url.includes('available')) {
+        return {
+          data: {
+            success: true,
+            data: []
+          },
+          status: 200,
+          statusText: 'OK (OFFLINE)'
+        };
+      }
+    }
     
     // Проверка на сетевые ошибки (например, CORS, нет соединения)
     if (!error.response) {
@@ -224,18 +302,18 @@ api.interceptors.response.use(
         
         try {
           // Попытка прямого запроса без прокси для Telegram
-          const directUrl = 'https://backend.self-detailing.duckdns.org/api/v1' + originalRequest.url;
+          const directUrl = 'https://backend.self-detailing.duckdns.org/api/v1' + error.config?.url;
           
           // Создаем новый запрос с копией параметров оригинального
           const directResponse = await axios({
             url: directUrl,
-            method: originalRequest.method,
+            method: error.config?.method,
             headers: {
-              ...originalRequest.headers,
+              ...error.config?.headers,
               'Authorization': getToken() ? `Bearer ${getToken()}` : ''
             },
-            params: originalRequest.params,
-            data: originalRequest.data
+            params: error.config?.params,
+            data: error.config?.data
           });
           
           return directResponse;
@@ -249,8 +327,8 @@ api.interceptors.response.use(
     }
     
     // Если ошибка 401 (неавторизован) и запрос не повторялся ранее
-    if (error.response && error.response.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
+    if (error.response && error.response.status === 401 && !error.config._retry) {
+      error.config._retry = true;
       
       try {
         // Сбрасываем токен
@@ -260,10 +338,10 @@ api.interceptors.response.use(
         const token = await login();
         
         // Обновляем заголовок в текущем запросе
-        originalRequest.headers.Authorization = `Bearer ${token}`;
+        error.config.headers.Authorization = `Bearer ${token}`;
         
         // Повторяем запрос
-        return axios(originalRequest);
+        return axios(error.config);
       } catch (loginError) {
         console.error('Ошибка при повторной авторизации:', loginError);
         return Promise.reject(loginError);

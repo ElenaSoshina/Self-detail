@@ -86,6 +86,8 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin }) => {
 
   // useEffect для инициализации
   useEffect(() => {
+    if (isInitialized) return; // Пропускаем, если уже инициализировано
+    
     const init = async () => {
       const daysArray = generateDaysForMonth(
         currentDate.getFullYear(),
@@ -95,6 +97,9 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin }) => {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const todayDay = daysArray.find(day => day.isToday && day.isAvailable);
+      
+      setIsInitialized(true); // Помечаем как инициализировано
+      
       if (todayDay) {
         setSelectedDate(todayDay.date);
         setLoadingSlots(true);
@@ -113,46 +118,74 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin }) => {
         setLoadingSlots(false);
       }
     };
+    
     init();
-  }, []);
+  }, [isInitialized, fetchAvailableTimeSlots]); // Добавляем зависимости
 
   // useEffect для смены выбранной даты
   useEffect(() => {
+    // Если дата не выбрана или компонент ещё не инициализирован, пропускаем
+    if (!selectedDate || !isInitialized) return;
+    
+    // Создаем переменную для отслеживания актуальности запроса
+    let isActive = true;
+    
     const fetchSlots = async () => {
-      if (selectedDate && days.length > 0) {
-        setLoadingSlots(true);
-        try {
-          const { formattedTimeSlots, timeSlotsWithData } = await fetchAvailableTimeSlots(selectedDate);
+      setLoadingSlots(true);
+      try {
+        const { formattedTimeSlots, timeSlotsWithData } = await fetchAvailableTimeSlots(selectedDate);
+        
+        // Проверяем, актуален ли еще запрос
+        if (isActive) {
           setAvailableTimeSlots(formattedTimeSlots);
           setTimeSlotData(timeSlotsWithData);
           setLoadingSlots(false);
-        } catch (e) {
+          setStartTime(null);
+          setEndTime(null);
+          setBookingDetails(null);
+          setBookingCompleted(false);
+        }
+      } catch (e) {
+        if (isActive) {
           setSlotsError('Ошибка загрузки слотов.');
           setAvailableTimeSlots([]);
           setTimeSlotData([]);
           setLoadingSlots(false);
         }
-        setStartTime(null);
-        setEndTime(null);
-        setBookingDetails(null);
-        setBookingCompleted(false);
       }
     };
+    
     fetchSlots();
-  }, [selectedDate]);
+    
+    // Функция cleanup для предотвращения обновления состояния после размонтирования
+    return () => {
+      isActive = false;
+    };
+  }, [selectedDate, isInitialized, fetchAvailableTimeSlots]); // Добавляем зависимости
 
-  // Обновление дней при изменении текущего месяца
+  // Обновление дней при изменении текущего месяца - делаем проверку на изменение месяца
   useEffect(() => {
-    // Пропускаем первый рендер, чтобы не перезаписать результаты инициализации
-    if (days.length > 0) {
+    // Проверяем, действительно ли изменился месяц
+    const month = currentDate.getMonth();
+    const year = currentDate.getFullYear();
+    
+    // Запоминаем текущий месяц и год в ref или состоянии
+    if (isInitialized && days.length > 0) {
+      // Получаем месяц и год из первого дня в массиве
+      const currentMonth = days[15].date.getMonth(); // Берем день в середине массива
+      const currentYear = days[15].date.getFullYear();
+      
+      // Сравниваем с выбранными месяцем и годом
+      if (month === currentMonth && year === currentYear) {
+        // Месяц не изменился, пропускаем обновление
+        return;
+      }
+      
       console.log('Обновление месяца:', currentDate);
-      const daysArray = generateDaysForMonth(
-        currentDate.getFullYear(),
-        currentDate.getMonth()
-      );
+      const daysArray = generateDaysForMonth(year, month);
       setDays(daysArray);
     }
-  }, [currentDate, days.length]);
+  }, [currentDate, days.length, isInitialized]);
 
   // Переключение на предыдущий месяц
   const goToPreviousMonth = () => {

@@ -1,12 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { getToken, isOfflineMode, setOfflineMode } from '../../api/apiService';
 import './AuthStatus.css';
 
-export const AuthStatus: React.FC = () => {
+interface AuthStatusProps {
+  className?: string;
+}
+
+const AuthStatus: React.FC<AuthStatusProps> = ({ className }) => {
   const { loading, error, isAuthenticated, token, retryAuth } = useAuth();
   const [showSuccessStatus, setShowSuccessStatus] = useState(false);
   const [isTelegramMode, setIsTelegramMode] = useState(false);
   const [detailedError, setDetailedError] = useState<string | null>(null);
+  const [isAuthorized, setIsAuthorized] = useState<boolean>(false);
+  const [offline, setOffline] = useState<boolean>(isOfflineMode());
 
   // Определяем при инициализации, работаем ли в Telegram WebApp
   useEffect(() => {
@@ -34,8 +41,32 @@ export const AuthStatus: React.FC = () => {
     }
   }, [isAuthenticated, token, loading, error, isTelegramMode]);
 
+  // Проверяем наличие токена при монтировании компонента
+  useEffect(() => {
+    const checkToken = () => {
+      const token = getToken();
+      setIsAuthorized(!!token);
+      setOffline(isOfflineMode());
+    };
+    
+    // Проверяем статус при монтировании
+    checkToken();
+    
+    // Запускаем периодическую проверку
+    const intervalId = setInterval(checkToken, 5000);
+    
+    // Очистка интервала при размонтировании
+    return () => clearInterval(intervalId);
+  }, []);
+
   const handleRetry = async () => {
     await retryAuth();
+  };
+
+  // Обработчик переключения режима работы
+  const toggleOfflineMode = () => {
+    setOfflineMode(!offline);
+    setOffline(!offline);
   };
 
   // Для Telegram WebApp всегда показываем индикатор
@@ -99,5 +130,21 @@ export const AuthStatus: React.FC = () => {
     return <div className="auth-success">Авторизация выполнена успешно</div>;
   }
 
-  return null;
-}; 
+  return (
+    <div className={`auth-status ${className || ''}`}>
+      <div className={`auth-indicator ${isAuthorized ? 'authorized' : 'unauthorized'}`}>
+        {isAuthorized ? 'Авторизован' : 'Не авторизован'}
+      </div>
+      
+      <div 
+        className={`api-indicator ${offline ? 'offline' : 'online'}`}
+        onClick={toggleOfflineMode}
+        title="Нажмите для переключения режима API"
+      >
+        {offline ? 'Офлайн режим' : 'Онлайн режим'}
+      </div>
+    </div>
+  );
+};
+
+export default AuthStatus; 

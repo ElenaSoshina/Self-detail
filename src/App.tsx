@@ -3,7 +3,7 @@ import { Routes, Route, useLocation } from 'react-router-dom'
 import { Header } from './components/Header/Header'
 import { CartProvider } from './context/CartContex';
 import { AuthProvider } from './context/AuthContext';
-import { AuthStatus } from './components/AuthStatus';
+import AuthStatus from './components/AuthStatus/AuthStatus';
 import HomePage from './pages/HomePage/HomePage';
 import ProductsPage from './pages/ProductsPage/ProductsPage';
 import CartPage from './pages/CartPage/CartPage';

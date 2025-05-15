@@ -10,15 +10,8 @@ export default defineConfig({
         target: 'https://backend.self-detailing.duckdns.org',
         changeOrigin: true,
         secure: false,
-        rewrite: (path) => path.replace(/^\/api/, '/api'),
-        headers: {
-          // Настройка CORS заголовков
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization'
-        }
+        rewrite: (path) => path.replace(/^\/api/, '/api')
       }
-    },
-    cors: true
+    }
   }
 })
