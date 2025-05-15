@@ -63,7 +63,7 @@ export const login = async () => {
       console.error(errorMessage);
       alert(errorMessage);
     } else {
-      console.error('Ошибка авторизации:', error);
+    console.error('Ошибка авторизации:', error);
       alert(`Ошибка авторизации: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
     }
     throw error;
@@ -113,7 +113,7 @@ api.interceptors.request.use(
           console.log('Заголовок Authorization (без Bearer):', token.substring(0, 20) + '...');
         } else {
           // Для остальных запросов добавляем с Bearer
-          config.headers.Authorization = `Bearer ${token}`;
+      config.headers.Authorization = `Bearer ${token}`;
           console.log('Заголовок Authorization (с Bearer):', `Bearer ${token.substring(0, 20)}...`);
         }
       }

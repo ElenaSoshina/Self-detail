@@ -3,6 +3,12 @@ import axios from 'axios';
 
 const API_PATH = '/calendar/available';
 
+function toMoscowISOString(date: Date): string {
+  const MOSCOW_OFFSET_MS = 3 * 60 * 60 * 1000;           // 3 ч в миллисекундах
+  const moscowDate       = new Date(date.getTime() + MOSCOW_OFFSET_MS);
+  return moscowDate.toISOString().replace('Z', '+03:00'); // → 2025-05-15T14:20:00.000+03:00
+}
+
 export async function fetchAvailableTimeSlotsApi(date: Date) {
   // Проверяем, является ли запрашиваемая дата текущим днем
   const now = new Date();
@@ -29,8 +35,9 @@ export async function fetchAvailableTimeSlotsApi(date: Date) {
     startDate.setHours(0, 0, 0, 0);
   }
   
-  const startDateISO = startDate.toISOString();
-  const endDateISO = endDate.toISOString();
+    // Формируем ISO-строки уже в московской зоне
+    const startDateISO = toMoscowISOString(startDate);
+    const endDateISO   = toMoscowISOString(endDate);
   
   console.log('Запрашиваем слоты для диапазона:', { startDateISO, endDateISO, isToday });
   
@@ -77,16 +84,16 @@ export async function fetchAvailableTimeSlotsApi(date: Date) {
         alert(`ПОВТОРНАЯ ПОПЫТКА С BEARER:\n\nURL: ${apiUrl}\n\nТокен: ${token.substring(0, 30)}...\n\nЗаголовок: Authorization: Bearer ${token}`);
         
         console.log('Пробуем с префиксом Bearer');
-        const response = await api.get(API_PATH, {
+  const response = await api.get(API_PATH, {
           params: { start: startDateISO, end: endDateISO },
           headers: {
             Authorization: `Bearer ${token}`
           }
-        });
+  });
         
         console.log('Успешный ответ с Bearer токеном:', response.status);
         alert(`Успешный ответ от API слотов с Bearer!\nСтатус: ${response.status}\nКоличество слотов: ${response.data.data?.length || 0}`);
-        return response.data.data;
+  return response.data.data;
       } catch (bearerError) {
         console.error('Ошибка и при использовании Bearer:', bearerError);
         

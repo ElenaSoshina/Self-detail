@@ -24,16 +24,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<Error | null>(null);
   
-  const authenticate = async () => {
-    try {
-      setLoading(true);
+    const authenticate = async () => {
+      try {
+        setLoading(true);
       setError(null);
-      const newToken = await login();
-      setToken(newToken);
-    } catch (err) {
+        const newToken = await login();
+        setToken(newToken);
+      } catch (err) {
       console.error('Ошибка в AuthContext:', err);
       setToken(null);
-      setError(err instanceof Error ? err : new Error('Ошибка авторизации'));
+        setError(err instanceof Error ? err : new Error('Ошибка авторизации'));
       // Выводим дополнительную информацию в консоль
       if (err instanceof Error) {
         console.debug('Подробности ошибки:', {
@@ -42,11 +42,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           stack: err.stack
         });
       }
-    } finally {
-      setLoading(false);
-    }
-  };
-  
+      } finally {
+        setLoading(false);
+      }
+    };
+    
   const retryAuth = async () => {
     // Очищаем токен перед повторной попыткой
     localStorage.removeItem('jwt_token');
