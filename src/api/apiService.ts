@@ -10,7 +10,7 @@ const api = axios.create({
     'Accept': 'application/json',
     'Content-Type': 'application/json',
   },
-  timeout: 10000,
+  timeout: 20000, // Увеличиваем таймаут до 20 секунд
 });
 
 // Функция для авторизации и получения токена
@@ -101,53 +101,25 @@ api.interceptors.request.use(
       }
     }
     
-    // Проверяем формат токена
+    // Проверяем и добавляем токен
     if (token) {
-      // Проверка, начинается ли токен с "eyJ" (как JWT токен)
-      if (!token.startsWith('eyJ')) {
-        console.warn('Токен имеет неправильный формат. Ожидается JWT токен, начинающийся с "eyJ"');
-        // Можно попробовать получить новый токен
-        try {
-          console.log('Пытаемся получить новый токен из-за некорректного формата');
-          localStorage.removeItem('jwt_token');
-          const newToken = await login();
-          if (newToken) {
-            token = newToken;
-          }
-        } catch (e) {
-          console.error('Не удалось получить новый токен:', e);
-        }
-      }
-      
-      // Добавляем токен к заголовкам, если он есть
-      if (token) {
-        // Если в запросе уже установлены заголовки авторизации - не перезаписываем их
-        if (config.headers.Authorization) {
-          console.log('Заголовок Authorization уже установлен:', config.headers.Authorization);
+      // Если в запросе уже установлены заголовки авторизации - не перезаписываем их
+      if (config.headers.Authorization) {
+        console.log('Заголовок Authorization уже установлен:', config.headers.Authorization);
+      } else {
+        // Для запросов слотов пробуем без Bearer
+        if (config.url && config.url.includes('available')) {
+          config.headers.Authorization = token;
+          console.log('Заголовок Authorization (без Bearer):', token.substring(0, 20) + '...');
         } else {
-          // Пробуем добавить токен без Bearer
-          if (config.url && config.url.includes('available')) {
-            // Для запросов слотов пробуем без Bearer
-            config.headers.Authorization = token;
-            console.log('Заголовок Authorization для запроса слотов (без Bearer):', token.substring(0, 20) + '...');
-          } else {
-            // Для остальных запросов добавляем с Bearer
-            config.headers.Authorization = `Bearer ${token}`;
-            console.log('Заголовок Authorization (с Bearer):', `Bearer ${token.substring(0, 20)}...`);
-          }
-          
-          // Алерт для запросов к slots
-          if (config.url && config.url.includes('available')) {
-            alert(`Запрос на ${config.url} с токеном (без Bearer):\n${token.substring(0, 20)}...`);
-          }
+          // Для остальных запросов добавляем с Bearer
+          config.headers.Authorization = `Bearer ${token}`;
+          console.log('Заголовок Authorization (с Bearer):', `Bearer ${token.substring(0, 20)}...`);
         }
       }
     } else {
       console.warn('Токен не добавлен к заголовкам, запрос будет отправлен без авторизации');
     }
-    
-    // Выводим заголовки запроса для отладки
-    console.log('Заголовки запроса:', JSON.stringify(config.headers));
     
     return config;
   },

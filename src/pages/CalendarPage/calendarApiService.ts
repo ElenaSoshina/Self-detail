@@ -1,5 +1,5 @@
 import api from '../../api/apiService';
-import axios, { AxiosError } from 'axios';
+import axios from 'axios';
 
 const API_PATH = '/calendar/available';
 
@@ -32,65 +32,53 @@ export async function fetchAvailableTimeSlotsApi(date: Date) {
   const startDateISO = startDate.toISOString();
   const endDateISO = endDate.toISOString();
   
-  console.log('Запрашиваем слоты для диапазона:', { 
-    startDateISO, 
-    endDateISO, 
-    isToday 
-  });
+  console.log('Запрашиваем слоты для диапазона:', { startDateISO, endDateISO, isToday });
   
   try {
-    // Попытка получить свежий токен перед запросом
-    let token = localStorage.getItem('jwt_token');
-    console.log('Текущий токен:', token ? `${token.substring(0, 20)}...` : 'отсутствует');
+    // Получаем токен из хранилища
+    const token = localStorage.getItem('jwt_token');
     
     if (!token) {
       console.error('Токен отсутствует при запросе слотов');
-      alert('Ошибка: Токен авторизации отсутствует. Обновите страницу для повторной авторизации.');
       throw new Error('Токен авторизации отсутствует');
     }
     
-    // Проверяем формат токена
-    if (!token.startsWith('eyJ')) {
-      console.warn('Токен имеет неправильный формат. Требуется JWT токен.');
-      alert('Ошибка: Токен имеет неправильный формат. Обновите страницу.');
-      throw new Error('Неверный формат токена');
-    }
-
-    // Пробуем два варианта форматов авторизации
-    try {
-      // Вариант 1: Только токен без Bearer
-      console.log('Пробуем отправить запрос с токеном без Bearer');
-      const response1 = await api.get(API_PATH, {
-        params: { start: startDateISO, end: endDateISO },
-        headers: {
-          Authorization: token
-        }
-      });
-      
-      console.log('Успешный ответ от API слотов с токеном без Bearer:', response1.status);
-      return response1.data.data;
-    } catch (error1) {
-      console.error('Ошибка при первой попытке запроса слотов:', error1);
-      
-      // Вариант 2: с Bearer
-      console.log('Пробуем отправить запрос с Bearer токеном');
-      const response2 = await api.get(API_PATH, {
-        params: { start: startDateISO, end: endDateISO },
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-      
-      console.log('Успешный ответ от API слотов с Bearer токеном:', response2.status);
-      return response2.data.data;
-    }
-  } catch (error: unknown) {
+    // Выполняем запрос с токеном без Bearer
+    console.log('Отправляем запрос с токеном без Bearer');
+    const response = await api.get(API_PATH, {
+      params: { start: startDateISO, end: endDateISO },
+      headers: {
+        Authorization: token
+      }
+    });
+    
+    console.log('Успешный ответ от API слотов:', response.status);
+    return response.data.data;
+  } catch (error) {
     console.error('Ошибка при запросе слотов:', error);
     
-    // Отображаем ошибку от сервера, если она есть
-    if (axios.isAxiosError(error) && error.response) {
-      console.error('Ответ сервера:', error.response.status, error.response.data);
-      alert(`Ошибка сервера: ${error.response.status}\n${JSON.stringify(error.response.data || {})}`);
+    // Если получили ошибку, пробуем с Bearer
+    if (axios.isAxiosError(error)) {
+      try {
+        console.log('Пробуем с префиксом Bearer');
+        const token = localStorage.getItem('jwt_token');
+        
+        if (!token) {
+          throw new Error('Токен отсутствует');
+        }
+        
+        const response = await api.get(API_PATH, {
+          params: { start: startDateISO, end: endDateISO },
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+        
+        console.log('Успешный ответ с Bearer токеном:', response.status);
+        return response.data.data;
+      } catch (bearerError) {
+        console.error('Ошибка и при использовании Bearer:', bearerError);
+      }
     }
     
     throw error;
