@@ -99,22 +99,7 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin }) => {
         setSelectedDate(todayDay.date);
         setLoadingSlots(true);
         try {
-          const data = await fetchAvailableTimeSlots(todayDay.date);
-          const filtered = Array.isArray(data) ? data.filter((slot: any) => slot.available) : [];
-          const timeSlotsWithData = filtered.map((slot: any) => {
-            const slotTime = new Date(slot.start);
-            const hours = slotTime.getHours();
-            const minutes = slotTime.getMinutes();
-            return {
-              formattedTime: `${hours < 10 ? '0' + hours : hours}:${minutes === 0 ? '00' : minutes < 10 ? '0' + minutes : minutes}`,
-              originalData: slot,
-              sortKey: hours * 60 + minutes,
-              start: slotTime,
-              end: new Date(slot.end)
-            };
-          });
-          timeSlotsWithData.sort((a, b) => a.sortKey - b.sortKey);
-          const formattedTimeSlots = timeSlotsWithData.map(slot => slot.formattedTime);
+          const { formattedTimeSlots, timeSlotsWithData } = await fetchAvailableTimeSlots(todayDay.date);
           setAvailableTimeSlots(formattedTimeSlots);
           setTimeSlotData(timeSlotsWithData);
           setLoadingSlots(false);
@@ -137,22 +122,7 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin }) => {
       if (selectedDate && days.length > 0) {
         setLoadingSlots(true);
         try {
-          const data = await fetchAvailableTimeSlots(selectedDate);
-          const filtered = Array.isArray(data) ? data.filter((slot: any) => slot.available) : [];
-          const timeSlotsWithData = filtered.map((slot: any) => {
-            const slotTime = new Date(slot.start);
-            const hours = slotTime.getHours();
-            const minutes = slotTime.getMinutes();
-            return {
-              formattedTime: `${hours < 10 ? '0' + hours : hours}:${minutes === 0 ? '00' : minutes < 10 ? '0' + minutes : minutes}`,
-              originalData: slot,
-              sortKey: hours * 60 + minutes,
-              start: slotTime,
-              end: new Date(slot.end)
-            };
-          });
-          timeSlotsWithData.sort((a, b) => a.sortKey - b.sortKey);
-          const formattedTimeSlots = timeSlotsWithData.map(slot => slot.formattedTime);
+          const { formattedTimeSlots, timeSlotsWithData } = await fetchAvailableTimeSlots(selectedDate);
           setAvailableTimeSlots(formattedTimeSlots);
           setTimeSlotData(timeSlotsWithData);
           setLoadingSlots(false);

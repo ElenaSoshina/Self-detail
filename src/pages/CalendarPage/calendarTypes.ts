@@ -1,3 +1,5 @@
+import { TimeSlotData } from './calendarApiService';
+
 export interface Day {
   date: Date;
   isCurrentMonth: boolean;
@@ -21,13 +23,7 @@ export interface BookingDetails {
   totalPrice: number;
 }
 
-export interface TimeSlotWithData {
-  formattedTime: string;
-  originalData: any;
-  sortKey: number;
-  start: Date;
-  end: Date;
-}
+export type TimeSlotWithData = TimeSlotData;
 
 export interface AvailabilityData {
   timeSlots: string[];

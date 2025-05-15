@@ -13,59 +13,72 @@ const api = axios.create({
   timeout: 20000, // Увеличиваем таймаут до 20 секунд
 });
 
+// Переменная для отслеживания выполнения запроса токена
+let tokenPromise: Promise<string> | null = null;
+
 // Функция для авторизации и получения токена
-export const login = async () => {
+export const login = async (): Promise<string> => {
+  // Если запрос за токеном уже выполняется, возвращаем его результат
+  if (tokenPromise) {
+    return tokenPromise;
+  }
+  
+  // Создаем новый промис для получения токена
+  tokenPromise = (async () => {
+    try {
+      // Сначала проверяем, есть ли уже токен в localStorage
+      const existingToken = localStorage.getItem('jwt_token');
+      if (existingToken) {
+        console.log('Используем существующий токен из localStorage');
+        return existingToken;
+      }
+      
+      const username = getBackendUsername();
+      const password = getBackendPassword();
+      
+      if (!username || !password) {
+        console.error('Учетные данные не найдены в переменных окружения');
+        throw new Error('Учетные данные не найдены в переменных окружения');
+      }
+      
+      const response = await axios.post(`${API_URL}/auth/login`, {
+        username,
+        password
+      });
+      
+      // Извлечение токена из ответа
+      if (response.data?.success && response.data?.data?.token) {
+        // Сохраняем токен
+        localStorage.setItem('jwt_token', response.data.data.token);
+        return response.data.data.token;
+      } else if (response.data && response.data.token) {
+        // Для обратной совместимости со старым форматом
+        localStorage.setItem('jwt_token', response.data.token);
+        return response.data.token;
+      }
+      
+      throw new Error('Не удалось получить токен');
+    } catch (error) {
+      // Сбрасываем промис при ошибке, чтобы можно было повторить запрос
+      tokenPromise = null;
+      
+      // Расширенный вывод информации об ошибке
+      if (axios.isAxiosError(error)) {
+        const errorMessage = `Ошибка авторизации (${error.code}): ${error.message}`;
+        console.error(errorMessage);
+      } else {
+        console.error('Ошибка авторизации:', error);
+      }
+      throw error;
+    }
+  })();
+  
   try {
-    const username = getBackendUsername();
-    const password = getBackendPassword();
-    
-    // Добавляем алерт для проверки учетных данных
-    alert(`Попытка авторизации:\nИмя пользователя: ${username ? 'Получено' : 'Отсутствует'}\nПароль: ${password ? 'Получен' : 'Отсутствует'}`);
-    
-    if (!username || !password) {
-      console.error('Учетные данные не найдены в переменных окружения');
-      alert('Ошибка: Учетные данные не найдены в переменных окружения');
-      throw new Error('Учетные данные не найдены в переменных окружения');
-    }
-    
-    // Алерт перед отправкой запроса
-    alert(`Отправка запроса на ${API_URL}/auth/login с данными:\nusername: ${username}\npassword: ${password.substring(0, 3)}...`);
-    
-    const response = await axios.post(`${API_URL}/auth/login`, {
-      username,
-      password
-    });
-    
-    // Выводим структуру ответа для диагностики
-    console.log('Структура ответа:', JSON.stringify(response.data, null, 2));
-    alert(`Структура ответа: ${JSON.stringify(response.data, null, 2)}`);
-    
-    // Алерт с информацией об ответе
-    alert(`Ответ от сервера:\nСтатус: ${response.status}\nУспех: ${response.data?.success ? 'Да' : 'Нет'}\nСообщение: ${response.data?.message || 'Нет сообщения'}`);
-    
-    // Извлечение токена из нового формата ответа
-    if (response.data?.success && response.data?.data?.token) {
-      // Сохраняем токен
-      localStorage.setItem('jwt_token', response.data.data.token);
-      return response.data.data.token;
-    } else if (response.data && response.data.token) {
-      // Для обратной совместимости со старым форматом
-      localStorage.setItem('jwt_token', response.data.token);
-      return response.data.token;
-    }
-    
-    alert('Ошибка: Не удалось получить токен из ответа сервера');
-    throw new Error('Не удалось получить токен');
+    // Ожидаем результат промиса
+    return await tokenPromise;
   } catch (error) {
-    // Расширенный вывод информации об ошибке
-    if (axios.isAxiosError(error)) {
-      const errorMessage = `Ошибка авторизации (${error.code}): ${error.message}\nСтатус: ${error.response?.status}\nДанные: ${JSON.stringify(error.response?.data || {})}`;
-      console.error(errorMessage);
-      alert(errorMessage);
-    } else {
-    console.error('Ошибка авторизации:', error);
-      alert(`Ошибка авторизации: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
-    }
+    // Сбрасываем промис при ошибке
+    tokenPromise = null;
     throw error;
   }
 };
@@ -75,27 +88,26 @@ export const getToken = () => {
   return localStorage.getItem('jwt_token');
 };
 
+// Функция сброса токена (для выхода или при ошибках)
+export const resetToken = () => {
+  localStorage.removeItem('jwt_token');
+  tokenPromise = null;
+};
+
 // Перехватчик запросов для добавления токена
 api.interceptors.request.use(
   async (config) => {
-    // Добавляем информацию об URL запроса для отладки
-    console.log(`Отправка запроса на ${config.url}`);
-    
     // Пропускаем добавление токена для запроса авторизации
     if (config.url && config.url.includes('/auth/login')) {
-      console.log('Запрос авторизации, пропускаем добавление токена');
       return config;
     }
     
     let token = getToken();
-    console.log('Токен из хранилища:', token ? `${token.substring(0, 20)}...` : 'отсутствует');
     
     // Если токена нет, пытаемся авторизоваться
     if (!token) {
       try {
-        console.log('Токен не найден, выполняем авторизацию...');
         token = await login();
-        console.log('Получен новый токен:', token ? `${token.substring(0, 20)}...` : 'не получен');
       } catch (error) {
         console.error('Не удалось авторизоваться автоматически:', error);
       }
@@ -105,16 +117,14 @@ api.interceptors.request.use(
     if (token) {
       // Если в запросе уже установлены заголовки авторизации - не перезаписываем их
       if (config.headers.Authorization) {
-        console.log('Заголовок Authorization уже установлен:', config.headers.Authorization);
+        console.log('Заголовок Authorization уже установлен');
       } else {
         // Для запросов слотов пробуем без Bearer
         if (config.url && config.url.includes('available')) {
           config.headers.Authorization = token;
-          console.log('Заголовок Authorization (без Bearer):', token.substring(0, 20) + '...');
         } else {
           // Для остальных запросов добавляем с Bearer
-      config.headers.Authorization = `Bearer ${token}`;
-          console.log('Заголовок Authorization (с Bearer):', `Bearer ${token.substring(0, 20)}...`);
+          config.headers.Authorization = `Bearer ${token}`;
         }
       }
     } else {
@@ -140,8 +150,8 @@ api.interceptors.response.use(
       originalRequest._retry = true;
       
       try {
-        // Сначала удаляем старый токен
-        localStorage.removeItem('jwt_token');
+        // Сбрасываем токен
+        resetToken();
         
         // Получаем новый токен
         const token = await login();

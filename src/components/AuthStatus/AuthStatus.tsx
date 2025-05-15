@@ -17,8 +17,6 @@ export const AuthStatus: React.FC = () => {
     // Проверяем ошибку и устанавливаем подробную информацию
     if (error) {
       setDetailedError(error.message);
-      // Добавляем алерт с подробностями ошибки
-      alert(`Подробности ошибки авторизации:\n${error.message}\n\nПроверьте консоль разработчика для дополнительной информации.`);
     } else {
       setDetailedError(null);
     }
@@ -27,11 +25,6 @@ export const AuthStatus: React.FC = () => {
   useEffect(() => {
     // Проверка на успешную авторизацию
     if (isAuthenticated && token && !loading && !error) {
-      // Для локальной разработки показываем алерт
-      if (import.meta.env.DEV && !isTelegramMode) {
-        alert(`Авторизация прошла успешно!\nТокен: ${token.substring(0, 20)}...`);
-      }
-      
       setShowSuccessStatus(true);
       
       // Скрыть индикатор успеха через 3 секунды
@@ -42,7 +35,6 @@ export const AuthStatus: React.FC = () => {
   }, [isAuthenticated, token, loading, error, isTelegramMode]);
 
   const handleRetry = async () => {
-    alert('Выполняется повторная попытка авторизации...');
     await retryAuth();
   };
 

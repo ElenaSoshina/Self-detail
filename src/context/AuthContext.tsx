@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { login, getToken } from '../api/apiService';
+import { login, getToken, resetToken } from '../api/apiService';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -7,6 +7,7 @@ interface AuthContextType {
   loading: boolean;
   error: Error | null;
   retryAuth: () => Promise<void>;
+  logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -14,7 +15,8 @@ const AuthContext = createContext<AuthContextType>({
   token: null,
   loading: true,
   error: null,
-  retryAuth: async () => {}
+  retryAuth: async () => {},
+  logout: () => {}
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -24,17 +26,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<Error | null>(null);
   
-    const authenticate = async () => {
-      try {
-        setLoading(true);
+  const authenticate = async () => {
+    try {
+      setLoading(true);
       setError(null);
-        const newToken = await login();
-        setToken(newToken);
-      } catch (err) {
+      
+      // Проверяем есть ли уже токен
+      const currentToken = getToken();
+      if (currentToken) {
+        setToken(currentToken);
+        setLoading(false);
+        return;
+      }
+      
+      // Если нет, получаем новый
+      const newToken = await login();
+      setToken(newToken);
+    } catch (err) {
       console.error('Ошибка в AuthContext:', err);
       setToken(null);
-        setError(err instanceof Error ? err : new Error('Ошибка авторизации'));
-      // Выводим дополнительную информацию в консоль
+      setError(err instanceof Error ? err : new Error('Ошибка авторизации'));
       if (err instanceof Error) {
         console.debug('Подробности ошибки:', {
           name: err.name,
@@ -42,15 +53,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           stack: err.stack
         });
       }
-      } finally {
-        setLoading(false);
-      }
-    };
+    } finally {
+      setLoading(false);
+    }
+  };
     
   const retryAuth = async () => {
     // Очищаем токен перед повторной попыткой
-    localStorage.removeItem('jwt_token');
+    resetToken();
     await authenticate();
+  };
+  
+  const logout = () => {
+    resetToken();
+    setToken(null);
   };
   
   useEffect(() => {
@@ -63,7 +79,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       token,
       loading,
       error,
-      retryAuth
+      retryAuth,
+      logout
     }}>
       {children}
     </AuthContext.Provider>

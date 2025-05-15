@@ -5,6 +5,7 @@ import api from '../../api/apiService';
 import TimeSlots from '../CalendarPage/TimeSlots';
 import CalendarPage from '../CalendarPage/CalendarPage';
 import BookingDetails from './BookingDetails';
+import { fetchAvailableTimeSlotsApi, formatTimeSlots } from '../../pages/CalendarPage/calendarApiService';
 
 const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
@@ -63,42 +64,13 @@ const AdminCalendar: React.FC<{ onUserSelect: (userId: string) => void }> = ({ o
   const fetchAvailableSlots = async () => {
     setLoadingSlots(true);
     try {
-      const year = currentDate.getFullYear();
-      const month = (currentDate.getMonth() + 1).toString().padStart(2, '0');
-      const day = currentDate.getDate().toString().padStart(2, '0');
-      const start = `${year}-${month}-${day}T00:00:00`;
-      const nextDay = new Date(currentDate);
-      nextDay.setDate(nextDay.getDate() + 1);
-      const nextYear = nextDay.getFullYear();
-      const nextMonth = (nextDay.getMonth() + 1).toString().padStart(2, '0');
-      const nextDayNum = nextDay.getDate().toString().padStart(2, '0');
-      const end = `${nextYear}-${nextMonth}-${nextDayNum}T00:00:00`;
-
-      const response = await api.get('/calendar/available', {
-        params: { start, end }
-      });
-
-      if (!response.data || !response.data.data) {
-        throw new Error('Неверный формат данных');
-      }
-
-      const timeSlotsWithData = response.data.data.map((slot: any) => {
-        const slotTime = new Date(slot.start);
-        const hours = slotTime.getHours();
-        const minutes = slotTime.getMinutes();
-        return {
-          formattedTime: `${hours < 10 ? '0' + hours : hours}:${minutes === 0 ? '00' : minutes < 10 ? '0' + minutes : minutes}`,
-          originalData: slot,
-          sortKey: hours * 60 + minutes,
-          start: slotTime,
-          end: new Date(slot.end),
-          available: slot.available
-        };
-      });
-
-      timeSlotsWithData.sort((a: TimeSlotData, b: TimeSlotData) => a.sortKey - b.sortKey);
-      const formattedTimeSlots = timeSlotsWithData.map((slot: TimeSlotData) => slot.formattedTime);
+      // Используем общую функцию для получения данных слотов
+      const apiData = await fetchAvailableTimeSlotsApi(currentDate);
       
+      // Используем общую функцию форматирования
+      const { formattedTimeSlots, timeSlotsWithData } = formatTimeSlots(apiData);
+      
+      // Обновляем состояние
       setAvailableTimeSlots(formattedTimeSlots);
       setTimeSlotData(timeSlotsWithData);
       setSlotsError(null);
