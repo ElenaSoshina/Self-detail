@@ -36,10 +36,20 @@ export const login = async () => {
       password
     });
     
-    // Алерт с информацией об ответе
-    alert(`Ответ от сервера:\nСтатус: ${response.status}\nИмеет токен: ${response.data && response.data.token ? 'Да' : 'Нет'}`);
+    // Выводим структуру ответа для диагностики
+    console.log('Структура ответа:', JSON.stringify(response.data, null, 2));
+    alert(`Структура ответа: ${JSON.stringify(response.data, null, 2)}`);
     
-    if (response.data && response.data.token) {
+    // Алерт с информацией об ответе
+    alert(`Ответ от сервера:\nСтатус: ${response.status}\nУспех: ${response.data?.success ? 'Да' : 'Нет'}\nСообщение: ${response.data?.message || 'Нет сообщения'}`);
+    
+    // Извлечение токена из нового формата ответа
+    if (response.data?.success && response.data?.data?.token) {
+      // Сохраняем токен
+      localStorage.setItem('jwt_token', response.data.data.token);
+      return response.data.data.token;
+    } else if (response.data && response.data.token) {
+      // Для обратной совместимости со старым форматом
       localStorage.setItem('jwt_token', response.data.token);
       return response.data.token;
     }
