@@ -15,9 +15,16 @@ export interface TimeSlotData {
 }
 
 function toMoscowISOString(date: Date): string {
-  const MOSCOW_OFFSET_MS = 3 * 60 * 60 * 1000;           // 3 ч в миллисекундах
-  const moscowDate       = new Date(date.getTime() + MOSCOW_OFFSET_MS);
-  return moscowDate.toISOString().replace('Z', '+03:00'); // → 2025-05-15T14:20:00.000+03:00
+  // Форматируем дату в формат ISO без указания часового пояса, как ожидает API
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+  
+  // Формат YYYY-MM-DDTHH:MM:SS (без миллисекунд и часового пояса)
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
 }
 
 /**
@@ -34,7 +41,7 @@ export async function fetchAvailableTimeSlotsApi(date: Date) {
     alert(`[DEBUG] Начало запроса слотов для даты: ${date.toLocaleDateString()}`);
     
     // Проверка на оффлайн-режим
-    if (isOfflineMode()) {
+    if (isOfflineMode && isOfflineMode()) {
       alert(`[DEBUG] Работаем в оффлайн-режиме. Будут использованы тестовые данные`);
     }
   }
@@ -82,9 +89,9 @@ export async function fetchAvailableTimeSlotsApi(date: Date) {
     startDate.setHours(0, 0, 0, 0);
   }
   
-  // Формируем ISO-строки уже в московской зоне
+  // Формируем ISO-строки для запроса
   const startDateISO = toMoscowISOString(startDate);
-  const endDateISO   = toMoscowISOString(endDate);
+  const endDateISO = toMoscowISOString(endDate);
   
   console.log('Запрашиваем слоты для диапазона:', { startDateISO, endDateISO, isToday });
   
@@ -97,8 +104,7 @@ export async function fetchAvailableTimeSlotsApi(date: Date) {
   try {
     // Показываем параметры запроса в алерте (только в Telegram)
     if (isTelegram) {
-      // Используем всегда локальную относительную ссылку
-      const apiUrl = `/api/v1${API_PATH}?start=${encodeURIComponent(startDateISO)}&end=${encodeURIComponent(endDateISO)}`;
+      const apiUrl = `${API_PATH}?start=${encodeURIComponent(startDateISO)}&end=${encodeURIComponent(endDateISO)}`;
       alert(`[DEBUG] Отправка запроса:\nURL: ${apiUrl}`);
     }
     
@@ -111,35 +117,25 @@ export async function fetchAvailableTimeSlotsApi(date: Date) {
       token: getToken() ? 'Есть токен' : 'Нет токена'
     });
     
-    // Метод отправки запроса зависит от окружения
-    let response;
-    
-    if (isTelegram) {
-      // В Telegram WebApp используем axios с полными параметрами
-      const fullUrl = import.meta.env.DEV 
-        ? `/api/v1${API_PATH}` 
-        : `${window.location.origin}/api/v1${API_PATH}`;
-      
-      response = await axios.get(fullUrl, {
-        params: { 
-          start: startDateISO, 
-          end: endDateISO 
-        },
-        headers: {
-          'Authorization': token ? `Bearer ${token}` : '',
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        }
-      });
-    } else {
-      // В обычном режиме используем подготовленный api-клиент
-      response = await api.get(API_PATH, {
-        params: { start: startDateISO, end: endDateISO }
-      });
-    }
+    // Используем подготовленный api-клиент для всех окружений
+    const response = await api.get(API_PATH, {
+      params: { 
+        start: startDateISO, 
+        end: endDateISO 
+      }
+    });
     
     console.log(`[API:${requestId}] Успешный ответ от API слотов:`, response.status);
     console.log(`[API:${requestId}] Данные ответа:`, response.data);
+    
+    // Печатаем подробную информацию о слотах
+    if (response.data && response.data.data) {
+      const slots = response.data.data;
+      console.log(`[API:${requestId}] Количество слотов в ответе:`, slots.length);
+      console.log(`[API:${requestId}] Первые 3 слота:`, slots.slice(0, 3));
+    } else {
+      console.warn(`[API:${requestId}] Данные в неожиданном формате:`, response.data);
+    }
     
     // Отображаем результат запроса в алерте (только в Telegram)
     if (isTelegram) {
@@ -168,14 +164,11 @@ export async function fetchAvailableTimeSlotsApi(date: Date) {
         const slotsCount = slotsArray.length;
         alert(`[DEBUG] Успешный ответ от API слотов!\nСтатус: ${response.status}\nКоличество слотов: ${slotsCount}`);
         
-        // Выводим дополнительную информацию о структуре ответа
-        const responseStructure = JSON.stringify(responseData, null, 2).substring(0, 100);
-        alert(`[DEBUG] Структура ответа: ${responseStructure}...`);
-        
         // Возвращаем найденный массив слотов
         return slotsArray;
       } else {
         alert(`[DEBUG] Успешный ответ от API слотов!\nСтатус: ${response.status}\nКоличество слотов: 0`);
+        alert(`[DEBUG] Данные ответа: ${JSON.stringify(response.data)}`);
         return [];
       }
     }
@@ -189,6 +182,7 @@ export async function fetchAvailableTimeSlotsApi(date: Date) {
       return responseData;
     } else if (responseData.success && Array.isArray(responseData.data)) {
       // Формат: {success: true, data: [...]}
+      console.log(`[API:${requestId}] Возвращаем массив ${responseData.data.length} слотов`);
       return responseData.data;
     } else if (responseData.data && Array.isArray(responseData.data.slots)) {
       // Формат: {data: {slots: [...]}}
@@ -199,16 +193,26 @@ export async function fetchAvailableTimeSlotsApi(date: Date) {
     }
     
     // Если не нашли массив, выводим в консоль структуру и возвращаем пустой массив
-    console.warn('Не удалось найти массив слотов в ответе:', responseData);
+    console.warn(`[API:${requestId}] Не удалось найти массив слотов в ответе:`, responseData);
     return [];
   } catch (error) {
     console.error('Ошибка при запросе слотов:', error);
     
     // Отображаем детали ошибки в алерте (только в Telegram)
-    if (isTelegram && axios.isAxiosError(error)) {
-      const statusCode = error.response?.status || 'нет статуса';
-      const errorData = JSON.stringify(error.response?.data || {});
-      alert(`[DEBUG] Ошибка запроса слотов!\nСтатус: ${statusCode}\nДанные: ${errorData}`);
+    if (isTelegram) {
+      if (axios.isAxiosError(error)) {
+        const statusCode = error.response?.status || 'нет статуса';
+        const errorData = JSON.stringify(error.response?.data || {});
+        alert(`[DEBUG] Ошибка запроса слотов!\nСтатус: ${statusCode}\nДанные: ${errorData}`);
+        
+        // Для CORS ошибок предлагаем решение
+        if (error.message.includes('Network Error') || !error.response) {
+          alert(`[DEBUG] Вероятно, проблема с CORS! Попробуйте запустить в режиме разработки с прокси.`);
+        }
+      } else {
+        // Для других ошибок просто выводим сообщение
+        alert(`[DEBUG] Ошибка: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
+      }
     }
     
     // В случае ошибок перебрасываем их дальше
