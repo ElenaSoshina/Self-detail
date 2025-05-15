@@ -78,25 +78,62 @@ export const getToken = () => {
 // Перехватчик запросов для добавления токена
 api.interceptors.request.use(
   async (config) => {
+    // Добавляем информацию об URL запроса для отладки
+    console.log(`Отправка запроса на ${config.url}`);
+    
     let token = getToken();
+    console.log('Токен из хранилища:', token ? `${token.substring(0, 20)}...` : 'отсутствует');
     
     // Если токена нет, пытаемся авторизоваться
     if (!token) {
       try {
+        console.log('Токен не найден, выполняем авторизацию...');
         token = await login();
+        console.log('Получен новый токен:', token ? `${token.substring(0, 20)}...` : 'не получен');
       } catch (error) {
         console.error('Не удалось авторизоваться автоматически:', error);
       }
     }
     
-    // Добавляем токен к заголовкам
+    // Проверяем формат токена
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+      // Проверка, начинается ли токен с "eyJ" (как JWT токен)
+      if (!token.startsWith('eyJ')) {
+        console.warn('Токен имеет неправильный формат. Ожидается JWT токен, начинающийся с "eyJ"');
+        // Можно попробовать получить новый токен
+        try {
+          console.log('Пытаемся получить новый токен из-за некорректного формата');
+          localStorage.removeItem('jwt_token');
+          const newToken = await login();
+          if (newToken) {
+            token = newToken;
+          }
+        } catch (e) {
+          console.error('Не удалось получить новый токен:', e);
+        }
+      }
+      
+      // Добавляем токен к заголовкам, если он есть
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+        console.log('Заголовок Authorization:', `Bearer ${token.substring(0, 20)}...`);
+        
+        // Добавляем алерт для запросов к slots
+        if (config.url && config.url.includes('available')) {
+          alert(`Запрос на ${config.url} с токеном:\nBearer ${token.substring(0, 20)}...`);
+        }
+      }
+    } else {
+      console.warn('Токен не добавлен к заголовкам, запрос будет отправлен без авторизации');
     }
+    
+    // Выводим заголовки запроса для отладки
+    console.log('Заголовки запроса:', JSON.stringify(config.headers));
     
     return config;
   },
   (error) => {
+    console.error('Ошибка в перехватчике запросов:', error);
     return Promise.reject(error);
   }
 );
