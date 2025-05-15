@@ -1,6 +1,7 @@
 import api from '../../api/apiService';
 import axios from 'axios';
 import { login, getToken, initAuth } from '../../api/apiService';
+import { isTelegramWebApp } from '../../utils/env';
 
 const API_PATH = '/calendar/available';
 
@@ -25,8 +26,25 @@ function toMoscowISOString(date: Date): string {
  * @returns Promise с массивом данных слотов из API
  */
 export async function fetchAvailableTimeSlotsApi(date: Date) {
+  const isTelegram = isTelegramWebApp();
+  
+  // Отображаем алерт в Telegram о начале процесса
+  if (isTelegram) {
+    alert(`[DEBUG] Начало запроса слотов для даты: ${date.toLocaleDateString()}`);
+  }
+  
   // Сначала убедимся, что авторизация выполнена
-  await initAuth();
+  try {
+    await initAuth();
+    if (isTelegram) {
+      alert(`[DEBUG] Авторизация успешно выполнена`);
+    }
+  } catch (error) {
+    if (isTelegram) {
+      alert(`[DEBUG] Ошибка авторизации: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
+    }
+    throw error;
+  }
   
   // Проверяем, является ли запрашиваемая дата текущим днем
   const now = new Date();
@@ -62,7 +80,19 @@ export async function fetchAvailableTimeSlotsApi(date: Date) {
   
   console.log('Запрашиваем слоты для диапазона:', { startDateISO, endDateISO, isToday });
   
+  // Проверка токена перед запросом
+  const token = getToken();
+  if (isTelegram) {
+    alert(`[DEBUG] Статус токена: ${token ? 'Присутствует' : 'Отсутствует'}`);
+  }
+  
   try {
+    // Показываем параметры запроса в алерте (только в Telegram)
+    if (isTelegram) {
+      const apiUrl = `https://backend.self-detailing.duckdns.org/api/v1${API_PATH}?start=${encodeURIComponent(startDateISO)}&end=${encodeURIComponent(endDateISO)}`;
+      alert(`[DEBUG] Отправка запроса:\nURL: ${apiUrl}`);
+    }
+    
     // Используем экземпляр API, который уже имеет логику добавления токена
     console.log('Отправляем запрос');
     const response = await api.get(API_PATH, {
@@ -70,9 +100,23 @@ export async function fetchAvailableTimeSlotsApi(date: Date) {
     });
     
     console.log('Успешный ответ от API слотов:', response.status);
+    
+    // Отображаем результат запроса в алерте (только в Telegram)
+    if (isTelegram) {
+      const slotsCount = response.data?.data?.length || 0;
+      alert(`[DEBUG] Успешный ответ от API слотов!\nСтатус: ${response.status}\nКоличество слотов: ${slotsCount}`);
+    }
+    
     return response.data.data;
   } catch (error) {
     console.error('Ошибка при запросе слотов:', error);
+    
+    // Отображаем детали ошибки в алерте (только в Telegram)
+    if (isTelegram && axios.isAxiosError(error)) {
+      const statusCode = error.response?.status || 'нет статуса';
+      const errorData = JSON.stringify(error.response?.data || {});
+      alert(`[DEBUG] Ошибка запроса слотов!\nСтатус: ${statusCode}\nДанные: ${errorData}`);
+    }
     
     // В случае ошибок перебрасываем их дальше
     throw error;
@@ -87,6 +131,12 @@ export async function fetchAvailableTimeSlotsApi(date: Date) {
 export function formatTimeSlots(slotsData: any[]) {
   if (!Array.isArray(slotsData)) {
     console.error('Данные слотов не являются массивом:', slotsData);
+    
+    // Отображаем ошибку в алерте (только в Telegram)
+    if (isTelegramWebApp()) {
+      alert(`[DEBUG] Ошибка: данные слотов не являются массивом!`);
+    }
+    
     return {
       formattedTimeSlots: [],
       timeSlotsWithData: []
@@ -95,6 +145,11 @@ export function formatTimeSlots(slotsData: any[]) {
   
   // Фильтруем только доступные слоты
   const availableSlots = slotsData.filter(slot => slot.available);
+  
+  // Отображаем информацию о количестве доступных слотов (только в Telegram)
+  if (isTelegramWebApp()) {
+    alert(`[DEBUG] Форматирование данных:\nВсего слотов: ${slotsData.length}\nДоступных слотов: ${availableSlots.length}`);
+  }
   
   // Форматируем каждый слот
   const timeSlotsWithData: TimeSlotData[] = availableSlots.map(slot => {
