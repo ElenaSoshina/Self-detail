@@ -225,35 +225,11 @@ export function formatTimeSlots(slotsData: any[]) {
   if (!Array.isArray(slotsData)) {
     console.error('Данные слотов не являются массивом:', slotsData);
     
-    // Если у нас нет доступа к API или пришел пустой ответ, 
-    // создаем тестовые слоты с интервалом в 1 час
-    const currentDate = new Date();
-    const testDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate());
-    
-    // Генерируем слоты с 9:00 до 20:00
-    const testSlots = [];
-    for (let hour = 9; hour < 20; hour++) {
-      const startTime = new Date(testDate);
-      startTime.setHours(hour, 0, 0, 0);
-      
-      const endTime = new Date(testDate);
-      endTime.setHours(hour + 1, 0, 0, 0);
-      
-      testSlots.push({
-        start: startTime,
-        end: endTime,
-        available: true
-      });
-    }
-    
-    // Отображаем информацию о тестовых слотах (только в Telegram)
-    if (isTelegramWebApp()) {
-      alert(`[DEBUG] API вернул некорректные данные, отображаем тестовые слоты: ${testSlots.length} шт.`);
-    }
-    
-    // Показываем, что используются тестовые данные
-    console.warn('Используются тестовые данные для слотов');
-    return formatTimeSlots(testSlots);
+    // Возвращаем пустые массивы при некорректных данных
+    return {
+      formattedTimeSlots: [],
+      timeSlotsWithData: []
+    };
   }
   
   // Фильтруем только доступные слоты
@@ -266,6 +242,12 @@ export function formatTimeSlots(slotsData: any[]) {
   
   // Форматируем каждый слот
   const timeSlotsWithData: TimeSlotData[] = availableSlots.map(slot => {
+    // Выводим информацию о дате из слота
+    console.log('Форматирование слота:', { 
+      originalStartTime: slot.start,
+      parsedTime: new Date(slot.start)
+    });
+    
     const slotTime = new Date(slot.start);
     const hours = slotTime.getHours();
     const minutes = slotTime.getMinutes();
@@ -275,7 +257,7 @@ export function formatTimeSlots(slotsData: any[]) {
       originalData: slot,
       sortKey: hours * 60 + minutes,
       start: slotTime,
-      end: new Date(slot.end || (slot.start + 3600000)), // Если нет end, то +1 час
+      end: new Date(slot.end), // Используем только оригинальное время окончания
       available: true
     };
   });
@@ -283,10 +265,6 @@ export function formatTimeSlots(slotsData: any[]) {
   // Если нет доступных слотов, логируем предупреждение
   if (timeSlotsWithData.length === 0) {
     console.warn('Нет доступных слотов в этот день');
-    
-    if (isTelegramWebApp()) {
-      alert(`[DEBUG] Предупреждение: нет доступных слотов в выбранный день!`);
-    }
   }
   
   // Сортируем слоты по времени
