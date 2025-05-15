@@ -81,6 +81,12 @@ api.interceptors.request.use(
     // Добавляем информацию об URL запроса для отладки
     console.log(`Отправка запроса на ${config.url}`);
     
+    // Пропускаем добавление токена для запроса авторизации
+    if (config.url && config.url.includes('/auth/login')) {
+      console.log('Запрос авторизации, пропускаем добавление токена');
+      return config;
+    }
+    
     let token = getToken();
     console.log('Токен из хранилища:', token ? `${token.substring(0, 20)}...` : 'отсутствует');
     
@@ -115,12 +121,25 @@ api.interceptors.request.use(
       
       // Добавляем токен к заголовкам, если он есть
       if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-        console.log('Заголовок Authorization:', `Bearer ${token.substring(0, 20)}...`);
-        
-        // Добавляем алерт для запросов к slots
-        if (config.url && config.url.includes('available')) {
-          alert(`Запрос на ${config.url} с токеном:\nBearer ${token.substring(0, 20)}...`);
+        // Если в запросе уже установлены заголовки авторизации - не перезаписываем их
+        if (config.headers.Authorization) {
+          console.log('Заголовок Authorization уже установлен:', config.headers.Authorization);
+        } else {
+          // Пробуем добавить токен без Bearer
+          if (config.url && config.url.includes('available')) {
+            // Для запросов слотов пробуем без Bearer
+            config.headers.Authorization = token;
+            console.log('Заголовок Authorization для запроса слотов (без Bearer):', token.substring(0, 20) + '...');
+          } else {
+            // Для остальных запросов добавляем с Bearer
+            config.headers.Authorization = `Bearer ${token}`;
+            console.log('Заголовок Authorization (с Bearer):', `Bearer ${token.substring(0, 20)}...`);
+          }
+          
+          // Алерт для запросов к slots
+          if (config.url && config.url.includes('available')) {
+            alert(`Запрос на ${config.url} с токеном (без Bearer):\n${token.substring(0, 20)}...`);
+          }
         }
       }
     } else {
