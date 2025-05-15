@@ -205,6 +205,40 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     
+    // Проверка на сетевые ошибки (например, CORS, нет соединения)
+    if (!error.response) {
+      console.error('Сетевая ошибка:', error.message);
+      
+      // Для Telegram WebApp меняем стратегию запроса при сетевой ошибке
+      if (typeof window !== 'undefined' && (window as any).Telegram?.WebApp) {
+        console.log('Обнаружен Telegram WebApp, пробуем альтернативный запрос');
+        
+        try {
+          // Попытка прямого запроса без прокси для Telegram
+          const directUrl = 'https://backend.self-detailing.duckdns.org/api/v1' + originalRequest.url;
+          
+          // Создаем новый запрос с копией параметров оригинального
+          const directResponse = await axios({
+            url: directUrl,
+            method: originalRequest.method,
+            headers: {
+              ...originalRequest.headers,
+              'Authorization': getToken() ? `Bearer ${getToken()}` : ''
+            },
+            params: originalRequest.params,
+            data: originalRequest.data
+          });
+          
+          return directResponse;
+        } catch (directError) {
+          console.error('Альтернативный запрос тоже не удался:', directError);
+          return Promise.reject(directError);
+        }
+      }
+      
+      return Promise.reject(error);
+    }
+    
     // Если ошибка 401 (неавторизован) и запрос не повторялся ранее
     if (error.response && error.response.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;

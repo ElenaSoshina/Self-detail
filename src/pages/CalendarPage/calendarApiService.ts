@@ -89,12 +89,8 @@ export async function fetchAvailableTimeSlotsApi(date: Date) {
   try {
     // Показываем параметры запроса в алерте (только в Telegram)
     if (isTelegram) {
-      // Формируем URL с учетом окружения (разработка или продакшн)
-      const baseUrl = import.meta.env.DEV 
-        ? window.location.origin + '/api/v1' 
-        : 'https://backend.self-detailing.duckdns.org/api/v1';
-      
-      const apiUrl = `${baseUrl}${API_PATH}?start=${encodeURIComponent(startDateISO)}&end=${encodeURIComponent(endDateISO)}`;
+      // Используем всегда локальную относительную ссылку
+      const apiUrl = `/api/v1${API_PATH}?start=${encodeURIComponent(startDateISO)}&end=${encodeURIComponent(endDateISO)}`;
       alert(`[DEBUG] Отправка запроса:\nURL: ${apiUrl}`);
     }
     
@@ -107,9 +103,32 @@ export async function fetchAvailableTimeSlotsApi(date: Date) {
       token: getToken() ? 'Есть токен' : 'Нет токена'
     });
     
-    const response = await api.get(API_PATH, {
-      params: { start: startDateISO, end: endDateISO }
-    });
+    // Метод отправки запроса зависит от окружения
+    let response;
+    
+    if (isTelegram) {
+      // В Telegram WebApp используем axios с полными параметрами
+      const fullUrl = import.meta.env.DEV 
+        ? `/api/v1${API_PATH}` 
+        : `${window.location.origin}/api/v1${API_PATH}`;
+      
+      response = await axios.get(fullUrl, {
+        params: { 
+          start: startDateISO, 
+          end: endDateISO 
+        },
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : '',
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      });
+    } else {
+      // В обычном режиме используем подготовленный api-клиент
+      response = await api.get(API_PATH, {
+        params: { start: startDateISO, end: endDateISO }
+      });
+    }
     
     console.log('Успешный ответ от API слотов:', response.status);
     console.log('Данные ответа:', response.data);
