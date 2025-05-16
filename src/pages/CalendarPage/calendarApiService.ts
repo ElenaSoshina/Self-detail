@@ -1,6 +1,6 @@
 import api from '../../api/apiService';
 import axios from 'axios';
-import { login, getToken, initAuth, isOfflineMode, resetToken } from '../../api/apiService';
+import { login, getToken, initAuth, isOfflineMode, resetToken, setOfflineMode } from '../../api/apiService';
 import { isTelegramWebApp } from '../../utils/env';
 
 // Используем полный URL API 
@@ -50,6 +50,28 @@ export async function fetchAvailableTimeSlotsApi(date: Date) {
   
   console.log(`[API:${requestId}] Запрос слотов для даты ${date.toLocaleDateString()}`);
   
+  // Проверяем доступность сервера
+  if (isTelegram) {
+    try {
+      // Быстрая проверка соединения с сервером
+      await axios.head('https://backend.self-detailing.duckdns.org/api/v1/health', { timeout: 3000 });
+    } catch (connectionError) {
+      if (isTelegram) {
+        alert(`[DEBUG] Ошибка соединения с сервером: ${connectionError instanceof Error ? connectionError.message : 'Неизвестная ошибка'}`);
+      }
+      // Продолжаем выполнение запроса, но не переходим в оффлайн-режим
+    }
+  }
+  
+  // Проверка оффлайн режима
+  if (isOfflineMode()) {
+    // Выходим из оффлайн-режима, нам нужны только реальные данные
+    setOfflineMode(false);
+    if (isTelegram) {
+      alert(`[DEBUG] Оффлайн-режим отключен. Запрашиваем данные с сервера.`);
+    }
+  }
+  
   // Сначала убедимся, что авторизация выполнена
   try {
     // Сбросим токен перед повторной инициализацией, чтобы избежать использования поврежденного токена
@@ -61,6 +83,9 @@ export async function fetchAvailableTimeSlotsApi(date: Date) {
   } catch (error) {
     if (isTelegram) {
       alert(`[DEBUG] Ошибка авторизации: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
+      // Сообщаем об ошибке авторизации
+      alert(`[DEBUG] Не удалось авторизоваться. Проверьте соединение и учетные данные.`);
+      throw error;
     }
     throw error;
   }

@@ -22,10 +22,8 @@ export const setOfflineMode = (value: boolean) => {
   }
 };
 
-// Определяем правильный API URL в зависимости от среды выполнения
-const API_URL = import.meta.env.DEV 
-  ? '/api/v1' // В режиме разработки используем прокси
-  : 'https://backend.self-detailing.duckdns.org/api/v1';
+// Всегда используем прямой URL к бэкенду
+const API_URL = 'https://backend.self-detailing.duckdns.org/api/v1';
 
 // Создаем экземпляр axios с базовыми настройками
 const api = axios.create({
