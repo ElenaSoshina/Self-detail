@@ -174,7 +174,7 @@
   opacity: 1;
 }
 
-.auth-indicator, .api-indicator {
+.auth-indicator {
   padding: 4px 8px;
   border-radius: 4px;
   cursor: pointer;
@@ -190,14 +190,4 @@
 .auth-indicator.unauthorized {
   background-color: #ffcaca;
   color: #cc3535;
-}
-
-.api-indicator.online {
-  background-color: #cae6f8;
-  color: #1868aa;
-}
-
-.api-indicator.offline {
-  background-color: #e6e6e6;
-  color: #666666;
 } 

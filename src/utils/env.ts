@@ -33,7 +33,7 @@ export const getTelegramWebApp = () => {
   return null;
 };
 
-/** Инициализация Telegram WebApp: ready, тема, expand */
+/** Инициализация Telegram WebApp: ready, тема, expand, disableVerticalSwipes */
 export const initTelegramWebApp = (): void => {
   const tg = getTelegramWebApp();
   if (tg) {
@@ -44,6 +44,9 @@ export const initTelegramWebApp = (): void => {
     );
     if (tg.expand) {
       tg.expand();
+    }
+    if (tg.disableVerticalSwipes) {
+      tg.disableVerticalSwipes();
     }
   }
 };

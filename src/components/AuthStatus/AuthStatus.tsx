@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { getToken, isOfflineMode, setOfflineMode } from '../../api/apiService';
+import { getToken } from '../../api/apiService';
 import './AuthStatus.css';
+import { isTelegramWebApp } from '../../utils/env';
 
 interface AuthStatusProps {
   className?: string;
@@ -13,11 +14,10 @@ const AuthStatus: React.FC<AuthStatusProps> = ({ className }) => {
   const [isTelegramMode, setIsTelegramMode] = useState(false);
   const [detailedError, setDetailedError] = useState<string | null>(null);
   const [isAuthorized, setIsAuthorized] = useState<boolean>(false);
-  const [offline, setOffline] = useState<boolean>(isOfflineMode());
 
   // Определяем при инициализации, работаем ли в Telegram WebApp
   useEffect(() => {
-    setIsTelegramMode(!!(window as any).Telegram?.WebApp);
+    setIsTelegramMode(isTelegramWebApp());
   }, []);
 
   useEffect(() => {
@@ -46,7 +46,6 @@ const AuthStatus: React.FC<AuthStatusProps> = ({ className }) => {
     const checkToken = () => {
       const token = getToken();
       setIsAuthorized(!!token);
-      setOffline(isOfflineMode());
     };
     
     // Проверяем статус при монтировании
@@ -61,12 +60,6 @@ const AuthStatus: React.FC<AuthStatusProps> = ({ className }) => {
 
   const handleRetry = async () => {
     await retryAuth();
-  };
-
-  // Обработчик переключения режима работы
-  const toggleOfflineMode = () => {
-    setOfflineMode(!offline);
-    setOffline(!offline);
   };
 
   // Для Telegram WebApp всегда показываем индикатор
@@ -134,14 +127,6 @@ const AuthStatus: React.FC<AuthStatusProps> = ({ className }) => {
     <div className={`auth-status ${className || ''}`}>
       <div className={`auth-indicator ${isAuthorized ? 'authorized' : 'unauthorized'}`}>
         {isAuthorized ? 'Авторизован' : 'Не авторизован'}
-      </div>
-      
-      <div 
-        className={`api-indicator ${offline ? 'offline' : 'online'}`}
-        onClick={toggleOfflineMode}
-        title="Нажмите для переключения режима API"
-      >
-        {offline ? 'Офлайн режим' : 'Онлайн режим'}
       </div>
     </div>
   );

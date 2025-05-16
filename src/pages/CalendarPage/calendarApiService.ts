@@ -1,6 +1,6 @@
 import api from '../../api/apiService';
 import axios from 'axios';
-import { login, getToken, initAuth, isOfflineMode, resetToken, setOfflineMode } from '../../api/apiService';
+import { login, getToken, initAuth, resetToken } from '../../api/apiService';
 import { isTelegramWebApp } from '../../utils/env';
 
 // Используем полный URL API 
@@ -41,11 +41,6 @@ export async function fetchAvailableTimeSlotsApi(date: Date) {
   // Отображаем алерт в Telegram о начале процесса
   if (isTelegram) {
     alert(`[DEBUG] Начало запроса слотов для даты: ${date.toLocaleDateString()}`);
-    
-    // Проверка на оффлайн-режим
-    if (isOfflineMode && isOfflineMode()) {
-      alert(`[DEBUG] Работаем в оффлайн-режиме. Будут использованы тестовые данные`);
-    }
   }
   
   console.log(`[API:${requestId}] Запрос слотов для даты ${date.toLocaleDateString()}`);
@@ -53,11 +48,6 @@ export async function fetchAvailableTimeSlotsApi(date: Date) {
   // Выводим информацию о начале запроса
   if (isTelegram) {
     alert(`[DEBUG] Начинаем запрос данных к серверу ${API_BASE_URL}`);
-  }
-  
-  // Выключаем оффлайн-режим, если он был включен
-  if (isOfflineMode()) {
-    setOfflineMode(false);
   }
   
   // Сначала убедимся, что авторизация выполнена
