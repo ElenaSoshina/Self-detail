@@ -46,8 +46,17 @@ let isInitialAuthComplete = false;
  * @returns Promise с токеном авторизации
  */
 export const login = async (): Promise<string> => {
+  // Для отладки в Telegram
+  const isTelegram = typeof window !== 'undefined' && (window as any).Telegram?.WebApp;
+  if (isTelegram) {
+    alert(`[AUTH] Начало процесса авторизации`);
+  }
+  
   // Если запрос за токеном уже выполняется, возвращаем его результат
   if (tokenPromise) {
+    if (isTelegram) {
+      alert(`[AUTH] Авторизация уже выполняется. Ждем результата.`);
+    }
     return tokenPromise;
   }
   
@@ -58,6 +67,9 @@ export const login = async (): Promise<string> => {
       const existingToken = localStorage.getItem('jwt_token');
       if (existingToken) {
         console.log('Используем существующий токен из localStorage');
+        if (isTelegram) {
+          alert(`[AUTH] Найден существующий токен (${existingToken.length} символов)`);
+        }
         isInitialAuthComplete = true;
         return existingToken;
       }
@@ -65,32 +77,69 @@ export const login = async (): Promise<string> => {
       const username = getBackendUsername();
       const password = getBackendPassword();
       
+      if (isTelegram) {
+        alert(`[AUTH] Данные: логин=${username ? 'указан' : 'не указан'}, пароль=${password ? 'указан' : 'не указан'}`);
+      }
+      
       if (!username || !password) {
         console.error('Учетные данные не найдены в переменных окружения');
+        if (isTelegram) {
+          alert(`[AUTH] Ошибка: учетные данные не найдены`);
+        }
         throw new Error('Учетные данные не найдены в переменных окружения');
       }
       
       console.log('Выполняем запрос на авторизацию');
+      if (isTelegram) {
+        alert(`[AUTH] Отправка запроса на ${API_URL}/auth/login`);
+      }
+      
       const response = await axios.post(`${API_URL}/auth/login`, {
         username,
         password
       });
+      
+      // Для отладки в Telegram
+      if (isTelegram) {
+        alert(`[AUTH] Ответ получен: HTTP ${response.status}`);
+        alert(`[AUTH] Данные ответа: ${JSON.stringify(response.data).substring(0, 150)}...`);
+      }
       
       // Извлечение токена из ответа
       let token: string;
       if (response.data?.success && response.data?.data?.token) {
         // Сохраняем токен из нового формата ответа
         token = response.data.data.token;
+        if (isTelegram) {
+          alert(`[AUTH] Токен получен из формата: response.data.data.token`);
+        }
       } else if (response.data && response.data.token) {
         // Для обратной совместимости со старым форматом
         token = response.data.token;
+        if (isTelegram) {
+          alert(`[AUTH] Токен получен из формата: response.data.token`);
+        }
       } else {
+        if (isTelegram) {
+          alert(`[AUTH] Ошибка: не удалось найти токен в ответе`);
+        }
         throw new Error('Не удалось получить токен');
+      }
+      
+      // Проверяем валидность токена
+      if (token.length < 20) {
+        if (isTelegram) {
+          alert(`[AUTH] Предупреждение: токен слишком короткий (${token.length} символов)`);
+        }
       }
       
       // Сохраняем токен в localStorage
       localStorage.setItem('jwt_token', token);
       console.log('Токен успешно получен и сохранен');
+      
+      if (isTelegram) {
+        alert(`[AUTH] Токен сохранен в localStorage (${token.length} символов)`);
+      }
       
       // Отмечаем, что первичная авторизация выполнена
       isInitialAuthComplete = true;
@@ -104,8 +153,23 @@ export const login = async (): Promise<string> => {
       if (axios.isAxiosError(error)) {
         const errorMessage = `Ошибка авторизации (${error.code}): ${error.message}`;
         console.error(errorMessage);
+        
+        if (isTelegram) {
+          alert(`[AUTH] Ошибка HTTP: ${error.message}`);
+          
+          // Анализируем ответ сервера, если есть
+          if (error.response) {
+            alert(`[AUTH] Статус ответа: ${error.response.status}`);
+            alert(`[AUTH] Данные ошибки: ${JSON.stringify(error.response.data).substring(0, 200)}`);
+          } else if (error.request) {
+            alert(`[AUTH] Нет ответа от сервера (возможно проблемы с сетью)`);
+          }
+        }
       } else {
         console.error('Ошибка авторизации:', error);
+        if (isTelegram) {
+          alert(`[AUTH] Ошибка JS: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
+        }
       }
       throw error;
     }
