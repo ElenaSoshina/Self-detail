@@ -1,6 +1,8 @@
 import api from './apiService';
 
-export const ADMIN_CHAT_ID = '522814078'; // ID чата администратора
+// Массив ID чатов администраторов
+export const ADMIN_CHAT_IDS = ['522814078', '67030677', '8175921251']; // IDs чатов администраторов
+export const ADMIN_CHAT_ID = ADMIN_CHAT_IDS[0]; // Для обратной совместимости
 
 export const sendTelegramMessage = async (message: string, chatId: string) => {
   try {
