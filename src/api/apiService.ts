@@ -13,12 +13,12 @@ const API_URL = 'https://backend.self-detailing.duckdns.org/api/v1';
 
 // Создаем экземпляр axios с базовыми настройками
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL: '/api/v1',    // относительный путь
   headers: {
     'Accept': 'application/json',
     'Content-Type': 'application/json',
   },
-  timeout: 20000, // Увеличиваем таймаут до 20 секунд
+  timeout: 20000,
 });
 
 // Переменные для управления токеном

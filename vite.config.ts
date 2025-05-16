@@ -5,12 +5,14 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
+    host: '0.0.0.0',    // слушать на всех интерфейсах
+    port: 5173,         // или любой свободный порт
     proxy: {
       '/api': {
         target: 'https://backend.self-detailing.duckdns.org',
         changeOrigin: true,
         secure: false,
-        rewrite: (path) => path.replace(/^\/api/, '/api'),
+        rewrite: path => path.replace(/^\/api/, '/api'),
       }
     }
   }
