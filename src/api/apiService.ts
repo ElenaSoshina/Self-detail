@@ -270,24 +270,13 @@ api.interceptors.response.use(
     if (!error.response && (error.code === 'ENOTFOUND' || error.message.includes('getaddrinfo'))) {
       console.error('DNS-ошибка при подключении к API:', error.message);
       
-      // Автоматически включаем оффлайн-режим
-      if (!offlineMode) {
-        setOfflineMode(true);
-        console.warn('Автоматически включен оффлайн-режим из-за проблем с соединением');
+      // В Telegram показываем сообщение об ошибке
+      if (typeof window !== 'undefined' && (window as any).Telegram?.WebApp) {
+        alert(`[DEBUG] Ошибка подключения к серверу: ${error.message}`);
       }
       
-      // Если это запрос календаря, возвращаем пустой список
-      const url = error.config?.url || '';
-      if (url.includes('available')) {
-        return {
-          data: {
-            success: true,
-            data: []
-          },
-          status: 200,
-          statusText: 'OK (OFFLINE)'
-        };
-      }
+      // Пробрасываем ошибку дальше
+      return Promise.reject(error);
     }
     
     // Проверка на сетевые ошибки (например, CORS, нет соединения)

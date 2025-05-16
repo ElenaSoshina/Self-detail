@@ -50,26 +50,14 @@ export async function fetchAvailableTimeSlotsApi(date: Date) {
   
   console.log(`[API:${requestId}] Запрос слотов для даты ${date.toLocaleDateString()}`);
   
-  // Проверяем доступность сервера
+  // Выводим информацию о начале запроса
   if (isTelegram) {
-    try {
-      // Быстрая проверка соединения с сервером
-      await axios.head('https://backend.self-detailing.duckdns.org/api/v1/health', { timeout: 3000 });
-    } catch (connectionError) {
-      if (isTelegram) {
-        alert(`[DEBUG] Ошибка соединения с сервером: ${connectionError instanceof Error ? connectionError.message : 'Неизвестная ошибка'}`);
-      }
-      // Продолжаем выполнение запроса, но не переходим в оффлайн-режим
-    }
+    alert(`[DEBUG] Начинаем запрос данных к серверу ${API_BASE_URL}`);
   }
   
-  // Проверка оффлайн режима
+  // Выключаем оффлайн-режим, если он был включен
   if (isOfflineMode()) {
-    // Выходим из оффлайн-режима, нам нужны только реальные данные
     setOfflineMode(false);
-    if (isTelegram) {
-      alert(`[DEBUG] Оффлайн-режим отключен. Запрашиваем данные с сервера.`);
-    }
   }
   
   // Сначала убедимся, что авторизация выполнена
