@@ -1,18 +1,15 @@
 import axios from 'axios';
-import { getBackendUsername, getBackendPassword, isTelegramWebApp } from '../utils/env';
+import { getBackendUsername, getBackendPassword } from '../utils/env';
 
-// Расширяем тип конфигурации axios (удалены поля оффлайн режима)
+// Расширяем тип конфигурации axios
 declare module 'axios' {
   interface InternalAxiosRequestConfig {
     // дополнительные поля могут быть здесь
   }
 }
 
-// Определяем базовый URL в зависимости от окружения
-const isProd = import.meta.env.PROD;
-const API_URL = isProd 
-  ? 'https://backend.self-detailing.duckdns.org/api/v1'  // В production используем полный URL
-  : '/api/v1';  // В development используем относительный путь для прокси
+// Всегда используем прямой URL к бэкенду
+const API_URL = 'https://backend.self-detailing.duckdns.org/api/v1';
 
 // Создаем экземпляр axios с базовыми настройками
 const api = axios.create({
@@ -24,54 +21,6 @@ const api = axios.create({
   timeout: 20000,
 });
 
-// Детальный лог каждого запроса
-api.interceptors.request.use(config => {
-  if (isTelegramWebApp()) {
-    // Добавляем Origin заголовок для CORS в production
-    if (import.meta.env.PROD) {
-      config.headers['Origin'] = 'https://frontend.self-detailing.duckdns.org';
-    }
-    
-    alert(
-      `[API REQUEST]\n` +
-      `Method: ${config.method?.toUpperCase()}\n` +
-      `URL:    ${config.baseURL}${config.url}\n` +
-      `Origin: ${window.location.origin}\n` +
-      `Online: ${navigator.onLine}\n` +
-      `Headers:\n${JSON.stringify(config.headers, null, 2)}\n` +
-      (config.params ? `Params:\n${JSON.stringify(config.params, null, 2)}\n` : '') +
-      (config.data   ? `Body:\n${JSON.stringify(config.data,   null, 2)}\n` : '')
-    );
-  }
-  return config;
-});
-
-// Детальный лог каждого ответа
-api.interceptors.response.use(response => {
-  if (isTelegramWebApp()) {
-    alert(
-      `[API RESPONSE]\n` +
-      `Status: ${response.status}\n` +
-      `URL:    ${response.config.baseURL}${response.config.url}\n` +
-      `Headers:\n${JSON.stringify(response.headers, null, 2)}\n` +
-      `Data:\n${JSON.stringify(response.data, null, 2)}`
-    );
-  }
-  return response;
-}, error => {
-  if (isTelegramWebApp()) {
-    alert(
-      `[API ERROR]\n` +
-      `Message: ${error.message}\n` +
-      `URL:     ${error.config?.baseURL}${error.config?.url}\n` +
-      `Status:  ${error.response?.status || '—'}\n` +
-      `Data:    ${JSON.stringify(error.response?.data) || '—'}\n` +
-      `Origin:  ${window.location.origin}\n` +
-      `Online:  ${navigator.onLine}`
-    );
-  }
-  return Promise.reject(error);
-});
 // Переменные для управления токеном
 let tokenPromise: Promise<string> | null = null;
 let isInitialAuthComplete = false;
@@ -81,11 +30,7 @@ let isInitialAuthComplete = false;
  * @returns Promise с токеном авторизации
  */
 export const login = async (): Promise<string> => {
-  const isTelegram = isTelegramWebApp();
-  if (isTelegram) alert('[AUTH] Начало процесса авторизации');
-
   if (tokenPromise) {
-    if (isTelegram) alert('[AUTH] Авторизация уже выполняется. Ждем результата.');
     return tokenPromise;
   }
 
@@ -93,7 +38,6 @@ export const login = async (): Promise<string> => {
     try {
       const existingToken = localStorage.getItem('jwt_token');
       if (existingToken) {
-        if (isTelegram) alert(`[AUTH] Найден существующий токен (${existingToken.length} символов)`);
         isInitialAuthComplete = true;
         return existingToken;
       }
@@ -102,21 +46,10 @@ export const login = async (): Promise<string> => {
       const password = getBackendPassword();
       if (!username || !password) {
         console.error('Учетные данные не найдены в переменных окружения');
-        if (isTelegram) alert('[AUTH] Ошибка: учетные данные не найдены');
         throw new Error('Учетные данные не найдены');
       }
 
-      // Детальный вывод информации о логине и пароле в Telegram
-      if (isTelegram) {
-        alert(`[AUTH] Данные: логин="${username}", пароль="${password}"`);
-        alert(`[AUTH] Длина логина: ${username.length}, длина пароля: ${password.length}`);
-        alert(`[AUTH] Первые символы: логин=${username.charAt(0)}..., пароль=${password.charAt(0)}...`);
-        alert(`[AUTH] Проверка на пустые значения: логин=${Boolean(username)}, пароль=${Boolean(password)}`);
-      }
-
-      if (isTelegram) alert(`[AUTH] Отправка запроса на ${API_URL}/auth/login`);
-      const response = await api.post('/auth/login', { username, password });
-      if (isTelegram) alert(`[AUTH] Ответ получен: HTTP ${response.status}`);
+      const response = await axios.post(`${API_URL}/auth/login`, { username, password });
 
       let token: string;
       if (response.data?.success && response.data?.data?.token) {
@@ -124,7 +57,6 @@ export const login = async (): Promise<string> => {
       } else if (response.data && response.data.token) {
         token = response.data.token;
       } else {
-        if (isTelegram) alert('[AUTH] Ошибка: не удалось найти токен в ответе');
         throw new Error('Не удалось получить токен');
       }
 
@@ -135,15 +67,8 @@ export const login = async (): Promise<string> => {
       tokenPromise = null;
       if (axios.isAxiosError(error)) {
         console.error(`Ошибка авторизации (${error.code}): ${error.message}`);
-        if (isTelegram) {
-          alert(`[AUTH] Ошибка HTTP: ${error.message}`);
-          if (error.response) {
-            alert(`[AUTH] Статус: ${error.response.status}, Данные: ${JSON.stringify(error.response.data).substring(0, 100)}`);
-          }
-        }
       } else {
         console.error('Ошибка авторизации:', error);
-        if (isTelegram) alert(`[AUTH] Ошибка JS: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
       }
       throw error;
     }
@@ -201,15 +126,13 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Перехватчик ответов для обработки 401 и сетевых ошибок
+// Перехватчик ответов для обработки 401
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const isTelegram = isTelegramWebApp();
     // Сетевые ошибки
     if (!error.response) {
       console.error('Сетевая ошибка:', error.message);
-      if (isTelegram) alert(`[DEBUG] Сетевая ошибка: ${error.message}`);
       throw error;
     }
     // Повтор авторизации при 401
