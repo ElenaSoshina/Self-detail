@@ -21,6 +21,49 @@ const api = axios.create({
   timeout: 20000,
 });
 
+// Детальный лог каждого запроса
+api.interceptors.request.use(config => {
+  if (isTelegramWebApp()) {
+    alert(
+      `[API REQUEST]\n` +
+      `Method: ${config.method?.toUpperCase()}\n` +
+      `URL:    ${config.baseURL}${config.url}\n` +
+      `Origin: ${window.location.origin}\n` +
+      `Online: ${navigator.onLine}\n` +
+      `Headers:\n${JSON.stringify(config.headers, null, 2)}\n` +
+      (config.params ? `Params:\n${JSON.stringify(config.params, null, 2)}\n` : '') +
+      (config.data   ? `Body:\n${JSON.stringify(config.data,   null, 2)}\n` : '')
+    );
+  }
+  return config;
+});
+
+// Детальный лог каждого ответа
+api.interceptors.response.use(response => {
+  if (isTelegramWebApp()) {
+    alert(
+      `[API RESPONSE]\n` +
+      `Status: ${response.status}\n` +
+      `URL:    ${response.config.baseURL}${response.config.url}\n` +
+      `Headers:\n${JSON.stringify(response.headers, null, 2)}\n` +
+      `Data:\n${JSON.stringify(response.data, null, 2)}`
+    );
+  }
+  return response;
+}, error => {
+  if (isTelegramWebApp()) {
+    alert(
+      `[API ERROR]\n` +
+      `Message: ${error.message}\n` +
+      `URL:     ${error.config?.baseURL}${error.config?.url}\n` +
+      `Status:  ${error.response?.status || '—'}\n` +
+      `Data:    ${JSON.stringify(error.response?.data) || '—'}\n` +
+      `Origin:  ${window.location.origin}\n` +
+      `Online:  ${navigator.onLine}`
+    );
+  }
+  return Promise.reject(error);
+});
 // Переменные для управления токеном
 let tokenPromise: Promise<string> | null = null;
 let isInitialAuthComplete = false;
