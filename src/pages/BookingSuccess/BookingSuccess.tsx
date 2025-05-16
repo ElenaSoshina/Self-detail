@@ -5,6 +5,7 @@ import styles from './BookingSuccess.module.css';
 import { BookingDetails } from '../CalendarPage/calendarTypes';
 import { useCart } from '../../context/CartContex';
 import { sendTelegramMessage, formatAdminMessage, ADMIN_CHAT_ID } from '../../api/telegram';
+import api from '../../api/apiService';
 
 interface BookingSuccessProps {
   bookingDetails: BookingDetails;
@@ -126,20 +127,13 @@ const BookingSuccess: React.FC<BookingSuccessProps> = ({ bookingDetails }) => {
     };
     
     // Отправляем запрос на API
-    const response = await fetch('https://backend.self-detailing.duckdns.org/api/v1/calendar/booking', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(apiData),
-    });
+    const response = await api.post('/calendar/booking', apiData);
     
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Ошибка сервера: ${response.status} ${errorText}`);
+    if (!response.data) {
+      throw new Error(`Ошибка сервера`);
     }
     
-    const result = await response.json();
+    const result = response.data;
     
     // Отправляем сообщение в Telegram
     await sendTelegramMessage(

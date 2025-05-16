@@ -3,8 +3,8 @@ import axios from 'axios';
 import { login, getToken, initAuth, resetToken } from '../../api/apiService';
 import { isTelegramWebApp } from '../../utils/env';
 
-// Используем полный URL API 
-const API_BASE_URL = 'https://backend.self-detailing.duckdns.org/api/v1';
+// Используем относительный URL API
+const API_BASE_URL = '/api/v1';
 const API_PATH = '/calendar/available';
 
 export interface TimeSlotData {
@@ -194,18 +194,12 @@ export async function fetchAvailableTimeSlotsApi(date: Date) {
         
         // Повторяем запрос с новым токеном
         if (newToken) {
-          const tokenValue = newToken.startsWith('Bearer ') ? newToken : `Bearer ${newToken}`;
           console.log(`[API:${requestId}] Повторный запрос с новым токеном`);
           
-          const retryResponse = await axios.get(fullApiUrl, {
+          const retryResponse = await api.get('/calendar/available', {
             params: { 
               start: startDateISO, 
               end: endDateISO 
-            },
-            headers: {
-              'Authorization': tokenValue,
-              'Accept': 'application/json',
-              'Content-Type': 'application/json'
             }
           });
           

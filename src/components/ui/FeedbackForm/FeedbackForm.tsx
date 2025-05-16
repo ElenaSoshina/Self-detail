@@ -3,6 +3,7 @@ import axios from 'axios';
 import PhoneInput from 'react-phone-number-input/input';
 import 'react-phone-number-input/style.css';
 import styles from './FeedbackForm.module.css';
+import api from '../../../api/apiService';
 
 interface FormData {
   name: string;
@@ -167,8 +168,8 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({
       // Отправляем сообщения администраторам
       await Promise.all(
         adminChatIds.map(id =>
-          axios.post(
-            `https://backend.self-detailing.duckdns.org/api/v1/chats/send-message/${id}`,
+          api.post(
+            `/chats/send-message/${id}`,
             { message: adminMessage }
           )
         )
@@ -176,8 +177,8 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({
 
       // Отправляем сообщение пользователю, если известен его chatId
       if (chatId) {
-        await axios.post(
-          `https://backend.self-detailing.duckdns.org/api/v1/chats/send-message/${chatId}`,
+        await api.post(
+          `/chats/send-message/${chatId}`,
           { message: userMessage }
         );
       }

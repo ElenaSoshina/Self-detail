@@ -9,7 +9,7 @@ declare module 'axios' {
 }
 
 // Всегда используем прямой URL к бэкенду
-const API_URL = 'https://backend.self-detailing.duckdns.org/api/v1';
+const API_URL = '/api/v1';
 
 // Создаем экземпляр axios с базовыми настройками
 const api = axios.create({
