@@ -4,7 +4,7 @@ import BookingModal from '../../components/BookingModal/BookingModal';
 import styles from './BookingSuccess.module.css';
 import { BookingDetails } from '../CalendarPage/calendarTypes';
 import { useCart } from '../../context/CartContex';
-import { sendTelegramMessage, formatAdminMessage, ADMIN_CHAT_ID } from '../../api/telegram';
+import { sendTelegramMessageToAllAdmins, formatAdminMessage } from '../../api/telegram';
 import api from '../../api/apiService';
 
 interface BookingSuccessProps {
@@ -135,10 +135,9 @@ const BookingSuccess: React.FC<BookingSuccessProps> = ({ bookingDetails }) => {
     
     const result = response.data;
     
-    // Отправляем сообщение в Telegram
-    await sendTelegramMessage(
-      formatAdminMessage(apiData, bookingData.service || { price: 0 }, bookingData.service?.serviceName || ''),
-      ADMIN_CHAT_ID
+    // Отправляем сообщение всем администраторам
+    await sendTelegramMessageToAllAdmins(
+      formatAdminMessage(apiData, bookingData.service || { price: 0 }, bookingData.service?.serviceName || '')
     );
     
     return result;

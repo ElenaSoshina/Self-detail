@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styles from './BookingModal.module.css';
 import SuccessPopup from '../SuccessPopup/SuccessPopup';
-import { sendTelegramMessage, sendTelegramMessageByUsername, formatUserMessage, formatAdminMessage, ADMIN_CHAT_ID } from '../../api/telegram';
+import { sendTelegramMessage, sendTelegramMessageByUsername, formatUserMessage, formatAdminMessage, ADMIN_CHAT_ID, sendTelegramMessageToAllAdmins } from '../../api/telegram';
 import PhoneInput from 'react-phone-number-input/input';
 import 'react-phone-number-input/style.css';
 import { useCart } from '../../context/CartContex';
@@ -250,12 +250,11 @@ const BookingModal: React.FC<BookingModalProps> = ({
         if (isAdmin) {
           if (isTech) {
             // Только админу
-            await sendTelegramMessage(
+            await sendTelegramMessageToAllAdmins(
               formatAdminMessage(apiData, 
                 service ? { ...service, price: servicePrice } : { price: 0 }, 
                 service?.serviceName || ''
-              ),
-              ADMIN_CHAT_ID
+              )
             );
           } else {
             // Пользователю по username через endpoint и админу
@@ -267,12 +266,11 @@ const BookingModal: React.FC<BookingModalProps> = ({
                 ),
                 formData.telegramUserName
               ),
-              sendTelegramMessage(
+              sendTelegramMessageToAllAdmins(
                 formatAdminMessage(apiData, 
                   service ? { ...service, price: servicePrice } : { price: 0 }, 
                   service?.serviceName || ''
-                ),
-                ADMIN_CHAT_ID
+                )
               ),
             ]);
           }
@@ -286,12 +284,11 @@ const BookingModal: React.FC<BookingModalProps> = ({
               ),
               chatId
             ),
-            sendTelegramMessage(
+            sendTelegramMessageToAllAdmins(
               formatAdminMessage(apiData, 
                 service ? { ...service, price: servicePrice } : { price: 0 }, 
                 service?.serviceName || ''
-              ),
-              ADMIN_CHAT_ID
+              )
             ),
           ]);
         }

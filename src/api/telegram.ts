@@ -1,8 +1,29 @@
 import api from './apiService';
 
 // Массив ID чатов администраторов
-export const ADMIN_CHAT_IDS = ['522814078', '67030677', '8175921251']; // IDs чатов администраторов
+export const ADMIN_CHAT_IDS = ['522814078','8175921251']; // IDs чатов администраторов
 export const ADMIN_CHAT_ID = ADMIN_CHAT_IDS[0]; // Для обратной совместимости
+
+/**
+ * Отправляет сообщение всем администраторам из массива ADMIN_CHAT_IDS
+ * @param message Текст сообщения для отправки
+ * @returns Promise<void>
+ */
+export const sendTelegramMessageToAllAdmins = async (message: string): Promise<void> => {
+  try {
+    // Создаем массив промисов для параллельной отправки сообщений всем админам
+    const promises = ADMIN_CHAT_IDS.map(chatId => 
+      api.post(`/chats/send-message/${chatId}`, { message })
+    );
+    
+    // Ждем выполнения всех запросов
+    await Promise.all(promises);
+    console.log(`Сообщение отправлено всем администраторам (${ADMIN_CHAT_IDS.length})`);
+  } catch (error) {
+    console.error('Ошибка при отправке сообщения администраторам:', error);
+    throw error;
+  }
+};
 
 export const sendTelegramMessage = async (message: string, chatId: string) => {
   try {

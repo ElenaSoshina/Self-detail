@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useCart } from '../../context/CartContex';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import styles from './CartPage.module.css';
@@ -8,7 +8,7 @@ import { CartItem } from '../../types';
 import BookingModal from '../../components/BookingModal/BookingModal';
 import BookingSuccess from '../BookingSuccess/BookingSuccess';
 import { BookingDetails } from '../CalendarPage/calendarTypes';
-import { sendTelegramMessage, formatAdminMessage, ADMIN_CHAT_ID } from '../../api/telegram';
+import { sendTelegramMessage, formatAdminMessage, ADMIN_CHAT_ID, sendTelegramMessageToAllAdmins } from '../../api/telegram';
 import api from '../../api/apiService';
 
 // Функция для получения изображения продукта по ID
@@ -154,10 +154,9 @@ const CartPage: React.FC = () => {
       const isTech = (formData.service?.serviceName || '').toLowerCase().includes('техничес');
       
       try {
-        // Обычный пользователь — отправляем админу
-        await sendTelegramMessage(
-          formatAdminMessage(apiData, formData.service || { price: 0 }, formData.service?.serviceName || ''),
-          ADMIN_CHAT_ID
+        // Отправляем сообщение всем администраторам
+        await sendTelegramMessageToAllAdmins(
+          formatAdminMessage(apiData, formData.service || { price: 0 }, formData.service?.serviceName || '')
         );
 
         alert('Уведомления в Telegram отправлены');

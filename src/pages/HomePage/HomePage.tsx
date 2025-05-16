@@ -5,8 +5,7 @@ import Pricing from '../../components/Pricing/Pricing';
 import HowItWorks from '../../components/HowItWorks/HowItWorks';
 import FAQ from '../../components/FAQ/FAQ';
 import ProductPreviewSection from '../../components/ProductPreviewSection/ProductPreviewSection';
-
-const ADMIN_IDS = ['522814078'];
+import { ADMIN_CHAT_IDS } from '../../api/telegram';
 
 const HomePage: React.FC = () => {
   const location = useLocation();
@@ -19,7 +18,7 @@ const HomePage: React.FC = () => {
     if (tg?.initDataUnsafe?.user?.id) {
       const id = tg.initDataUnsafe.user.id.toString();
       setTelegramId(id);
-      setIsAdmin(ADMIN_IDS.includes(id));
+      setIsAdmin(ADMIN_CHAT_IDS.includes(id));
       tg.ready?.();
     }
   }, []);

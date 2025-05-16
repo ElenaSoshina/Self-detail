@@ -1,15 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import styles from './Header.module.css';
 import { Search } from '../Search/Search';
 import Cart from '../Cart/Cart';
 import logo from '../../assets/self-detail-logo.png';
+import { ADMIN_CHAT_IDS } from '../../api/telegram';
 
 export const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  
+  // Проверка является ли пользователь админом
+  useEffect(() => {
+    const tg = (window as any).Telegram?.WebApp;
+    if (tg?.initDataUnsafe?.user?.id) {
+      const id = tg.initDataUnsafe.user.id.toString();
+      setIsAdmin(ADMIN_CHAT_IDS.includes(id));
+    }
+  }, []);
   
   const handleMenuClick = (e: React.MouseEvent<HTMLAnchorElement>, sectionId: string) => {
     e.preventDefault();
@@ -77,9 +88,11 @@ export const Header: React.FC = () => {
           <Link to="/profile" className={styles.profileBtn} aria-label="Личный кабинет">
             <div className={styles.profileIcon} />
           </Link>
-          <Link to="/admin" className={styles.adminBtn} aria-label="Админ">
-            <div className={styles.adminIcon} />
-          </Link>
+          {isAdmin && (
+            <Link to="/admin" className={styles.adminBtn} aria-label="Админ">
+              <div className={styles.adminIcon} />
+            </Link>
+          )}
         </div>
       </div>
 
