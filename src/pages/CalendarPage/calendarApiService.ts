@@ -1,8 +1,10 @@
 import api from '../../api/apiService';
 import axios from 'axios';
-import { login, getToken, initAuth, isOfflineMode } from '../../api/apiService';
+import { login, getToken, initAuth, isOfflineMode, resetToken } from '../../api/apiService';
 import { isTelegramWebApp } from '../../utils/env';
 
+// Используем полный URL API 
+const API_BASE_URL = 'https://backend.self-detailing.duckdns.org/api/v1';
 const API_PATH = '/calendar/available';
 
 export interface TimeSlotData {
@@ -50,6 +52,8 @@ export async function fetchAvailableTimeSlotsApi(date: Date) {
   
   // Сначала убедимся, что авторизация выполнена
   try {
+    // Сбросим токен перед повторной инициализацией, чтобы избежать использования поврежденного токена
+    resetToken();
     await initAuth();
     if (isTelegram) {
       alert(`[DEBUG] Авторизация успешно выполнена`);
@@ -95,38 +99,124 @@ export async function fetchAvailableTimeSlotsApi(date: Date) {
   
   console.log('Запрашиваем слоты для диапазона:', { startDateISO, endDateISO, isToday });
   
-  // Проверка токена перед запросом
-  const token = getToken();
-  if (isTelegram) {
-    alert(`[DEBUG] Статус токена: ${token ? 'Присутствует' : 'Отсутствует'}`);
+  // Проверяем токен и обновляем при необходимости
+  let token = getToken();
+  if (!token) {
+    try {
+      console.log(`[API:${requestId}] Токен отсутствует, запрашиваем новый`);
+      token = await login();
+      console.log(`[API:${requestId}] Получен новый токен:`, token ? `${token.substring(0, 10)}...` : 'ошибка');
+    } catch (error) {
+      console.error(`[API:${requestId}] Ошибка получения токена:`, error);
+    }
   }
   
+  if (isTelegram) {
+    if (token) {
+      alert(`[DEBUG] Токен: ${token.substring(0, 10)}... (${token.length} символов)`);
+    } else {
+      alert(`[DEBUG] Токен отсутствует! Проверьте авторизацию.`);
+    }
+  }
+  
+  // Выводим токен в консоль для проверки
+  console.log(`[API:${requestId}] Токен авторизации:`, token ? `Bearer ${token.substring(0, 10)}... (${token.length} символов)` : 'отсутствует');
+  
   try {
+    // Получаем полный URL запроса
+    const fullApiUrl = `${API_BASE_URL}${API_PATH}`;
+    
     // Показываем параметры запроса в алерте (только в Telegram)
     if (isTelegram) {
-      const apiUrl = `${API_PATH}?start=${encodeURIComponent(startDateISO)}&end=${encodeURIComponent(endDateISO)}`;
+      const apiUrl = `${fullApiUrl}?start=${encodeURIComponent(startDateISO)}&end=${encodeURIComponent(endDateISO)}`;
       alert(`[DEBUG] Отправка запроса:\nURL: ${apiUrl}`);
     }
     
     // Используем экземпляр API, который уже имеет логику добавления токена
     console.log(`[API:${requestId}] Отправляем запрос`);
     console.log(`[API:${requestId}] Параметры запроса:`, { 
-      url: API_PATH, 
+      url: fullApiUrl, 
       start: startDateISO, 
       end: endDateISO,
       token: getToken() ? 'Есть токен' : 'Нет токена'
     });
     
-    // Используем подготовленный api-клиент для всех окружений
-    const response = await api.get(API_PATH, {
+    // Используем axios напрямую с полным URL
+    // Проверяем, начинается ли токен уже с Bearer, чтобы избежать дублирования
+    const tokenValue = token && token.startsWith('Bearer ') ? token : (token ? `Bearer ${token}` : '');
+    console.log(`[API:${requestId}] Используемый заголовок Authorization:`, tokenValue);
+    
+    const response = await axios.get(fullApiUrl, {
       params: { 
         start: startDateISO, 
         end: endDateISO 
+      },
+      headers: {
+        'Authorization': tokenValue,
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
       }
+    });
+    
+          // Выводим информацию о заголовках отправленного запроса
+    console.log(`[API:${requestId}] Заголовки запроса:`, {
+      Authorization: tokenValue,
+      Accept: 'application/json',
+      'Content-Type': 'application/json'
     });
     
     console.log(`[API:${requestId}] Успешный ответ от API слотов:`, response.status);
     console.log(`[API:${requestId}] Данные ответа:`, response.data);
+    
+    // Проверяем на сообщения об ошибках авторизации в ответе
+    if (response.data && response.data.message && 
+       (response.data.message.includes('Unauthorized') || 
+        response.data.message.includes('Access denied'))) {
+      
+      console.error(`[API:${requestId}] Сервер вернул ошибку авторизации:`, response.data.message);
+      
+      if (isTelegram) {
+        alert(`[DEBUG] Ошибка авторизации: ${response.data.message}`);
+        alert(`[DEBUG] Попытка переавторизации...`);
+      }
+      
+      // Сбрасываем токен и пробуем получить новый
+      // Полностью сбрасываем авторизацию, а не только удаляем токен из localStorage
+      resetToken();
+      try {
+        const newToken = await login();
+        if (isTelegram) {
+          alert(`[DEBUG] Получен новый токен: ${newToken ? 'Да' : 'Нет'}`);
+        }
+        
+        // Повторяем запрос с новым токеном
+        if (newToken) {
+          const tokenValue = newToken.startsWith('Bearer ') ? newToken : `Bearer ${newToken}`;
+          console.log(`[API:${requestId}] Повторный запрос с новым токеном`);
+          
+          const retryResponse = await axios.get(fullApiUrl, {
+            params: { 
+              start: startDateISO, 
+              end: endDateISO 
+            },
+            headers: {
+              'Authorization': tokenValue,
+              'Accept': 'application/json',
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          console.log(`[API:${requestId}] Результат повторного запроса:`, retryResponse.status);
+          // Используем ответ от повторного запроса
+          return retryResponse.data.data || [];
+        }
+      } catch (authError: any) {
+        console.error(`[API:${requestId}] Ошибка повторной авторизации:`, authError);
+        if (isTelegram) {
+          alert(`[DEBUG] Не удалось выполнить переавторизацию: ${authError.message}`);
+        }
+      }
+    }
     
     // Печатаем подробную информацию о слотах
     if (response.data && response.data.data) {
