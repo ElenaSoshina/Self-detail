@@ -1,7 +1,6 @@
 import api from '../../api/apiService';
-import axios from 'axios';
 import { login, getToken, initAuth, resetToken } from '../../api/apiService';
-import { isTelegramWebApp } from '../../utils/env';
+
 
 // Используем относительный URL API
 const API_BASE_URL = '/api/v1';
@@ -35,36 +34,14 @@ function toMoscowISOString(date: Date): string {
  * @returns Promise с массивом данных слотов из API
  */
 export async function fetchAvailableTimeSlotsApi(date: Date) {
-  const isTelegram = isTelegramWebApp();
   const requestId = Math.random().toString(36).substring(2, 8); // Уникальный ID запроса для логов
-  
-  // Отображаем алерт в Telegram о начале процесса
-  if (isTelegram) {
-    alert(`[DEBUG] Начало запроса слотов для даты: ${date.toLocaleDateString()}`);
-  }
-  
-  console.log(`[API:${requestId}] Запрос слотов для даты ${date.toLocaleDateString()}`);
-  
-  // Выводим информацию о начале запроса
-  if (isTelegram) {
-    alert(`[DEBUG] Начинаем запрос данных к серверу ${API_BASE_URL}`);
-  }
   
   // Сначала убедимся, что авторизация выполнена
   try {
     // Сбросим токен перед повторной инициализацией, чтобы избежать использования поврежденного токена
     resetToken();
     await initAuth();
-    if (isTelegram) {
-      alert(`[DEBUG] Авторизация успешно выполнена`);
-    }
   } catch (error) {
-    if (isTelegram) {
-      alert(`[DEBUG] Ошибка авторизации: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
-      // Сообщаем об ошибке авторизации
-      alert(`[DEBUG] Не удалось авторизоваться. Проверьте соединение и учетные данные.`);
-      throw error;
-    }
     throw error;
   }
   
@@ -114,26 +91,12 @@ export async function fetchAvailableTimeSlotsApi(date: Date) {
     }
   }
   
-  if (isTelegram) {
-    if (token) {
-      alert(`[DEBUG] Токен: ${token.substring(0, 10)}... (${token.length} символов)`);
-    } else {
-      alert(`[DEBUG] Токен отсутствует! Проверьте авторизацию.`);
-    }
-  }
-  
   // Выводим токен в консоль для проверки
   console.log(`[API:${requestId}] Токен авторизации:`, token ? `Bearer ${token.substring(0, 10)}... (${token.length} символов)` : 'отсутствует');
   
   try {
     // Получаем полный URL запроса
     const fullApiUrl = `${API_BASE_URL}${API_PATH}`;
-    
-    // Показываем параметры запроса в алерте (только в Telegram)
-    if (isTelegram) {
-      const apiUrl = `${fullApiUrl}?start=${encodeURIComponent(startDateISO)}&end=${encodeURIComponent(endDateISO)}`;
-      alert(`[DEBUG] Отправка запроса:\nURL: ${apiUrl}`);
-    }
     
     // Используем экземпляр API, который уже имеет логику добавления токена
     console.log(`[API:${requestId}] Отправляем запрос`);
@@ -154,19 +117,10 @@ export async function fetchAvailableTimeSlotsApi(date: Date) {
       start: toMoscowISOString(startDate),
       end: toMoscowISOString(endDate),
     };
-    if (isTelegram) {
-      alert(`[DEBUG] Параметры запроса: ${JSON.stringify(params)}`);
-    }
 
     
     const response = await api.get('/calendar/available', { params });
     
-          // Выводим информацию о заголовках отправленного запроса
-    console.log(`[API:${requestId}] Заголовки запроса:`, {
-      Authorization: tokenValue,
-      Accept: 'application/json',
-      'Content-Type': 'application/json'
-    });
     
     console.log(`[API:${requestId}] Успешный ответ от API слотов:`, response.status);
     console.log(`[API:${requestId}] Данные ответа:`, response.data);
@@ -178,19 +132,12 @@ export async function fetchAvailableTimeSlotsApi(date: Date) {
       
       console.error(`[API:${requestId}] Сервер вернул ошибку авторизации:`, response.data.message);
       
-      if (isTelegram) {
-        alert(`[DEBUG] Ошибка авторизации: ${response.data.message}`);
-        alert(`[DEBUG] Попытка переавторизации...`);
-      }
       
       // Сбрасываем токен и пробуем получить новый
       // Полностью сбрасываем авторизацию, а не только удаляем токен из localStorage
       resetToken();
       try {
         const newToken = await login();
-        if (isTelegram) {
-          alert(`[DEBUG] Получен новый токен: ${newToken ? 'Да' : 'Нет'}`);
-        }
         
         // Повторяем запрос с новым токеном
         if (newToken) {
@@ -208,57 +155,10 @@ export async function fetchAvailableTimeSlotsApi(date: Date) {
           return retryResponse.data.data || [];
         }
       } catch (authError: any) {
-        console.error(`[API:${requestId}] Ошибка повторной авторизации:`, authError);
-        if (isTelegram) {
-          alert(`[DEBUG] Не удалось выполнить переавторизацию: ${authError.message}`);
-        }
+
       }
     }
-    
-    // Печатаем подробную информацию о слотах
-    if (response.data && response.data.data) {
-      const slots = response.data.data;
-      console.log(`[API:${requestId}] Количество слотов в ответе:`, slots.length);
-      console.log(`[API:${requestId}] Первые 3 слота:`, slots.slice(0, 3));
-    } else {
-      console.warn(`[API:${requestId}] Данные в неожиданном формате:`, response.data);
-    }
-    
-    // Отображаем результат запроса в алерте (только в Telegram)
-    if (isTelegram) {
-      const responseData = response.data;
-      // Проверяем наличие данных в разных форматах ответа
-      if (responseData && typeof responseData === 'object') {
-        // Определяем структуру ответа API
-        let slotsArray;
-        if (Array.isArray(responseData)) {
-          // Если ответ сразу является массивом
-          slotsArray = responseData;
-        } else if (responseData.success && Array.isArray(responseData.data)) {
-          // Формат: {success: true, data: [...]}
-          slotsArray = responseData.data;
-        } else if (responseData.data && Array.isArray(responseData.data.slots)) {
-          // Формат: {data: {slots: [...]}}
-          slotsArray = responseData.data.slots;
-        } else if (responseData.slots && Array.isArray(responseData.slots)) {
-          // Формат: {slots: [...]}
-          slotsArray = responseData.slots;
-        } else {
-          // Не нашли массив - создаем пустой
-          slotsArray = [];
-        }
-        
-        const slotsCount = slotsArray.length;
-        alert(`[DEBUG] Успешный ответ от API слотов!\nСтатус: ${response.status}\nКоличество слотов: ${slotsCount}`);
-        
-        // Возвращаем найденный массив слотов
-        return slotsArray;
-      } else {
-        alert(`[DEBUG] Успешный ответ от API слотов!\nСтатус: ${response.status}\nКоличество слотов: 0`);
-        alert(`[DEBUG] Данные ответа: ${JSON.stringify(response.data)}`);
-        return [];
-      }
-    }
+
     
     // Обрабатываем ответ API для всех окружений
     const responseData = response.data;
@@ -279,28 +179,9 @@ export async function fetchAvailableTimeSlotsApi(date: Date) {
       return responseData.slots;
     }
     
-    // Если не нашли массив, выводим в консоль структуру и возвращаем пустой массив
-    console.warn(`[API:${requestId}] Не удалось найти массив слотов в ответе:`, responseData);
     return [];
   } catch (error) {
     console.error('Ошибка при запросе слотов:', error);
-    
-    // Отображаем детали ошибки в алерте (только в Telegram)
-    if (isTelegram) {
-      if (axios.isAxiosError(error)) {
-        const statusCode = error.response?.status || 'нет статуса';
-        const errorData = JSON.stringify(error.response?.data || {});
-        alert(`[DEBUG] Ошибка запроса слотов!\nСтатус: ${statusCode}\nДанные: ${errorData}`);
-        
-        // Для CORS ошибок предлагаем решение
-        if (error.message.includes('Network Error') || !error.response) {
-          alert(`[DEBUG] Вероятно, проблема с CORS! Попробуйте запустить в режиме разработки с прокси.`);
-        }
-      } else {
-        // Для других ошибок просто выводим сообщение
-        alert(`[DEBUG] Ошибка: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
-      }
-    }
     
     // В случае ошибок перебрасываем их дальше
     throw error;
@@ -314,7 +195,6 @@ export async function fetchAvailableTimeSlotsApi(date: Date) {
  */
 export function formatTimeSlots(slotsData: any[]) {
   if (!Array.isArray(slotsData)) {
-    console.error('Данные слотов не являются массивом:', slotsData);
     
     // Возвращаем пустые массивы при некорректных данных
     return {
@@ -326,10 +206,6 @@ export function formatTimeSlots(slotsData: any[]) {
   // Фильтруем только доступные слоты
   const availableSlots = slotsData.filter(slot => slot.available !== false);
   
-  // Отображаем информацию о количестве доступных слотов (только в Telegram)
-  if (isTelegramWebApp()) {
-    alert(`[DEBUG] Форматирование данных:\nВсего слотов: ${slotsData.length}\nДоступных слотов: ${availableSlots.length}`);
-  }
   
   // Форматируем каждый слот
   const timeSlotsWithData: TimeSlotData[] = availableSlots.map(slot => {

@@ -29,18 +29,6 @@ const AuthStatus: React.FC<AuthStatusProps> = ({ className }) => {
     }
   }, [error]);
 
-  useEffect(() => {
-    // Проверка на успешную авторизацию
-    if (isAuthenticated && token && !loading && !error) {
-      setShowSuccessStatus(true);
-      
-      // Скрыть индикатор успеха через 3 секунды
-      setTimeout(() => {
-        setShowSuccessStatus(false);
-      }, 3000);
-    }
-  }, [isAuthenticated, token, loading, error, isTelegramMode]);
-
   // Проверяем наличие токена при монтировании компонента
   useEffect(() => {
     const checkToken = () => {
@@ -64,15 +52,15 @@ const AuthStatus: React.FC<AuthStatusProps> = ({ className }) => {
 
   // Для Telegram WebApp всегда показываем индикатор
   if (isTelegramMode) {
-    const status = loading ? 'loading' : error ? 'error' : isAuthenticated ? 'success' : '';
+    const status = loading ? 'loading' : error ? 'error' : '';
     const message = loading 
       ? 'Авторизация...' 
       : error 
         ? `Ошибка: ${error.message}` 
-        : 'Авторизация выполнена успешно';
+        : '';
     
-    // Если нет статуса или успешная авторизация скрыта - ничего не показываем
-    if (!status || (status === 'success' && !showSuccessStatus)) {
+    // Показываем только загрузку или ошибку
+    if (!status) {
       return null;
     }
     
@@ -80,7 +68,6 @@ const AuthStatus: React.FC<AuthStatusProps> = ({ className }) => {
       <div className={`auth-telegram-status ${status}`}>
         <div className="auth-telegram-content">
           {status === 'loading' && <div className="auth-telegram-spinner"></div>}
-          {status === 'success' && <div className="auth-telegram-checkmark">✓</div>}
           {status === 'error' && <div className="auth-telegram-error-icon">!</div>}
           <span>{message}</span>
           {status === 'error' && detailedError && (
@@ -117,10 +104,6 @@ const AuthStatus: React.FC<AuthStatusProps> = ({ className }) => {
         </button>
       </div>
     );
-  }
-
-  if (showSuccessStatus) {
-    return <div className="auth-success">Авторизация выполнена успешно</div>;
   }
 
   return (

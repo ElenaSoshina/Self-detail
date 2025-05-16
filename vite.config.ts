@@ -13,26 +13,6 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
         rewrite: path => path.replace(/^\/api/, '/api'),
-        prependPath: false,
-        ws: true,
-        configure: (proxy, _options) => {
-          proxy.on('error', (err, _req, _res) => {
-            console.log('proxy error', err);
-          });
-          proxy.on('proxyReq', (proxyReq, req, _res) => {
-            console.log('Отправка запроса:', req.method, req.url);
-            proxyReq.setHeader('Origin', 'https://frontend.self-detailing.duckdns.org');
-            if (req.method === 'POST') {
-              console.log('Это POST запрос. Заголовки:', JSON.stringify(proxyReq.getHeaders()));
-            }
-          });
-          proxy.on('proxyRes', (proxyRes, req, _res) => {
-            console.log('Получен ответ:', proxyRes.statusCode, req.url, 'для метода', req.method);
-            if (proxyRes.statusCode && proxyRes.statusCode >= 400) {
-              console.log('Ошибка при проксировании:', proxyRes.statusCode, req.url);
-            }
-          });
-        }
       }
     }
   }
