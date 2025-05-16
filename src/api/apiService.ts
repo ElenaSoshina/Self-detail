@@ -8,12 +8,15 @@ declare module 'axios' {
   }
 }
 
-// Всегда используем прямой URL к бэкенду
-const API_URL = '/api/v1';
+// Определяем базовый URL в зависимости от окружения
+const isProd = import.meta.env.PROD;
+const API_URL = isProd 
+  ? 'https://backend.self-detailing.duckdns.org/api/v1'  // В production используем полный URL
+  : '/api/v1';  // В development используем относительный путь для прокси
 
 // Создаем экземпляр axios с базовыми настройками
 const api = axios.create({
-  baseURL: '/api/v1',    // относительный путь
+  baseURL: API_URL,
   headers: {
     'Accept': 'application/json',
     'Content-Type': 'application/json',
@@ -24,6 +27,11 @@ const api = axios.create({
 // Детальный лог каждого запроса
 api.interceptors.request.use(config => {
   if (isTelegramWebApp()) {
+    // Добавляем Origin заголовок для CORS в production
+    if (import.meta.env.PROD) {
+      config.headers['Origin'] = 'https://frontend.self-detailing.duckdns.org';
+    }
+    
     alert(
       `[API REQUEST]\n` +
       `Method: ${config.method?.toUpperCase()}\n` +
@@ -107,7 +115,7 @@ export const login = async (): Promise<string> => {
       }
 
       if (isTelegram) alert(`[AUTH] Отправка запроса на ${API_URL}/auth/login`);
-      const response = await axios.post(`${API_URL}/auth/login`, { username, password });
+      const response = await api.post('/auth/login', { username, password });
       if (isTelegram) alert(`[AUTH] Ответ получен: HTTP ${response.status}`);
 
       let token: string;
@@ -211,7 +219,7 @@ api.interceptors.response.use(
       try {
         const newToken = await login();
         error.config.headers.Authorization = `Bearer ${newToken}`;
-        return axios(error.config);
+        return api(error.config);
       } catch (err) {
         console.error('Ошибка повторной авторизации:', err);
         throw err;
