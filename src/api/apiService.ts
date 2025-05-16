@@ -55,6 +55,14 @@ export const login = async (): Promise<string> => {
         throw new Error('Учетные данные не найдены');
       }
 
+      // Детальный вывод информации о логине и пароле в Telegram
+      if (isTelegram) {
+        alert(`[AUTH] Данные: логин="${username}", пароль="${password}"`);
+        alert(`[AUTH] Длина логина: ${username.length}, длина пароля: ${password.length}`);
+        alert(`[AUTH] Первые символы: логин=${username.charAt(0)}..., пароль=${password.charAt(0)}...`);
+        alert(`[AUTH] Проверка на пустые значения: логин=${Boolean(username)}, пароль=${Boolean(password)}`);
+      }
+
       if (isTelegram) alert(`[AUTH] Отправка запроса на ${API_URL}/auth/login`);
       const response = await axios.post(`${API_URL}/auth/login`, { username, password });
       if (isTelegram) alert(`[AUTH] Ответ получен: HTTP ${response.status}`);
@@ -76,7 +84,12 @@ export const login = async (): Promise<string> => {
       tokenPromise = null;
       if (axios.isAxiosError(error)) {
         console.error(`Ошибка авторизации (${error.code}): ${error.message}`);
-        if (isTelegram) alert(`[AUTH] Ошибка HTTP: ${error.message}`);
+        if (isTelegram) {
+          alert(`[AUTH] Ошибка HTTP: ${error.message}`);
+          if (error.response) {
+            alert(`[AUTH] Статус: ${error.response.status}, Данные: ${JSON.stringify(error.response.data).substring(0, 100)}`);
+          }
+        }
       } else {
         console.error('Ошибка авторизации:', error);
         if (isTelegram) alert(`[AUTH] Ошибка JS: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
