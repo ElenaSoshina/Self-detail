@@ -149,17 +149,17 @@ export async function fetchAvailableTimeSlotsApi(date: Date) {
     const tokenValue = token && token.startsWith('Bearer ') ? token : (token ? `Bearer ${token}` : '');
     console.log(`[API:${requestId}] Используемый заголовок Authorization:`, tokenValue);
     
-    const response = await axios.get(fullApiUrl, {
-      params: { 
-        start: startDateISO, 
-        end: endDateISO 
-      },
-      headers: {
-        'Authorization': tokenValue,
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      }
-    });
+
+    const params = {
+      start: toMoscowISOString(startDate),
+      end: toMoscowISOString(endDate),
+    };
+    if (isTelegram) {
+      alert(`[DEBUG] Параметры запроса: ${JSON.stringify(params)}`);
+    }
+
+    
+    const response = await api.get('/calendar/available', { params });
     
           // Выводим информацию о заголовках отправленного запроса
     console.log(`[API:${requestId}] Заголовки запроса:`, {
