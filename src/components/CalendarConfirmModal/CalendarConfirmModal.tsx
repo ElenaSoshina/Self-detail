@@ -1,6 +1,6 @@
 import React from 'react';
 import styles from './CalendarConfirmModal.module.css';
-import { buildGoogleLink } from '../../utils/calendarUtils';
+import { buildGoogleLink, openICS, openGoogleCalendar } from '../../utils/calendarLinks';
 
 interface Props {
   isOpen: boolean;
@@ -22,39 +22,50 @@ const CalendarConfirmModal: React.FC<Props> = ({
 }) => {
   if (!isOpen) return null;
 
-  const googleHref = buildGoogleLink(
-    event.title,
-    event.description,
-    event.location,
-    event.start,
-    event.end
-  );
+  const handleAppleCalendar = () => {
+    openICS(bookingId);
+    onConfirm();
+  };
+
+  const handleGoogleCalendar = () => {
+    openGoogleCalendar(
+      event.title,
+      event.description,
+      event.location,
+      event.start,
+      event.end
+    );
+    onConfirm();
+  };
 
   return (
     <div className={styles.modalOverlay}>
       <div className={styles.modalContent}>
-        <h3>Добавить в календарь?</h3>
-        <p>Выберите, куда добавить:</p>
+        <h3 className={styles.modalTitle}>Добавить в календарь?</h3>
+        <p className={styles.modalText}>
+          Выберите, куда добавить информацию о бронировании:
+        </p>
 
         <div className={styles.buttonGroup}>
           <button
-            className={styles.icalBtn}
-            onClick={onConfirm}
+            className={styles.icalBtn || styles.confirmButton}
+            onClick={handleAppleCalendar}
             disabled={isLoading}
           >
-            {isLoading ? 'Загрузка...' : 'Apple / iCal'}
+            {isLoading ? 'Загрузка...' : 'Apple / iOS Calendar'}
           </button>
 
-          <a
-            className={styles.googleBtn}
-            href={googleHref}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            className={styles.googleBtn || styles.confirmButton}
+            onClick={handleGoogleCalendar}
           >
             Google Calendar
-          </a>
+          </button>
 
-          <button className={styles.cancelBtn} onClick={onClose}>
+          <button
+            className={styles.cancelBtn || styles.cancelButton}
+            onClick={onClose}
+          >
             Отмена
           </button>
         </div>

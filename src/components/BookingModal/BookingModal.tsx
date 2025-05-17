@@ -13,7 +13,7 @@ import 'react-phone-number-input/style.css';
 import { useCart } from '../../context/CartContex';
 import api from '../../api/apiService';
 import CalendarConfirmModal from '../CalendarConfirmModal/CalendarConfirmModal';
-import { openICS } from '../../utils/calendarUtils';
+import { openICS } from '../../utils/calendarLinks';
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -324,6 +324,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
       console.error('Ошибка бронирования:', error);
       setError(error instanceof Error ? error.message : 'Произошла ошибка при отправке формы');
       setIsLoading(false);
+
     }
   };
   
@@ -352,14 +353,12 @@ const BookingModal: React.FC<BookingModalProps> = ({
     }
     
     setIsCalendarLoading(true);
-    try {
-      // Скачиваем ICS файл
-      await downloadICSFile(bookingId);
-      
-      // Показываем сообщение об успешном бронировании
+    
+    // Показываем сообщение об успешном бронировании
+    setTimeout(() => {
       alert(`Бронирование успешно добавлено! ID: ${bookingId}`);
       
-      // Вызываем onSubmit с данными бронирования и ID для перехода на страницу успешного бронирования
+      // Обработка успешного добавления
       if (onSubmit) {
         const submittedData = {
           name: formData.name,
@@ -379,20 +378,15 @@ const BookingModal: React.FC<BookingModalProps> = ({
           addedToCalendar: true  // Флаг, что пользователь добавил бронирование в календарь
         };
         
-        await onSubmit(submittedData);
+        onSubmit(submittedData);
       }
       
       // Закрываем модальное окно
       setShowCalendarModal(false);
       setShowSuccess(true);
       onClose();
-    } catch (error) {
-      console.error('Ошибка при добавлении в календарь:', error);
-      // Показываем сообщение об ошибке
-      alert('Не удалось добавить бронирование в календарь. Пожалуйста, попробуйте позднее.');
-    } finally {
       setIsCalendarLoading(false);
-    }
+    }, 1000);
   };
   
   // Обработчик отказа от добавления в календарь
@@ -563,13 +557,16 @@ const BookingModal: React.FC<BookingModalProps> = ({
       </div>
       <SuccessPopup isOpen={showSuccess} onClose={() => setShowSuccess(false)} />
       
-      <CalendarConfirmModal 
-        isOpen={showCalendarModal} 
-        onClose={handleDeclineCalendar}
-        onConfirm={handleAddToCalendar}
-        bookingId={bookingId}
-        isLoading={isCalendarLoading}
-      />
+      {eventDetails && bookingId !== null && (
+        <CalendarConfirmModal
+          isOpen={showCalendarModal}
+          onClose={handleDeclineCalendar}
+          onConfirm={handleAddToCalendar}
+          bookingId={bookingId}
+          event={eventDetails}
+          isLoading={isCalendarLoading}
+        />
+      )}
     </div>
   );
 };

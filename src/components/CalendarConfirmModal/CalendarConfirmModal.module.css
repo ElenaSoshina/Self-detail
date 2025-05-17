@@ -39,42 +39,64 @@
 
 .buttonGroup {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
   gap: 12px;
+  width: 100%;
 }
 
 .confirmButton,
-.cancelButton {
+.cancelButton,
+.icalBtn,
+.googleBtn,
+.cancelBtn {
   padding: 12px 20px;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 16px;
   font-weight: 500;
   cursor: pointer;
   border: none;
   transition: all 0.2s ease;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
-.confirmButton {
+.confirmButton,
+.icalBtn {
   background-color: #007bff;
   color: white;
 }
 
-.confirmButton:hover {
+.confirmButton:hover,
+.icalBtn:hover {
   background-color: #0069d9;
 }
 
-.confirmButton:disabled {
+.confirmButton:disabled,
+.icalBtn:disabled {
   background-color: #a6c5e6;
   cursor: not-allowed;
 }
 
-.cancelButton {
+.googleBtn {
+  background-color: #4285F4;
+  color: white;
+}
+
+.googleBtn:hover {
+  background-color: #3367D6;
+}
+
+.cancelButton,
+.cancelBtn {
   background-color: #f8f9fa;
   color: #333;
   border: 1px solid #ddd;
 }
 
-.cancelButton:hover {
+.cancelButton:hover,
+.cancelBtn:hover {
   background-color: #e2e6ea;
 }
 
