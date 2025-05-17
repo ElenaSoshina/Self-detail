@@ -25,7 +25,7 @@ const generateICSContent = (
   const startStr = formatDate(start);
   const endStr = formatDate(end);
   
-  // Создаем минимальный валидный ICS файл
+  // Создаем минимальный валидный ICS файл с экранированием специальных символов
   return `BEGIN:VCALENDAR
 VERSION:2.0
 PRODID:-//Self-Detailing//Calendar//RU
@@ -36,68 +36,89 @@ UID:${Math.random().toString(36).substring(2)}@self-detailing.duckdns.org
 DTSTAMP:${formatDate(new Date())}
 DTSTART:${startStr}
 DTEND:${endStr}
-SUMMARY:${title}
-DESCRIPTION:${description}
-LOCATION:${location}
+SUMMARY:${title.replace(/,|;|\n/g, ' ')}
+DESCRIPTION:${description.replace(/,|;|\n/g, ' ')}
+LOCATION:${location.replace(/,|;|\n/g, ' ')}
 END:VEVENT
 END:VCALENDAR`;
 };
 
 /**
- * Создает URL для скачивания ICS файла с токеном авторизации
+ * Скачивает ICS файл
  */
-export const buildAppleCalendarLink = async (bookingId: number): Promise<string> => {
-  const base = api.defaults.baseURL;
+const downloadICSFile = (
+  title: string,
+  icsContent: string
+): void => {
+  // Создаем Blob с содержимым ICS
+  const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
   
-  // Перед формированием ссылки обновляем токен
-  let token: string;
-  try {
-    token = await login();
-    alert(`Токен получен: ${token.substring(0, 10)}...`);
-  } catch (error) {
-    alert(`Ошибка получения токена: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
-    token = getToken() || '';
-  }
+  // Создаем временную ссылку для скачивания
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `${title.replace(/\s+/g, '_')}_booking.ics`;
   
-  // Прокидываем токен как query-параметр и проверяем его наличие
-  if (!token) {
-    alert('ВНИМАНИЕ: Токен отсутствует! Авторизация не будет работать.');
-    return `${base}/calendar/booking/${bookingId}/ics`;
-  }
+  // Добавляем ссылку в DOM, кликаем по ней и удаляем
+  document.body.appendChild(link);
+  link.click();
   
-  // Используем токен в URL
-  const url = `${base}/calendar/booking/${bookingId}/ics?token=${encodeURIComponent(token)}`;
-  
-  // Логируем URL для отладки (скрыв большую часть токена)
-  const debugUrl = url.replace(/(token=)([^&]+)/, (_, prefix, token) => 
-    `${prefix}${token.substring(0, 10)}...${token.substring(token.length - 5)}`
-  );
-  console.log('Ссылка на календарь:', debugUrl);
-  
-  return url;
+  // Небольшая задержка перед удалением для обеспечения скачивания
+  setTimeout(() => {
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+  }, 100);
 };
 
 /**
- * Открывает ссылку на ICS файл
+ * Создает data URI для ICS файла (устаревший метод)
  */
-export const openICS = async (bookingId: number): Promise<void> => {
+export const buildAppleCalendarLink = (
+  title: string,
+  description: string,
+  location: string,
+  start: Date,
+  end: Date
+): string => {
+  // Создаем содержимое ICS файла
+  const ics = generateICSContent(title, description, location, start, end);
+  
+  // Создаем data URI
+  const dataUri = 'data:text/calendar;charset=utf-8,' + encodeURIComponent(ics);
+  
+  return dataUri;
+};
+
+/**
+ * Открывает событие в Apple Calendar через скачивание ICS файла
+ */
+export const openICS = (
+  title: string,
+  description: string,
+  location: string,
+  start: Date,
+  end: Date
+): void => {
   const tg = (window as any).Telegram?.WebApp;
   
   try {
-    // Получаем URL с актуальным токеном
-    const url = await buildAppleCalendarLink(bookingId);
+    // Генерируем содержимое ICS
+    const icsContent = generateICSContent(title, description, location, start, end);
     
     // Для отладки
-    alert(`Открываем Apple Calendar с URL: ${url.substring(0, 50)}...`);
+    console.log('Создаем ICS файл для события:', title);
     
-    if (tg?.openLink) {
-      tg.openLink(url);
+    // Скачиваем ICS файл
+    if (tg) {
+      // Если в Telegram, используем временный метод через data URI
+      const dataUri = 'data:text/calendar;charset=utf-8,' + encodeURIComponent(icsContent);
+      tg.openLink(dataUri);
     } else {
-      window.location.href = url;
+      // В обычном браузере скачиваем файл
+      downloadICSFile(title, icsContent);
     }
   } catch (error) {
-    alert(`Ошибка при открытии Apple Calendar: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
-    console.error('Ошибка при открытии Apple Calendar:', error);
+    console.error('Ошибка при создании ICS файла:', error);
+    alert(`Ошибка при создании календарного события: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
   }
 };
 
@@ -133,9 +154,6 @@ export const openGoogleCalendar = (
 ): void => {
   const tg = (window as any).Telegram?.WebApp;
   const url = buildGoogleLink(title, description, location, start, end);
-  
-  // Для отладки
-  alert(`Открываем Google Calendar с URL: ${url}`);
   
   if (tg && tg.openLink) {
     tg.openLink(url);
