@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styles from './BookingModal.module.css';
 import SuccessPopup from '../SuccessPopup/SuccessPopup';
-import { sendTelegramMessage, sendTelegramMessageByUsername, formatUserMessage, formatAdminMessage, ADMIN_CHAT_ID, sendTelegramMessageToAllAdmins } from '../../api/telegram';
+import { sendTelegramMessage, sendTelegramMessageByUsername, formatUserMessage, formatAdminMessage, sendTelegramMessageToAllAdmins } from '../../api/telegram';
 import PhoneInput from 'react-phone-number-input/input';
 import 'react-phone-number-input/style.css';
 import { useCart } from '../../context/CartContex';
@@ -292,14 +292,6 @@ const BookingModal: React.FC<BookingModalProps> = ({
             ),
           ]);
         }
-
-        
-        // Закрываем Telegram WebApp после успешной отправки
-        const tg = (window as any).Telegram?.WebApp;
-        if (tg && typeof tg.close === 'function') {
-
-          tg.close();
-        }
       } catch (telegramError) {
       }
       
@@ -332,9 +324,10 @@ const BookingModal: React.FC<BookingModalProps> = ({
       // Закрываем Telegram WebApp после полного завершения процесса
       setTimeout(() => {
         const tg = (window as any).Telegram?.WebApp;
-        if (tg && typeof tg.close === 'function') {
-          tg.close();
-        }
+        // Убираем автоматическое закрытие приложения
+        // if (tg && typeof tg.close === 'function') {
+        //   tg.close();
+        // }
       }, 1000);
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Произошла ошибка при отправке формы');
