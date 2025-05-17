@@ -44,54 +44,30 @@ END:VCALENDAR`;
 };
 
 /**
- * Создает webcal:// ссылку для Apple Calendar с полными данными события
+ * Создает URL для скачивания ICS файла с токеном авторизации
  */
-export const buildAppleCalendarLink = (
-  title: string,
-  description: string,
-  location: string,
-  start: Date,
-  end: Date
-): string => {
-  // Создаем содержимое ICS файла
-  const icsContent = generateICSContent(title, description, location, start, end);
+export const buildAppleCalendarLink = (bookingId: number): string => {
+  const base = api.defaults.baseURL;
+  const token = getToken(); // JWT
   
-  // Кодируем содержимое ICS в base64 и создаем data URL
-  const base64Content = btoa(unescape(encodeURIComponent(icsContent)));
-  
-  // Создаем data URL, который можно открыть напрямую в браузере
-  return `data:text/calendar;charset=utf-8;base64,${base64Content}`;
+  // Прокидываем токен как query-параметр
+  return `${base}/calendar/booking/${bookingId}/ics?token=${token}`;
 };
 
 /**
- * Открывает событие в Apple Calendar
+ * Открывает ссылку на ICS файл
  */
-export const openICS = async (
-  title: string,
-  description: string,
-  location: string,
-  start: Date,
-  end: Date
-): Promise<void> => {
+export const openICS = (bookingId: number): void => {
   const tg = (window as any).Telegram?.WebApp;
+  const url = buildAppleCalendarLink(bookingId);
   
-  try {
-    // Генерируем data URL с событием календаря
-    const icsURL = buildAppleCalendarLink(title, description, location, start, end);
-    
-    alert(`Открываем Apple Calendar с данными события: ${title}`);
-    
-    // Пробуем открыть сгенерированный URL
-    if (tg && tg.openLink) {
-      tg.openLink(icsURL);
-    } else {
-      // Если нет Telegram WebApp, открываем напрямую
-      window.location.href = icsURL;
-    }
-  } catch (error) {
-    alert(`Ошибка при открытии Apple Calendar: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
-    console.error('Ошибка при открытии Apple Calendar:', error);
-    throw error;
+  // Для отладки
+  alert(`Открываем Apple Calendar с URL: ${url}`);
+  
+  if (tg?.openLink) {
+    tg.openLink(url);
+  } else {
+    window.location.href = url;
   }
 };
 
