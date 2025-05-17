@@ -26,15 +26,20 @@ const BookingSuccess: React.FC<BookingSuccessProps> = ({ bookingDetails, formatD
 
   const handleBooking = async (formData: any) => {
     try {
-      const selectedService = serviceMap[formData.service[0].serviceName as keyof typeof serviceMap];
-      const bookingData = {
-        // ...другие поля...
-        service: [selectedService],
-        notes: ''
-      };
-      // Здесь будет логика отправки данных на сервер
-      console.log('Booking data: ', bookingData);
+      // Проверяем, добавлено ли бронирование в календарь
+      if (formData.bookingId) {
+        console.log('Бронирование успешно создано. ID:', formData.bookingId);
+        if (formData.addedToCalendar) {
+          console.log('Бронирование добавлено в календарь');
+        } else {
+          console.log('Пользователь отказался от добавления в календарь');
+        }
+      }
+      
+      // Закрываем модальное окно и продолжаем работу
       setIsModalOpen(false);
+      
+      // Здесь можно добавить дополнительную логику, например, переход на страницу с подтверждением
     } catch (error) {
       console.error('Ошибка при бронировании:', error);
     }

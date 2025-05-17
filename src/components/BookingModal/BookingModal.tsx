@@ -307,35 +307,35 @@ const BookingModal: React.FC<BookingModalProps> = ({
       } catch (telegramError) {
       }
       
-      // Формируем данные для onSubmit
-      if (onSubmit) {
-        const submittedData = {
-          name: formData.name,
-          phone: formData.phone,
-          email: formData.email,
-          telegramUserName: formData.telegramUserName,
-          selectedDate: dateToUse,
-          startTime: startTime, 
-          endTime: endTime,
-          service: hasService && service 
-            ? { 
-                serviceName: service.serviceName,
-                price: servicePrice
-              }
-            : null
-        };
-        
-
-        
-        await onSubmit(submittedData);
-      }
-      
-      // Показываем модальное окно с предложением добавить в календарь, если есть ID бронирования
+      // Теперь у нас есть ID бронирования, полученное из запроса
       if (bookingId) {
+        // Показываем модальное окно для добавления в календарь
         setShowCalendarModal(true);
       } else {
+        // Если по какой-то причине нет ID (что странно)
+        console.error('Не удалось получить ID бронирования');
         setShowSuccess(true);
         onClose();
+        
+        // Вызываем onSubmit с пустым bookingId
+        if (onSubmit) {
+          const submittedData = {
+            name: formData.name,
+            phone: formData.phone,
+            email: formData.email,
+            telegramUserName: formData.telegramUserName,
+            selectedDate: dateToUse,
+            startTime: startTime, 
+            endTime: endTime,
+            service: hasService && service 
+              ? { 
+                  serviceName: service.serviceName,
+                  price: servicePrice
+                }
+              : null
+          };
+          await onSubmit(submittedData);
+        }
       }
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Произошла ошибка при отправке формы');
@@ -368,7 +368,33 @@ const BookingModal: React.FC<BookingModalProps> = ({
     
     setIsCalendarLoading(true);
     try {
+      // Скачиваем ICS файл
       await downloadICSFile(bookingId);
+      
+      // Вызываем onSubmit с данными бронирования и ID для перехода на страницу успешного бронирования
+      if (onSubmit) {
+        const submittedData = {
+          name: formData.name,
+          phone: formData.phone,
+          email: formData.email,
+          telegramUserName: formData.telegramUserName,
+          selectedDate: selectedDate || new Date(),
+          startTime: startTime, 
+          endTime: endTime,
+          service: hasService && service 
+            ? { 
+                serviceName: service.serviceName,
+                price: servicePrice
+              }
+            : null,
+          bookingId: bookingId,
+          addedToCalendar: true  // Флаг, что пользователь добавил бронирование в календарь
+        };
+        
+        await onSubmit(submittedData);
+      }
+      
+      // Закрываем модальное окно
       setShowCalendarModal(false);
       setShowSuccess(true);
       onClose();
@@ -380,7 +406,31 @@ const BookingModal: React.FC<BookingModalProps> = ({
   };
   
   // Обработчик отказа от добавления в календарь
-  const handleDeclineCalendar = () => {
+  const handleDeclineCalendar = async () => {
+    // Вызываем onSubmit с данными бронирования для перехода на страницу успешного бронирования
+    if (onSubmit) {
+      const submittedData = {
+        name: formData.name,
+        phone: formData.phone,
+        email: formData.email,
+        telegramUserName: formData.telegramUserName,
+        selectedDate: selectedDate || new Date(),
+        startTime: startTime, 
+        endTime: endTime,
+        service: hasService && service 
+          ? { 
+              serviceName: service.serviceName,
+              price: servicePrice
+            }
+          : null,
+        bookingId: bookingId,
+        addedToCalendar: false  // Флаг, что пользователь отказался добавлять бронирование в календарь
+      };
+      
+      await onSubmit(submittedData);
+    }
+    
+    // Закрываем модальное окно
     setShowCalendarModal(false);
     setShowSuccess(true);
     onClose();
