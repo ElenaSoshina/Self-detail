@@ -343,6 +343,9 @@ const BookingModal: React.FC<BookingModalProps> = ({
       // Скачиваем ICS файл
       await downloadICSFile(bookingId);
       
+      // Показываем сообщение об успешном бронировании
+      alert(`Бронирование успешно добавлено! ID: ${bookingId}`);
+      
       // Вызываем onSubmit с данными бронирования и ID для перехода на страницу успешного бронирования
       if (onSubmit) {
         const submittedData = {
@@ -372,6 +375,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
       onClose();
     } catch (error) {
       console.error('Ошибка при добавлении в календарь:', error);
+      // Показываем сообщение об ошибке
+      alert('Не удалось добавить бронирование в календарь. Пожалуйста, попробуйте позднее.');
     } finally {
       setIsCalendarLoading(false);
     }
