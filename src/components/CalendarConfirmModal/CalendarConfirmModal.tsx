@@ -52,8 +52,14 @@ const CalendarConfirmModal: React.FC<Props> = ({
         loadingIndicator.textContent = 'Загрузка...';
       }
       
-      // Запрашиваем ICS файл
-      await openICS(bookingId);
+      // Передаем данные события для создания ICS файла
+      await openICS(
+        event.title,
+        event.description,
+        event.location,
+        event.start,
+        event.end
+      );
       
       // Завершаем процесс, вызываем колбэк
       onConfirm();
