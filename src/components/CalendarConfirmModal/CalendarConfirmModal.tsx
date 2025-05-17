@@ -44,10 +44,29 @@ const CalendarConfirmModal: React.FC<Props> = ({
     try {
       // Убедимся, что у нас есть токен перед открытием календаря
       await initAuth();
-      openICS(bookingId);
+      
+      // Показываем индикатор загрузки
+      const loadingIndicator = document.querySelector('button.icalBtn') as HTMLButtonElement;
+      if (loadingIndicator) {
+        loadingIndicator.disabled = true;
+        loadingIndicator.textContent = 'Загрузка...';
+      }
+      
+      // Запрашиваем ICS файл
+      await openICS(bookingId);
+      
+      // Завершаем процесс, вызываем колбэк
       onConfirm();
     } catch (error) {
       alert(`Ошибка при открытии Apple календаря: ${(error as Error).message}`);
+      console.error('Ошибка при обработке ICS:', error);
+    } finally {
+      // Восстанавливаем кнопку
+      const loadingIndicator = document.querySelector('button.icalBtn') as HTMLButtonElement;
+      if (loadingIndicator) {
+        loadingIndicator.disabled = false;
+        loadingIndicator.textContent = 'Apple / iOS Calendar';
+      }
     }
   };
 

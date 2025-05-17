@@ -8,24 +8,47 @@ const fmt = (d: Date): string =>
   d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
 
 /**
- * Перенаправляет браузер на ваш .ics-эндпоинт,
- * что на iOS/macOS вызовет диалог «Добавить в Календарь»
+ * Скачивает ICS файл через API и открывает его
+ * @param bookingId ID бронирования
  */
-export const openICS = (bookingId: number): void => {
+export const openICS = async (bookingId: number): Promise<void> => {
   const tg = (window as any).Telegram?.WebApp;
-  const token = getToken();
   
-  // URL с токеном для авторизации
-  const url = `${api.defaults.baseURL}/calendar/booking/${bookingId}/ics${token ? `?token=${token}` : ''}`;
-  
-  // Для отладки
-  alert(`Открываем ICS с URL: ${url}`);
-  
-  if (tg && tg.openLink) {
-    tg.openLink(url);
-  } else {
-    // Если Telegram WebApp недоступен, используем обычный переход
-    window.location.href = url;
+  try {
+    // Делаем запрос к API для получения ICS данных
+    alert('Запрашиваем ICS файл через API...');
+    
+    const response = await api.get(`/calendar/booking/${bookingId}/ics`, {
+      headers: {
+        'Accept': 'text/calendar',
+      },
+      responseType: 'blob'
+    });
+    
+    alert('ICS файл получен от API');
+    
+    // Создаем временный URL для скачанного ICS файла
+    const blob = new Blob([response.data], { type: 'text/calendar' });
+    const url = URL.createObjectURL(blob);
+    
+    // Используем Telegram.WebApp.openLink или window.location
+    if (tg && tg.openLink) {
+      alert('Открываем ICS через Telegram.WebApp.openLink');
+      tg.openLink(url);
+    } else {
+      alert('Открываем ICS через window.location');
+      window.location.href = url;
+    }
+    
+    // Освобождаем URL через некоторое время
+    setTimeout(() => {
+      URL.revokeObjectURL(url);
+    }, 5000);
+    
+  } catch (error) {
+    alert(`Ошибка при загрузке ICS файла: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
+    console.error('Ошибка при загрузке ICS файла:', error);
+    throw error;
   }
 };
 
