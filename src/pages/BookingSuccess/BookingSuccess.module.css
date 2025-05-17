@@ -15,6 +15,69 @@
   color: #666;
 }
 
+.bookingDetails {
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  text-align: left;
+}
+
+.bookingDetails h2 {
+  color: #343a40;
+  margin-bottom: 1rem;
+  font-size: 1.25rem;
+}
+
+.bookingDetails p {
+  margin-bottom: 0.5rem;
+  color: #495057;
+}
+
+.productsSection {
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  text-align: left;
+}
+
+.productsSection h2 {
+  color: #343a40;
+  margin-bottom: 1rem;
+  font-size: 1.25rem;
+}
+
+.productsList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.productItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.productItem:last-child {
+  border-bottom: none;
+}
+
+.productName {
+  font-weight: 500;
+}
+
+.productQuantity {
+  color: #6c757d;
+}
+
+.productPrice {
+  font-weight: 600;
+}
+
 .buttonGroup {
   display: flex;
   flex-direction: column;
@@ -24,7 +87,8 @@
 }
 
 .confirmButton,
-.homeButton {
+.homeButton,
+.calendarButton {
   padding: 0.75rem 1.5rem;
   border-radius: 4px;
   cursor: pointer;
@@ -40,6 +104,20 @@
 
 .confirmButton:hover {
   background-color: #218838;
+}
+
+.calendarButton {
+  background-color: #007bff;
+  color: white;
+}
+
+.calendarButton:hover {
+  background-color: #0069d9;
+}
+
+.calendarButton:disabled {
+  background-color: #a6c5e6;
+  cursor: not-allowed;
 }
 
 .homeButton {

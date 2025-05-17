@@ -6,6 +6,7 @@ import { BookingDetails } from '../CalendarPage/calendarTypes';
 import { useCart } from '../../context/CartContex';
 import { sendTelegramMessageToAllAdmins, formatAdminMessage } from '../../api/telegram';
 import api from '../../api/apiService';
+import { downloadICSFile } from '../../utils/calendarUtils';
 
 interface BookingSuccessProps {
   bookingDetails: BookingDetails;
@@ -16,6 +17,8 @@ const BookingSuccess: React.FC<BookingSuccessProps> = ({ bookingDetails }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { items, clearCart } = useCart();
   const [formattedTime, setFormattedTime] = useState('');
+  const [bookingId, setBookingId] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   
   // Получаем товары из корзины (всё, кроме бронирования)
   const products = items.filter(item => item.type !== 'booking');
@@ -134,6 +137,11 @@ const BookingSuccess: React.FC<BookingSuccessProps> = ({ bookingDetails }) => {
     }
     
     const result = response.data;
+
+    // Сохраняем ID бронирования для дальнейшего использования
+    if (result && result.data && result.data.bookingId) {
+      setBookingId(result.data.bookingId);
+    }
     
     // Отправляем сообщение всем администраторам
     await sendTelegramMessageToAllAdmins(
@@ -149,6 +157,19 @@ const BookingSuccess: React.FC<BookingSuccessProps> = ({ bookingDetails }) => {
       navigate('/booking-success');
     } catch (error) {
       console.error('Ошибка при бронировании:', error);
+    }
+  };
+  
+  const handleAddToCalendar = async () => {
+    if (!bookingId) return;
+    
+    setIsLoading(true);
+    try {
+      await downloadICSFile(bookingId);
+    } catch (error) {
+      console.error('Ошибка при добавлении в календарь:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -188,6 +209,13 @@ const BookingSuccess: React.FC<BookingSuccessProps> = ({ bookingDetails }) => {
       )}
       
       <div className={styles.buttonGroup}>
+        <button 
+          onClick={handleAddToCalendar}
+          className={styles.calendarButton}
+          disabled={isLoading || !bookingId}
+        >
+          {isLoading ? 'Загрузка...' : 'Добавить в календарь'}
+        </button>
         <button 
           onClick={() => {
             clearCart(); // Очищаем корзину
