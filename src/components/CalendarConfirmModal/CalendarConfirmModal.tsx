@@ -1,67 +1,60 @@
 import React from 'react';
 import styles from './CalendarConfirmModal.module.css';
-import { openICS, buildGoogleLink } from '../../utils/calendarUtils';
+import { buildGoogleLink } from '../../utils/calendarUtils';
 
-interface CalendarConfirmModalProps {
+interface Props {
   isOpen: boolean;
-  onClose: () => void;
-  onConfirm: () => void;
-  bookingId: number | null;
-  eventDetails: {
+  bookingId: number;
+  event: {
     title: string;
     description: string;
     location: string;
     start: Date;
     end: Date;
-  } | null;
+  };
   isLoading: boolean;
+  onConfirm: () => void;
+  onClose: () => void;
 }
 
-const CalendarConfirmModal: React.FC<CalendarConfirmModalProps> = ({
-  isOpen,
-  onClose,
-  onConfirm,
-  bookingId,
-  eventDetails,
-  isLoading
+const CalendarConfirmModal: React.FC<Props> = ({
+  isOpen, bookingId, event, isLoading, onConfirm, onClose
 }) => {
-  if (!isOpen || !bookingId || !eventDetails) return null;
+  if (!isOpen) return null;
 
   const googleHref = buildGoogleLink(
-    eventDetails.title,
-    eventDetails.description,
-    eventDetails.location,
-    eventDetails.start,
-    eventDetails.end
+    event.title,
+    event.description,
+    event.location,
+    event.start,
+    event.end
   );
 
   return (
     <div className={styles.modalOverlay}>
       <div className={styles.modalContent}>
-        <h3 className={styles.modalTitle}>Добавить в календарь?</h3>
-        <p className={styles.modalText}>
-          Выберите вариант, чтобы сохранить бронирование в вашем календаре.
-        </p>
+        <h3>Добавить в календарь?</h3>
+        <p>Выберите, куда добавить:</p>
+
         <div className={styles.buttonGroup}>
           <button
+            className={styles.icalBtn}
             onClick={onConfirm}
-            className={styles.confirmButton}
             disabled={isLoading}
           >
-            {isLoading ? 'Загрузка...' : 'Apple/iCal'}
+            {isLoading ? 'Загрузка...' : 'Apple / iCal'}
           </button>
+
           <a
+            className={styles.googleBtn}
             href={googleHref}
             target="_blank"
             rel="noopener noreferrer"
-            className={styles.googleButton}
           >
             Google Calendar
           </a>
-          <button
-            onClick={onClose}
-            className={styles.cancelButton}
-          >
+
+          <button className={styles.cancelBtn} onClick={onClose}>
             Отмена
           </button>
         </div>
