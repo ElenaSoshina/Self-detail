@@ -1,42 +1,57 @@
 import api from '../api/apiService';
 import { getToken } from '../api/apiService';
 
-const fmt = (d: Date): string =>
-  d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-
 // Базовый URL API
 const API_URL = 'https://backend.self-detailing.duckdns.org/api/v1';
 
+const fmt = (d: Date | undefined): string => {
+  if (!d || !(d instanceof Date) || isNaN(d.getTime())) {
+    throw new Error('Неверная дата');
+  }
+  return d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+};
+
 /**
- * Открывает событие в календаре iOS/macOS с использованием webcal-протокола,
- * который гарантирует открытие нативного приложения Calendar на устройствах Apple
+ * Открывает событие в календаре iOS/macOS через внешний браузер (Safari).
+ * Safari автоматически распознает .ics файл и предложит добавить его в Календарь.
  */
 export const openICS = (bookingId: number): void => {
-  const tg = (window as any).Telegram?.WebApp;
-  const token = getToken();
-  const baseApiUrl = (api.defaults.baseURL || API_URL);
-  
-  // Формируем URL с токеном авторизации
-  const baseUrl = baseApiUrl.replace('https://', '').replace('http://', '');
-  const icsUrl = `${baseUrl}/calendar/booking/${bookingId}/ics${token ? `?token=${token}` : ''}`;
-  
-  // Создаем ссылку с webcal-протоколом для Apple устройств
-  const webcalUrl = `webcal://${icsUrl}`;
-  
-  // Создаем https-ссылку для резервного использования
-  const httpsUrl = `${baseApiUrl}/calendar/booking/${bookingId}/ics${token ? `?token=${token}` : ''}`;
-  
-  console.log('Открываем календарь по ссылке:', webcalUrl);
-  
-  // В Telegram WebApp используем tg.openLink
-  if (tg && tg.openLink) {
-    // На устройствах Apple webcal:// должен открыть нативное приложение Calendar
-    // Но при проблемах с этим, можно использовать https-ссылку
-    tg.openLink(webcalUrl);
-  } else {
-    // В обычном браузере переходим по ссылке webcal://
-    window.location.href = webcalUrl;
+  try {
+    const tg = (window as any).Telegram?.WebApp;
+    const token = getToken();
+    const baseApiUrl = (api.defaults.baseURL || API_URL);
+    
+    // Проверяем валидность bookingId
+    if (!bookingId || isNaN(Number(bookingId))) {
+      throw new Error('Неверный ID бронирования');
+    }
+    
+    // Прямая ссылка на ICS файл 
+    const icsUrl = `${baseApiUrl}/calendar/booking/${bookingId}/ics${token ? `?token=${token}` : ''}`;
+    
+    console.log('Открываем .ics файл во внешнем браузере:', icsUrl);
+    
+    // В Telegram WebApp используем tg.openLink для открытия внешнего браузера
+    if (tg && tg.openLink) {
+      tg.openLink(icsUrl);
+    } else {
+      // В обычном браузере открываем в новой вкладке
+      window.open(icsUrl, '_blank');
+    }
+  } catch (error) {
+    console.error('Ошибка в openICS:', error);
+    throw error;
   }
+};
+
+/**
+ * Определяет, нужно ли показывать кнопку Apple Calendar
+ * Кнопка показывается только для iOS и macOS
+ */
+export const shouldShowAppleCalendar = (): boolean => {
+  const tg = (window as any).Telegram?.WebApp;
+  const platform = tg?.platform || 'unknown';
+  return platform === 'ios' || platform === 'macos';
 };
 
 /**
@@ -49,12 +64,17 @@ export const buildGoogleLink = (
   start: Date,
   end: Date
 ): string => {
-  const params = new URLSearchParams({
-    action: 'TEMPLATE',
-    text: title,
-    details: description,
-    location,
-    dates: `${fmt(start)}/${fmt(end)}`,
-  });
-  return `https://calendar.google.com/calendar/render?${params.toString()}`;
+  try {
+    const params = new URLSearchParams({
+      action: 'TEMPLATE',
+      text: title,
+      details: description,
+      location,
+      dates: `${fmt(start)}/${fmt(end)}`,
+    });
+    return `https://calendar.google.com/calendar/render?${params.toString()}`;
+  } catch (error) {
+    console.error('Ошибка в buildGoogleLink:', error);
+    throw error;
+  }
 };

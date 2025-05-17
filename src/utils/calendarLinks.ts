@@ -4,8 +4,12 @@ import { getToken, login } from '../api/apiService';
 /**
  * Форматирует дату для URL Google Calendar
  */
-const fmt = (d: Date): string =>
-  d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+const fmt = (d: Date | undefined): string => {
+  if (!d || !(d instanceof Date) || isNaN(d.getTime())) {
+    throw new Error('Неверная дата');
+  }
+  return d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+};
 
 /**
  * Создает содержимое ICS файла для события
@@ -17,6 +21,15 @@ const generateICSContent = (
   start: Date,
   end: Date
 ): string => {
+  // Проверяем даты
+  if (!start || !(start instanceof Date) || isNaN(start.getTime())) {
+    throw new Error('Неверная дата начала события');
+  }
+  
+  if (!end || !(end instanceof Date) || isNaN(end.getTime())) {
+    throw new Error('Неверная дата окончания события');
+  }
+  
   // Форматируем даты для ICS
   const formatDate = (date: Date): string => {
     return date.toISOString().replace(/-|:|\.\d+/g, '');
@@ -36,9 +49,9 @@ UID:${Math.random().toString(36).substring(2)}@self-detailing.duckdns.org
 DTSTAMP:${formatDate(new Date())}
 DTSTART:${startStr}
 DTEND:${endStr}
-SUMMARY:${title}
-DESCRIPTION:${description}
-LOCATION:${location}
+SUMMARY:${title || 'Бронирование'}
+DESCRIPTION:${description || ''}
+LOCATION:${location || ''}
 END:VEVENT
 END:VCALENDAR`;
 };
@@ -53,13 +66,18 @@ export const buildAppleCalendarLink = (
   start: Date,
   end: Date
 ): string => {
-  // Создаем содержимое ICS файла
-  const ics = generateICSContent(title, description, location, start, end);
-  
-  // Создаем data URI
-  const dataUri = 'data:text/calendar;charset=utf-8,' + encodeURIComponent(ics);
-  
-  return dataUri;
+  try {
+    // Создаем содержимое ICS файла
+    const ics = generateICSContent(title, description, location, start, end);
+    
+    // Создаем data URI
+    const dataUri = 'data:text/calendar;charset=utf-8,' + encodeURIComponent(ics);
+    
+    return dataUri;
+  } catch (error) {
+    console.error('Ошибка в buildAppleCalendarLink:', error);
+    throw error;
+  }
 };
 
 /**
@@ -75,6 +93,15 @@ export const openICS = (
   const tg = (window as any).Telegram?.WebApp;
   
   try {
+    // Проверка параметров
+    if (!start || !(start instanceof Date) || isNaN(start.getTime())) {
+      throw new Error('Неверная дата начала события');
+    }
+    
+    if (!end || !(end instanceof Date) || isNaN(end.getTime())) {
+      throw new Error('Неверная дата окончания события');
+    }
+    
     // Генерируем data URI с ICS содержимым
     const dataUri = buildAppleCalendarLink(title, description, location, start, end);
     
@@ -103,11 +130,20 @@ export const buildGoogleLink = (
   start: Date,
   end: Date
 ): string => {
+  // Проверяем даты
+  if (!start || !(start instanceof Date) || isNaN(start.getTime())) {
+    throw new Error('Неверная дата начала события');
+  }
+  
+  if (!end || !(end instanceof Date) || isNaN(end.getTime())) {
+    throw new Error('Неверная дата окончания события');
+  }
+
   const params = new URLSearchParams({
     action: 'TEMPLATE',
-    text: title,
-    details: description,
-    location,
+    text: title || 'Бронирование',
+    details: description || '',
+    location: location || '',
     dates: `${fmt(start)}/${fmt(end)}`,
   });
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
@@ -123,13 +159,27 @@ export const openGoogleCalendar = (
   start: Date,
   end: Date
 ): void => {
-  const tg = (window as any).Telegram?.WebApp;
-  const url = buildGoogleLink(title, description, location, start, end);
-  
-  if (tg && tg.openLink) {
-    tg.openLink(url);
-  } else {
-    // Если Telegram WebApp недоступен, используем обычный переход
-    window.open(url, '_blank');
+  try {
+    // Проверка параметров
+    if (!start || !(start instanceof Date) || isNaN(start.getTime())) {
+      throw new Error('Неверная дата начала события');
+    }
+    
+    if (!end || !(end instanceof Date) || isNaN(end.getTime())) {
+      throw new Error('Неверная дата окончания события');
+    }
+    
+    const tg = (window as any).Telegram?.WebApp;
+    const url = buildGoogleLink(title, description, location, start, end);
+    
+    if (tg && tg.openLink) {
+      tg.openLink(url);
+    } else {
+      // Если Telegram WebApp недоступен, используем обычный переход
+      window.open(url, '_blank');
+    }
+  } catch (error) {
+    console.error('Ошибка в openGoogleCalendar:', error);
+    alert(`Ошибка при создании календарного события: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
   }
 }; 
