@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react';
 import styles from './CalendarConfirmModal.module.css';
-import { openGoogleCalendar } from '../../utils/calendarLinks';
-import { openICS } from '../../utils/calendarUtils';
+import { buildGoogleLink, openICS, openGoogleCalendar } from '../../utils/calendarLinks';
 import { initAuth } from '../../api/apiService';
 
 interface Props {

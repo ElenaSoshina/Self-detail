@@ -25,7 +25,7 @@ const generateICSContent = (
   const startStr = formatDate(start);
   const endStr = formatDate(end);
   
-  // Создаем минимальный валидный ICS файл с экранированием специальных символов
+  // Создаем минимальный валидный ICS файл
   return `BEGIN:VCALENDAR
 VERSION:2.0
 PRODID:-//Self-Detailing//Calendar//RU
@@ -36,41 +36,15 @@ UID:${Math.random().toString(36).substring(2)}@self-detailing.duckdns.org
 DTSTAMP:${formatDate(new Date())}
 DTSTART:${startStr}
 DTEND:${endStr}
-SUMMARY:${title.replace(/,|;|\n/g, ' ')}
-DESCRIPTION:${description.replace(/,|;|\n/g, ' ')}
-LOCATION:${location.replace(/,|;|\n/g, ' ')}
+SUMMARY:${title}
+DESCRIPTION:${description}
+LOCATION:${location}
 END:VEVENT
 END:VCALENDAR`;
 };
 
 /**
- * Скачивает ICS файл
- */
-const downloadICSFile = (
-  title: string,
-  icsContent: string
-): void => {
-  // Создаем Blob с содержимым ICS
-  const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
-  
-  // Создаем временную ссылку для скачивания
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = `${title.replace(/\s+/g, '_')}_booking.ics`;
-  
-  // Добавляем ссылку в DOM, кликаем по ней и удаляем
-  document.body.appendChild(link);
-  link.click();
-  
-  // Небольшая задержка перед удалением для обеспечения скачивания
-  setTimeout(() => {
-    document.body.removeChild(link);
-    URL.revokeObjectURL(link.href);
-  }, 100);
-};
-
-/**
- * Создает data URI для ICS файла (устаревший метод)
+ * Создает data URI для ICS файла
  */
 export const buildAppleCalendarLink = (
   title: string,
@@ -89,7 +63,7 @@ export const buildAppleCalendarLink = (
 };
 
 /**
- * Открывает событие в Apple Calendar через скачивание ICS файла
+ * Открывает событие в Apple Calendar через data URI
  */
 export const openICS = (
   title: string,
@@ -101,23 +75,20 @@ export const openICS = (
   const tg = (window as any).Telegram?.WebApp;
   
   try {
-    // Генерируем содержимое ICS
-    const icsContent = generateICSContent(title, description, location, start, end);
+    // Генерируем data URI с ICS содержимым
+    const dataUri = buildAppleCalendarLink(title, description, location, start, end);
     
     // Для отладки
-    console.log('Создаем ICS файл для события:', title);
+    console.log('Открываем Apple Calendar с data URI события:', title);
     
-    // Скачиваем ICS файл
-    if (tg) {
-      // Если в Telegram, используем временный метод через data URI
-      const dataUri = 'data:text/calendar;charset=utf-8,' + encodeURIComponent(icsContent);
+    // Открываем data URI
+    if (tg?.openLink) {
       tg.openLink(dataUri);
     } else {
-      // В обычном браузере скачиваем файл
-      downloadICSFile(title, icsContent);
+      window.location.href = dataUri;
     }
   } catch (error) {
-    console.error('Ошибка при создании ICS файла:', error);
+    console.error('Ошибка при открытии Apple Calendar:', error);
     alert(`Ошибка при создании календарного события: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
   }
 };

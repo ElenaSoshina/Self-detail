@@ -1,5 +1,4 @@
 import api from '../api/apiService';
-import { getToken } from '../api/apiService';
 
 const fmt = (d: Date): string =>
   d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
@@ -9,21 +8,7 @@ const fmt = (d: Date): string =>
  * что на iOS/macOS вызовет диалог «Добавить в Календарь»
  */
 export const openICS = (bookingId: number): void => {
-  const tg = (window as any).Telegram?.WebApp;
-  const token = getToken();
-  
-  // Формируем URL с токеном авторизации
-  const icsUrl = `${api.defaults.baseURL}/calendar/booking/${bookingId}/ics${token ? `?token=${token}` : ''}`;
-  
-  console.log('Открываем ICS-файл с сервера:', icsUrl);
-  
-  // В Telegram WebApp используем tg.openLink
-  if (tg && tg.openLink) {
-    tg.openLink(icsUrl);
-  } else {
-    // В обычном браузере просто переходим по ссылке
-    window.location.href = icsUrl;
-  }
+  window.location.href = `${api.defaults.baseURL}/calendar/booking/${bookingId}/ics`;
 };
 
 /**
