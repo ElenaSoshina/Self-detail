@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import styles from './CalendarConfirmModal.module.css';
-import { buildGoogleLink, openICS, openGoogleCalendar } from '../../utils/calendarLinks';
+import { openGoogleCalendar } from '../../utils/calendarLinks';
+import { openICS } from '../../utils/calendarUtils';
 import { initAuth } from '../../api/apiService';
 
 interface Props {
@@ -49,8 +50,8 @@ const CalendarConfirmModal: React.FC<Props> = ({
         loadingIndicator.textContent = 'Загрузка...';
       }
       
-      // Открываем ICS файл через прямую ссылку с токеном
-      await openICS(bookingId);
+      // Открываем ICS файл через webcal-протокол
+      openICS(bookingId);
       
       // Завершаем процесс, вызываем колбэк
       onConfirm();

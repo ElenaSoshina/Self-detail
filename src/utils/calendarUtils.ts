@@ -1,14 +1,42 @@
 import api from '../api/apiService';
+import { getToken } from '../api/apiService';
 
 const fmt = (d: Date): string =>
   d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
 
+// Базовый URL API
+const API_URL = 'https://backend.self-detailing.duckdns.org/api/v1';
+
 /**
- * Перенаправляет браузер на ваш .ics-эндпоинт,
- * что на iOS/macOS вызовет диалог «Добавить в Календарь»
+ * Открывает событие в календаре iOS/macOS с использованием webcal-протокола,
+ * который гарантирует открытие нативного приложения Calendar на устройствах Apple
  */
 export const openICS = (bookingId: number): void => {
-  window.location.href = `${api.defaults.baseURL}/calendar/booking/${bookingId}/ics`;
+  const tg = (window as any).Telegram?.WebApp;
+  const token = getToken();
+  const baseApiUrl = (api.defaults.baseURL || API_URL);
+  
+  // Формируем URL с токеном авторизации
+  const baseUrl = baseApiUrl.replace('https://', '').replace('http://', '');
+  const icsUrl = `${baseUrl}/calendar/booking/${bookingId}/ics${token ? `?token=${token}` : ''}`;
+  
+  // Создаем ссылку с webcal-протоколом для Apple устройств
+  const webcalUrl = `webcal://${icsUrl}`;
+  
+  // Создаем https-ссылку для резервного использования
+  const httpsUrl = `${baseApiUrl}/calendar/booking/${bookingId}/ics${token ? `?token=${token}` : ''}`;
+  
+  console.log('Открываем календарь по ссылке:', webcalUrl);
+  
+  // В Telegram WebApp используем tg.openLink
+  if (tg && tg.openLink) {
+    // На устройствах Apple webcal:// должен открыть нативное приложение Calendar
+    // Но при проблемах с этим, можно использовать https-ссылку
+    tg.openLink(webcalUrl);
+  } else {
+    // В обычном браузере переходим по ссылке webcal://
+    window.location.href = webcalUrl;
+  }
 };
 
 /**
