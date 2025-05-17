@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react';
 import styles from './CalendarConfirmModal.module.css';
 import { openGoogleCalendar } from '../../utils/calendarLinks';
-import { openICS as openAppleCalendar, shouldShowAppleCalendar } from '../../utils/calendarUtils';
 import { initAuth } from '../../api/apiService';
 
 interface Props {
@@ -22,9 +21,6 @@ interface Props {
 const CalendarConfirmModal: React.FC<Props> = ({
   isOpen, bookingId, event, isLoading, onConfirm, onClose
 }) => {
-  // Проверяем, нужно ли показывать кнопку Apple Calendar
-  const showAppleCalendar = shouldShowAppleCalendar();
-  
   useEffect(() => {
     if (isOpen) {
       // Инициализируем авторизацию сразу при открытии окна
@@ -36,7 +32,7 @@ const CalendarConfirmModal: React.FC<Props> = ({
     }
   }, [isOpen, bookingId, event]);
 
-  console.log('CalendarConfirmModal render:', { isOpen, bookingId, event, showAppleCalendar });
+  console.log('CalendarConfirmModal render:', { isOpen, bookingId, event });
 
   if (!isOpen) return null;
 
@@ -47,41 +43,6 @@ const CalendarConfirmModal: React.FC<Props> = ({
     onClose();
     return null;
   }
-
-  const handleAppleCalendar = () => {
-    console.log('Нажата кнопка Apple/iOS Calendar', { bookingId });
-    
-    try {
-      // Показываем индикатор загрузки
-      const loadingIndicator = document.querySelector('button.icalBtn') as HTMLButtonElement;
-      if (loadingIndicator) {
-        loadingIndicator.disabled = true;
-        loadingIndicator.textContent = 'Загрузка...';
-      }
-      
-      // Проверяем валидность bookingId
-      if (!bookingId || bookingId <= 0) {
-        throw new Error('Неверный ID бронирования');
-      }
-      
-      // Открываем ICS файл через внешний браузер
-      openAppleCalendar(bookingId);
-      
-      // Завершаем процесс, вызываем колбэк
-      onConfirm();
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Неизвестная ошибка';
-      console.error('Ошибка при обработке Apple Calendar:', error);
-      alert(`Ошибка при открытии Apple календаря: ${errorMessage}`);
-    } finally {
-      // Восстанавливаем кнопку
-      const loadingIndicator = document.querySelector('button.icalBtn') as HTMLButtonElement;
-      if (loadingIndicator) {
-        loadingIndicator.disabled = false;
-        loadingIndicator.textContent = 'Apple / iOS Calendar';
-      }
-    }
-  };
 
   const handleGoogleCalendar = () => {
     console.log('Нажата кнопка Google Calendar');
@@ -100,21 +61,10 @@ const CalendarConfirmModal: React.FC<Props> = ({
       <div className={styles.modalContent}>
         <h3 className={styles.modalTitle}>Добавить в календарь?</h3>
         <p className={styles.modalText}>
-          Выберите, куда добавить информацию о бронировании:
+          Добавьте информацию о бронировании в свой календарь
         </p>
 
         <div className={styles.buttonGroup}>
-          {/* Показываем кнопку Apple Calendar только на устройствах Apple */}
-          {showAppleCalendar && (
-            <button
-              className={styles.icalBtn || styles.confirmButton}
-              onClick={handleAppleCalendar}
-              disabled={isLoading}
-            >
-              {isLoading ? 'Загрузка...' : 'Apple / iOS Calendar'}
-            </button>
-          )}
-
           <button
             className={styles.googleBtn || styles.confirmButton}
             onClick={handleGoogleCalendar}
