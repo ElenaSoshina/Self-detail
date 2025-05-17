@@ -191,140 +191,89 @@ const BookingModal: React.FC<BookingModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validate()) return;
+    
+    alert('Начало отправки формы бронирования');
+    
     setIsLoading(true);
     setError(null);
-    
-    if (!validate()) {
-      setIsLoading(false);
-      return;
-    }
-    
     try {
-      if (!chatId) {
-        throw new Error('Не удалось получить ID пользователя из Telegram');
-      }
-      
-      // Извлекаем время для запроса
-      const timeMatches = startTime.match(/\d{1,2}:\d{2}/g);
-      if (!timeMatches || timeMatches.length === 0) {
-        throw new Error('Некорректный формат времени');
-      }
-      
-      // Определяем начальное и конечное время
-      const startTimeFormatted = timeMatches[0];
-      const endTimeFormatted = timeMatches.length > 1 ? timeMatches[1] : startTimeFormatted;
-      
-      // Используем выбранную дату из календаря
-      const dateToUse = selectedDate || new Date();
-      
-      // Простое форматирование выбранной даты
-      const year = dateToUse.getFullYear();
-      const month = dateToUse.getMonth() + 1;  // JS месяцы от 0 до 11
-      const day = dateToUse.getDate();
-      
-      // Форматируем в строку даты в формате YYYY-MM-DD
-      const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      
-      // Собираем итоговые строки для API
-      const startISODate = `${dateStr}T${startTimeFormatted}:00`;
-      const endISODate = `${dateStr}T${endTimeFormatted}:00`;
-      
-      // Формируем данные для API
-      const apiData = {
-        telegramUserId: parseInt(chatId || '0'),
-        telegramUserName: formData.telegramUserName.startsWith('@') 
-          ? formData.telegramUserName 
-          : `@${formData.telegramUserName}`,
+      if (!chatId) throw new Error('Telegram ID не получен');
+      // подготовить дату
+      const times = startTime.match(/\d{1,2}:\d{2}/g)!;
+      const s = times[0], eT = times[1] || times[0];
+      const date = selectedDate || new Date();
+      const yyyy = date.getFullYear();
+      const mm   = String(date.getMonth()+1).padStart(2,'0');
+      const dd   = String(date.getDate()).padStart(2,'0');
+      const startISO = `${yyyy}-${mm}-${dd}T${s}:00`;
+      const endISO   = `${yyyy}-${mm}-${dd}T${eT}:00`;
+
+      const payload = {
+        telegramUserId: parseInt(chatId),
+        telegramUserName: formData.telegramUserName,
         clientName: formData.name,
-        clientPhone: formData.phone.replace(/\+/g, ''),
+        clientPhone: formData.phone.replace('+',''),
         clientEmail: formData.email,
-        start: startISODate,
-        end: endISODate,
-        service: hasService && service
-          ? [{
-              serviceName: service.serviceName,
-              price: servicePrice // Используем корректную стоимость
-            }]
-          : [],
-        notes: '',
-        // Добавляем информацию о товарах, если они есть
-        products: products.length > 0 
-          ? products.map(product => ({
-              name: product.name,
-              price: product.price,
-              quantity: product.quantity
-            }))
-          : undefined
+        start: startISO,
+        end: endISO,
+        service: hasService ? [{ serviceName: service!.serviceName, price: servicePrice }] : [],
+        products: products.length
+          ? products.map(p => ({ name: p.name, price: p.price, quantity: p.quantity }))
+          : undefined,
+        notes: ''
       };
 
-      // Отправляем запрос на API для создания бронирования
-      const response = await api.post('/calendar/booking', apiData);
-      const result = response.data;
+      alert('Отправка запроса на API календаря...');
       
-      // Получаем ID бронирования для календаря
-      if (result && result.data && result.data.bookingId) {
-        // Устанавливаем ID бронирования и сразу показываем модальное окно
-        setBookingId(result.data.bookingId);
-        setShowCalendarModal(true);
-      }
+      const res = await api.post('/calendar/booking', payload);
       
-      // Отправляем уведомления в Telegram
-      const isTech = (service?.serviceName || '').toLowerCase().includes('техничес');
+      alert('Получен ответ от API. Проверяем наличие bookingId');
       
-      try {
-        if (isAdmin) {
-          if (isTech) {
-            // Только админу
-            await sendTelegramMessageToAllAdmins(
-              formatAdminMessage(apiData, 
-                service ? { ...service, price: servicePrice } : { price: 0 }, 
-                service?.serviceName || ''
-              )
-            );
-          } else {
-            // Пользователю по username через endpoint и админу
-            await Promise.all([
-              sendTelegramMessageByUsername(
-                formatUserMessage(apiData, 
-                  service ? { ...service, price: servicePrice } : { price: 0 }, 
-                  service?.serviceName || ''
-                ),
-                formData.telegramUserName
-              ),
-              sendTelegramMessageToAllAdmins(
-                formatAdminMessage(apiData, 
-                  service ? { ...service, price: servicePrice } : { price: 0 }, 
-                  service?.serviceName || ''
-                )
-              ),
-            ]);
-          }
-        } else {
-          // Обычный пользователь — по chatId и админу
-          await Promise.all([
-            sendTelegramMessage(
-              formatUserMessage(apiData, 
-                service ? { ...service, price: servicePrice } : { price: 0 }, 
-                service?.serviceName || ''
-              ),
-              chatId
-            ),
-            sendTelegramMessageToAllAdmins(
-              formatAdminMessage(apiData, 
-                service ? { ...service, price: servicePrice } : { price: 0 }, 
-                service?.serviceName || ''
-              )
-            ),
-          ]);
-        }
-      } catch (telegramError) {
-        console.error('Ошибка отправки уведомления Telegram:', telegramError);
-      }
-    } catch (error) {
-      console.error('Ошибка бронирования:', error);
-      setError(error instanceof Error ? error.message : 'Произошла ошибка при отправке формы');
-      setIsLoading(false);
+      const id = res.data?.data?.bookingId;
+      if (!id) throw new Error('bookingId не вернулся');
+      
+      alert(`Получен bookingId: ${id}`);
+      
+      setBookingId(id);
 
+      // собираем детали события
+      setEventDetails({
+        title: `Бронирование: ${service?.serviceName ?? ''}`,
+        description: `Услуги: ${service?.serviceName ?? ''}\nКонтакт: ${formData.name}, тел: ${formData.phone}`,
+        location: 'Self-Detailing Location',
+        start: new Date(startISO),
+        end: new Date(endISO),
+      });
+
+      alert('Детали события созданы. Открываем модальное окно календаря');
+      
+      // открываем наше модальное окно
+      setShowCalendarModal(true);
+      
+      alert('Флаг showCalendarModal установлен в true');
+
+      // уведомляем в Telegram
+      alert('Отправка уведомлений в Telegram...');
+      
+      const adminMsg = formatAdminMessage(payload, { price: servicePrice }, service?.serviceName ?? '');
+      const userMsg  = formatUserMessage(payload, { price: servicePrice }, service?.serviceName ?? '');
+      if (isAdmin) {
+        await sendTelegramMessageToAllAdmins(adminMsg);
+      } else {
+        await Promise.all([
+          sendTelegramMessage(userMsg, chatId),
+          sendTelegramMessageToAllAdmins(adminMsg)
+        ]);
+      }
+      
+      alert('Уведомления в Telegram отправлены успешно');
+
+    } catch (err: any) {
+      alert(`Ошибка при бронировании: ${err.message}`);
+      setError(err.message || 'Ошибка бронирования');
+    } finally {
+      setIsLoading(false);
     }
   };
   
@@ -421,6 +370,12 @@ const BookingModal: React.FC<BookingModalProps> = ({
   };
 
   if (!isOpen) return null;
+
+  console.log('Состояние модального окна:', {
+    showCalendarModal,
+    bookingId,
+    hasEventDetails: !!eventDetails
+  });
 
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
