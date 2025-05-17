@@ -16,10 +16,7 @@ const CalendarConfirmModal: React.FC<CalendarConfirmModalProps> = ({
   bookingId,
   isLoading
 }) => {
-  window.alert(`CalendarConfirmModal рендерится с параметрами: isOpen=${isOpen}, bookingId=${bookingId}, isLoading=${isLoading}`);
-  
   if (!isOpen || !bookingId) {
-    window.alert(`CalendarConfirmModal не отображается, потому что: isOpen=${isOpen}, bookingId=${bookingId}`);
     return null;
   }
 

@@ -62,8 +62,6 @@ const BookingModal: React.FC<BookingModalProps> = ({
   const [showCalendarModal, setShowCalendarModal] = useState(false);
   const [isCalendarLoading, setIsCalendarLoading] = useState(false);
   
-  window.alert(`Состояние модального окна календаря: ID=${bookingId}, открыто=${showCalendarModal}`);
-  
   // Нормализуем отображение времени
   const [displayTime, setDisplayTime] = useState('');
 
@@ -179,7 +177,6 @@ const BookingModal: React.FC<BookingModalProps> = ({
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    window.alert('Начинаем handleSubmit - отправка формы бронирования');
     e.preventDefault();
     setIsLoading(true);
     setError(null);
@@ -247,30 +244,16 @@ const BookingModal: React.FC<BookingModalProps> = ({
           : undefined
       };
 
-      window.alert('Отправляем запрос на API для создания бронирования');
       // Отправляем запрос на API для создания бронирования
       const response = await api.post('/calendar/booking', apiData);
-
       const result = response.data;
       
-      window.alert(`API ответ получен. Статус: ${response.status}`);
-      
-      // Сохраняем ID бронирования для дальнейшего использования и показываем модальное окно
+      // Получаем ID бронирования для календаря
       if (result && result.data && result.data.bookingId) {
-        window.alert(`Получен ID бронирования: ${result.data.bookingId}`);
-        // Устанавливаем ID бронирования и показываем модальное окно
-        const newBookingId = result.data.bookingId;
-        setBookingId(newBookingId);
-        
-        // Небольшая задержка перед отображением модального окна для гарантии обновления состояния
-        setTimeout(() => {
-          window.alert(`Показываем модальное окно для ID: ${newBookingId}`);
-          setShowCalendarModal(true);
-        }, 500);
-      } else {
-                  window.alert('ID бронирования не получен из API ответа!');
+        // Устанавливаем ID бронирования и сразу показываем модальное окно
+        setBookingId(result.data.bookingId);
+        setShowCalendarModal(true);
       }
-
       
       // Отправляем уведомления в Telegram
       const isTech = (service?.serviceName || '').toLowerCase().includes('техничес');
@@ -322,40 +305,11 @@ const BookingModal: React.FC<BookingModalProps> = ({
           ]);
         }
       } catch (telegramError) {
-      }
-      
-      // Здесь не нужно дублировать логику показа модального окна,
-      // так как мы уже показываем его выше при получении ID бронирования
-      
-      // Только если ID бронирования не получен, выполняем стандартную логику завершения
-      if (!bookingId) {
-        console.error('Не удалось получить ID бронирования');
-        setShowSuccess(true);
-        onClose();
-        
-        // Вызываем onSubmit с пустым bookingId
-        if (onSubmit) {
-          const submittedData = {
-            name: formData.name,
-            phone: formData.phone,
-            email: formData.email,
-            telegramUserName: formData.telegramUserName,
-            selectedDate: dateToUse,
-            startTime: startTime, 
-            endTime: endTime,
-            service: hasService && service 
-              ? { 
-                  serviceName: service.serviceName,
-                  price: servicePrice
-                }
-              : null
-          };
-          await onSubmit(submittedData);
-        }
+        console.error('Ошибка отправки уведомления Telegram:', telegramError);
       }
     } catch (error) {
+      console.error('Ошибка бронирования:', error);
       setError(error instanceof Error ? error.message : 'Произошла ошибка при отправке формы');
-    } finally {
       setIsLoading(false);
     }
   };
@@ -380,15 +334,12 @@ const BookingModal: React.FC<BookingModalProps> = ({
   
   // Обработчик добавления в календарь
   const handleAddToCalendar = async () => {
-    window.alert(`Вызван handleAddToCalendar, bookingId: ${bookingId}`);
     if (!bookingId) {
-      window.alert('ID бронирования отсутствует, нельзя добавить в календарь');
       return;
     }
     
     setIsCalendarLoading(true);
     try {
-      window.alert(`Начинаем скачивание ICS файла для ID: ${bookingId}`);
       // Скачиваем ICS файл
       await downloadICSFile(bookingId);
       
@@ -420,7 +371,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
       setShowSuccess(true);
       onClose();
     } catch (error) {
-      window.alert(`Ошибка при добавлении в календарь: ${error}`);
+      console.error('Ошибка при добавлении в календарь:', error);
     } finally {
       setIsCalendarLoading(false);
     }
@@ -428,7 +379,6 @@ const BookingModal: React.FC<BookingModalProps> = ({
   
   // Обработчик отказа от добавления в календарь
   const handleDeclineCalendar = async () => {
-    window.alert('Вызван handleDeclineCalendar, пользователь отказался от добавления в календарь');
     // Вызываем onSubmit с данными бронирования для перехода на страницу успешного бронирования
     if (onSubmit) {
       const submittedData = {
@@ -594,13 +544,6 @@ const BookingModal: React.FC<BookingModalProps> = ({
         </form>
       </div>
       <SuccessPopup isOpen={showSuccess} onClose={() => setShowSuccess(false)} />
-      {/* Явное отображение состояния модального окна для отладки */}
-      {showCalendarModal && bookingId && (
-        <div style={{ position: 'fixed', bottom: '10px', left: '10px', background: '#333', color: '#fff', padding: '5px', zIndex: 9999 }}>
-          Модальное окно добавления в календарь должно отображаться: 
-          ID={bookingId}, открыто={showCalendarModal.toString()}
-        </div>
-      )}
       
       <CalendarConfirmModal 
         isOpen={showCalendarModal} 
