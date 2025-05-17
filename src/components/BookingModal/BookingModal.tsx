@@ -6,6 +6,8 @@ import PhoneInput from 'react-phone-number-input/input';
 import 'react-phone-number-input/style.css';
 import { useCart } from '../../context/CartContex';
 import api from '../../api/apiService';
+import CalendarConfirmModal from '../CalendarConfirmModal/CalendarConfirmModal';
+import { downloadICSFile } from '../../utils/calendarUtils';
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -54,6 +56,11 @@ const BookingModal: React.FC<BookingModalProps> = ({
   const { items } = useCart();
   const products = items.filter(item => item.type !== 'booking');
   const productsTotal = products.reduce((sum, p) => sum + p.price * p.quantity, 0);
+  
+  // Состояние для работы с модальным окном подтверждения добавления в календарь
+  const [bookingId, setBookingId] = useState<number | null>(null);
+  const [showCalendarModal, setShowCalendarModal] = useState(false);
+  const [isCalendarLoading, setIsCalendarLoading] = useState(false);
   
   // Нормализуем отображение времени
   const [displayTime, setDisplayTime] = useState('');
@@ -241,6 +248,11 @@ const BookingModal: React.FC<BookingModalProps> = ({
       const response = await api.post('/calendar/booking', apiData);
 
       const result = response.data;
+      
+      // Сохраняем ID бронирования для дальнейшего использования
+      if (result && result.data && result.data.bookingId) {
+        setBookingId(result.data.bookingId);
+      }
 
       
       // Отправляем уведомления в Telegram
@@ -318,17 +330,13 @@ const BookingModal: React.FC<BookingModalProps> = ({
         await onSubmit(submittedData);
       }
       
-      setShowSuccess(true);
-      onClose();
-      
-      // Закрываем Telegram WebApp после полного завершения процесса
-      setTimeout(() => {
-        const tg = (window as any).Telegram?.WebApp;
-        // Убираем автоматическое закрытие приложения
-        // if (tg && typeof tg.close === 'function') {
-        //   tg.close();
-        // }
-      }, 1000);
+      // Показываем модальное окно с предложением добавить в календарь, если есть ID бронирования
+      if (bookingId) {
+        setShowCalendarModal(true);
+      } else {
+        setShowSuccess(true);
+        onClose();
+      }
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Произошла ошибка при отправке формы');
     } finally {
@@ -352,6 +360,30 @@ const BookingModal: React.FC<BookingModalProps> = ({
     if (digits.length > 11) return;
     setFormData(prev => ({ ...prev, phone: value || '' }));
     setFieldErrors((prev) => ({ ...prev, phone: undefined }));
+  };
+  
+  // Обработчик добавления в календарь
+  const handleAddToCalendar = async () => {
+    if (!bookingId) return;
+    
+    setIsCalendarLoading(true);
+    try {
+      await downloadICSFile(bookingId);
+      setShowCalendarModal(false);
+      setShowSuccess(true);
+      onClose();
+    } catch (error) {
+      console.error('Ошибка при добавлении в календарь:', error);
+    } finally {
+      setIsCalendarLoading(false);
+    }
+  };
+  
+  // Обработчик отказа от добавления в календарь
+  const handleDeclineCalendar = () => {
+    setShowCalendarModal(false);
+    setShowSuccess(true);
+    onClose();
   };
 
   if (!isOpen) return null;
@@ -490,6 +522,13 @@ const BookingModal: React.FC<BookingModalProps> = ({
         </form>
       </div>
       <SuccessPopup isOpen={showSuccess} onClose={() => setShowSuccess(false)} />
+      <CalendarConfirmModal 
+        isOpen={showCalendarModal} 
+        onClose={handleDeclineCalendar}
+        onConfirm={handleAddToCalendar}
+        bookingId={bookingId}
+        isLoading={isCalendarLoading}
+      />
     </div>
   );
 };
