@@ -1,4 +1,5 @@
 import api from '../api/apiService';
+import { getToken } from '../api/apiService';
 
 /**
  * Форматирует дату для URL Google Calendar
@@ -12,7 +13,13 @@ const fmt = (d: Date): string =>
  */
 export const openICS = (bookingId: number): void => {
   const tg = (window as any).Telegram?.WebApp;
-  const url = `${api.defaults.baseURL}/calendar/booking/${bookingId}/ics`;
+  const token = getToken();
+  
+  // URL с токеном для авторизации
+  const url = `${api.defaults.baseURL}/calendar/booking/${bookingId}/ics${token ? `?token=${token}` : ''}`;
+  
+  // Для отладки
+  alert(`Открываем ICS с URL: ${url}`);
   
   if (tg && tg.openLink) {
     tg.openLink(url);
@@ -54,6 +61,9 @@ export const openGoogleCalendar = (
 ): void => {
   const tg = (window as any).Telegram?.WebApp;
   const url = buildGoogleLink(title, description, location, start, end);
+  
+  // Для отладки
+  alert(`Открываем Google Calendar с URL: ${url}`);
   
   if (tg && tg.openLink) {
     tg.openLink(url);

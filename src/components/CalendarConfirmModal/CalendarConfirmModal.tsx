@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import styles from './CalendarConfirmModal.module.css';
 import { buildGoogleLink, openICS, openGoogleCalendar } from '../../utils/calendarLinks';
+import { initAuth } from '../../api/apiService';
 
 interface Props {
   isOpen: boolean;
@@ -22,6 +23,11 @@ const CalendarConfirmModal: React.FC<Props> = ({
 }) => {
   useEffect(() => {
     if (isOpen) {
+      // Инициализируем авторизацию сразу при открытии окна
+      initAuth().catch(err => 
+        alert(`Ошибка получения токена авторизации: ${err.message}`)
+      );
+      
       alert(`Модальное окно календаря отрисовано: bookingId=${bookingId}`);
     }
   }, [isOpen, bookingId]);
@@ -32,10 +38,17 @@ const CalendarConfirmModal: React.FC<Props> = ({
 
   alert(`CalendarConfirmModal активно с bookingId=${bookingId}`);
 
-  const handleAppleCalendar = () => {
+  const handleAppleCalendar = async () => {
     alert('Нажата кнопка Apple/iOS Calendar');
-    openICS(bookingId);
-    onConfirm();
+    
+    try {
+      // Убедимся, что у нас есть токен перед открытием календаря
+      await initAuth();
+      openICS(bookingId);
+      onConfirm();
+    } catch (error) {
+      alert(`Ошибка при открытии Apple календаря: ${(error as Error).message}`);
+    }
   };
 
   const handleGoogleCalendar = () => {
