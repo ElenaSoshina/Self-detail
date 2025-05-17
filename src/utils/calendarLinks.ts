@@ -70,6 +70,6 @@ export const openGoogleCalendar = (
     }
   } catch (error) {
     console.error('Ошибка в openGoogleCalendar:', error);
-    alert(`Ошибка при создании календарного события: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
+    console.error(`Ошибка при создании календарного события: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
   }
 }; 

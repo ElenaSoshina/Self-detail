@@ -39,7 +39,6 @@ const CalendarConfirmModal: React.FC<Props> = ({
   // Проверяем валидность bookingId
   if (!bookingId || isNaN(Number(bookingId))) {
     console.error('Неверный ID бронирования:', bookingId);
-    alert('Ошибка: неверный ID бронирования.');
     onClose();
     return null;
   }
