@@ -42,9 +42,6 @@ const CalendarConfirmModal: React.FC<Props> = ({
     alert('Нажата кнопка Apple/iOS Calendar');
     
     try {
-      // Убедимся, что у нас есть токен перед открытием календаря
-      await initAuth();
-      
       // Показываем индикатор загрузки
       const loadingIndicator = document.querySelector('button.icalBtn') as HTMLButtonElement;
       if (loadingIndicator) {
@@ -53,7 +50,7 @@ const CalendarConfirmModal: React.FC<Props> = ({
       }
       
       // Открываем ICS файл через прямую ссылку с токеном
-      openICS(bookingId);
+      await openICS(bookingId);
       
       // Завершаем процесс, вызываем колбэк
       onConfirm();

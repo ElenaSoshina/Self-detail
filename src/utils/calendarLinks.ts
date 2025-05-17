@@ -1,5 +1,5 @@
 import api from '../api/apiService';
-import { getToken } from '../api/apiService';
+import { getToken, login } from '../api/apiService';
 
 /**
  * Форматирует дату для URL Google Calendar
@@ -46,28 +46,58 @@ END:VCALENDAR`;
 /**
  * Создает URL для скачивания ICS файла с токеном авторизации
  */
-export const buildAppleCalendarLink = (bookingId: number): string => {
+export const buildAppleCalendarLink = async (bookingId: number): Promise<string> => {
   const base = api.defaults.baseURL;
-  const token = getToken(); // JWT
   
-  // Прокидываем токен как query-параметр
-  return `${base}/calendar/booking/${bookingId}/ics?token=${token}`;
+  // Перед формированием ссылки обновляем токен
+  let token: string;
+  try {
+    token = await login();
+    alert(`Токен получен: ${token.substring(0, 10)}...`);
+  } catch (error) {
+    alert(`Ошибка получения токена: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
+    token = getToken() || '';
+  }
+  
+  // Прокидываем токен как query-параметр и проверяем его наличие
+  if (!token) {
+    alert('ВНИМАНИЕ: Токен отсутствует! Авторизация не будет работать.');
+    return `${base}/calendar/booking/${bookingId}/ics`;
+  }
+  
+  // Используем токен в URL
+  const url = `${base}/calendar/booking/${bookingId}/ics?token=${encodeURIComponent(token)}`;
+  
+  // Логируем URL для отладки (скрыв большую часть токена)
+  const debugUrl = url.replace(/(token=)([^&]+)/, (_, prefix, token) => 
+    `${prefix}${token.substring(0, 10)}...${token.substring(token.length - 5)}`
+  );
+  console.log('Ссылка на календарь:', debugUrl);
+  
+  return url;
 };
 
 /**
  * Открывает ссылку на ICS файл
  */
-export const openICS = (bookingId: number): void => {
+export const openICS = async (bookingId: number): Promise<void> => {
   const tg = (window as any).Telegram?.WebApp;
-  const url = buildAppleCalendarLink(bookingId);
   
-  // Для отладки
-  alert(`Открываем Apple Calendar с URL: ${url}`);
-  
-  if (tg?.openLink) {
-    tg.openLink(url);
-  } else {
-    window.location.href = url;
+  try {
+    // Получаем URL с актуальным токеном
+    const url = await buildAppleCalendarLink(bookingId);
+    
+    // Для отладки
+    alert(`Открываем Apple Calendar с URL: ${url.substring(0, 50)}...`);
+    
+    if (tg?.openLink) {
+      tg.openLink(url);
+    } else {
+      window.location.href = url;
+    }
+  } catch (error) {
+    alert(`Ошибка при открытии Apple Calendar: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
+    console.error('Ошибка при открытии Apple Calendar:', error);
   }
 };
 
