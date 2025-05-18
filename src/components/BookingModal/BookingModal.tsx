@@ -235,7 +235,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
       
       const res = await api.post('/calendar/booking', payload);
       
-      alert('Получен ответ от API. Проверяем наличие bookingId');
+      // alert('Получен ответ от API. Проверяем наличие bookingId');
       
       const id = res.data?.data?.bookingId;
       if (!id) throw new Error('bookingId не вернулся');
