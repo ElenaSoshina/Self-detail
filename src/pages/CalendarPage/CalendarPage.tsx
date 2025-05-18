@@ -2,24 +2,28 @@ import React, { useState, useEffect } from 'react';
 import styles from './CalendarPage.module.css';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../../context/CartContex';
-import { v4 as uuidv4 } from 'uuid'; // Для генерации уникальных ID
-import axios from 'axios';
+import { v4 as uuidv4 } from 'uuid';
 import CalendarMonth from './CalendarMonth';
 import TimeSlots from './TimeSlots';
 import PlanSelection from './PlanSelection';
 import BookingSuccess from './BookingSuccess';
 import { useCalendarApi } from './useCalendarApi';
 import { useBooking } from './useBooking';
+import BookingModal from '../../components/BookingModal/BookingModal';
 import {
   Day,
   PricingPlan,
   BookingDetails,
   TimeSlotWithData,
-  AvailabilityData
 } from './calendarTypes';
-import { generateDaysForMonth, isSameDay, formatDate, calculateMaxAvailableHours } from './calendarUtils';
+import {
+  generateDaysForMonth,
+  isSameDay,
+  formatDate,
+} from './calendarUtils';
 import { months, weekDays } from './calendarConstants';
 import BookingSummary from './BookingSummary';
+import api from '../../api/apiService';
 
 interface CalendarPageProps {
   isAdmin?: boolean;
@@ -28,6 +32,8 @@ interface CalendarPageProps {
 const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin }) => {
   const navigate = useNavigate();
   const { addToCart } = useCart();
+
+  /** ——————————————————— State ——————————————————— */
   const [currentDate, setCurrentDate] = useState(new Date());
   const [days, setDays] = useState<Day[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -35,14 +41,14 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin }) => {
   const [timeSlotData, setTimeSlotData] = useState<TimeSlotWithData[]>([]);
   const [startTime, setStartTime] = useState<string | null>(null);
   const [endTime, setEndTime] = useState<string | null>(null);
-  const [maxAvailableHours, setMaxAvailableHours] = useState<number>(8); // Максимально возможная продолжительность
   const [bookingDetails, setBookingDetails] = useState<BookingDetails | null>(null);
   const [bookingCompleted, setBookingCompleted] = useState(false);
-  const [loadingSlots, setLoadingSlots] = useState(true); // Изначально загрузка включена
+  const [loadingSlots, setLoadingSlots] = useState(true);
   const [slotsError, setSlotsError] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [showBookingModal, setShowBookingModal] = useState(false);
 
-  // Данные о тарифах
+  /** ——————————————————— Pricing ——————————————————— */
   const pricingPlans: PricingPlan[] = [
     {
       id: 'wash',
@@ -77,266 +83,236 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin }) => {
       title: 'Технические работы',
       price: 0,
       icon: '🛠️',
-      description: 'Слот для внутренних или сервисных работ. Не отображается для клиентов.'
+      description: 'Сlot для внутренних или сервисных работ. Не отображается для клиентов.'
     }] : [])
   ];
 
-  // Запрос доступных слотов с сервера
-  const { fetchAvailableTimeSlots, loading, error } = useCalendarApi();
+  /** ——————————————————— API hooks ——————————————————— */
+  const { fetchAvailableTimeSlots } = useCalendarApi();
+  const {
+    selectedPlan,
+    handlePlanClick,
+  } = useBooking();
 
-  // useEffect для инициализации
+  /** ——————————————————— Init ——————————————————— */
   useEffect(() => {
-    if (isInitialized) return; // Пропускаем, если уже инициализировано
-    
+    if (isInitialized) return;
+
     const init = async () => {
-      const daysArray = generateDaysForMonth(
-        currentDate.getFullYear(),
-        currentDate.getMonth()
-      );
+      const daysArray = generateDaysForMonth(currentDate.getFullYear(), currentDate.getMonth());
       setDays(daysArray);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const todayDay = daysArray.find(day => day.isToday && day.isAvailable);
-      
-      setIsInitialized(true); // Помечаем как инициализировано
-      
-      if (todayDay) {
-        setSelectedDate(todayDay.date);
-        setLoadingSlots(true);
-        try {
-          const { formattedTimeSlots, timeSlotsWithData } = await fetchAvailableTimeSlots(todayDay.date);
-          setAvailableTimeSlots(formattedTimeSlots);
-          setTimeSlotData(timeSlotsWithData);
-          setLoadingSlots(false);
-        } catch (e) {
-          setSlotsError('Ошибка загрузки слотов.');
-          setAvailableTimeSlots([]);
-          setTimeSlotData([]);
-          setLoadingSlots(false);
-        }
-      } else {
+
+      const todayDay = daysArray.find(d => d.isToday && d.isAvailable);
+      setIsInitialized(true);
+
+      if (!todayDay) {
+        setLoadingSlots(false);
+        return;
+      }
+
+      setSelectedDate(todayDay.date);
+      setLoadingSlots(true);
+      try {
+        const { formattedTimeSlots, timeSlotsWithData } = await fetchAvailableTimeSlots(todayDay.date);
+        setAvailableTimeSlots(formattedTimeSlots);
+        setTimeSlotData(timeSlotsWithData);
+      } catch {
+        setSlotsError('Ошибка загрузки слотов.');
+      } finally {
         setLoadingSlots(false);
       }
     };
-    
-    init();
-  }, [isInitialized, fetchAvailableTimeSlots]); // Добавляем зависимости
 
-  // useEffect для смены выбранной даты
+    init();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /** ——————————————————— Load slots on date change ——————————————————— */
   useEffect(() => {
-    // Если дата не выбрана или компонент ещё не инициализирован, пропускаем
     if (!selectedDate || !isInitialized) return;
-    
-    // Создаем переменную для отслеживания актуальности запроса
-    let isActive = true;
-    
-    const fetchSlots = async () => {
+    let cancelled = false;
+
+    (async () => {
       setLoadingSlots(true);
       try {
         const { formattedTimeSlots, timeSlotsWithData } = await fetchAvailableTimeSlots(selectedDate);
-        
-        // Проверяем, актуален ли еще запрос
-        if (isActive) {
-          setAvailableTimeSlots(formattedTimeSlots);
-          setTimeSlotData(timeSlotsWithData);
-          setLoadingSlots(false);
-          setStartTime(null);
-          setEndTime(null);
-          setBookingDetails(null);
-          setBookingCompleted(false);
-        }
-      } catch (e) {
-        if (isActive) {
+        if (cancelled) return;
+        setAvailableTimeSlots(formattedTimeSlots);
+        setTimeSlotData(timeSlotsWithData);
+        setStartTime(null);
+        setEndTime(null);
+        setBookingDetails(null);
+        setBookingCompleted(false);
+      } catch {
+        if (!cancelled) {
           setSlotsError('Ошибка загрузки слотов.');
           setAvailableTimeSlots([]);
           setTimeSlotData([]);
-          setLoadingSlots(false);
         }
+      } finally {
+        if (!cancelled) setLoadingSlots(false);
       }
-    };
-    
-    fetchSlots();
-    
-    // Функция cleanup для предотвращения обновления состояния после размонтирования
-    return () => {
-      isActive = false;
-    };
-  }, [selectedDate, isInitialized, fetchAvailableTimeSlots]); // Добавляем зависимости
+    })();
 
-  // Обновление дней при изменении текущего месяца - делаем проверку на изменение месяца
-  useEffect(() => {
-    // Проверяем, действительно ли изменился месяц
-    const month = currentDate.getMonth();
-    const year = currentDate.getFullYear();
-    
-    // Запоминаем текущий месяц и год в ref или состоянии
-    if (isInitialized && days.length > 0) {
-      // Получаем месяц и год из первого дня в массиве
-      const currentMonth = days[15].date.getMonth(); // Берем день в середине массива
-      const currentYear = days[15].date.getFullYear();
-      
-      // Сравниваем с выбранными месяцем и годом
-      if (month === currentMonth && year === currentYear) {
-        // Месяц не изменился, пропускаем обновление
-        return;
-      }
-      
-      console.log('Обновление месяца:', currentDate);
-      const daysArray = generateDaysForMonth(year, month);
-      setDays(daysArray);
-    }
-  }, [currentDate, days.length, isInitialized]);
+    return () => { cancelled = true; };
+  }, [selectedDate, isInitialized, fetchAvailableTimeSlots]);
 
-  // Переключение на предыдущий месяц
+  /** ——————————————————— Month navigation ——————————————————— */
   const goToPreviousMonth = () => {
-    setCurrentDate(prevDate => {
-      const newDate = new Date(prevDate);
-      newDate.setMonth(prevDate.getMonth() - 1);
-      return newDate;
-    });
+    setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
     setSelectedDate(null);
   };
 
-  // Переключение на следующий месяц
   const goToNextMonth = () => {
-    setCurrentDate(prevDate => {
-      const newDate = new Date(prevDate);
-      newDate.setMonth(prevDate.getMonth() + 1);
-      return newDate;
-    });
+    setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
     setSelectedDate(null);
   };
 
-  // handleDateClick теперь просто меняет selectedDate
+  /** ——————————————————— Date click ——————————————————— */
   const handleDateClick = (day: Day) => {
-    if (day.isAvailable) {
-      setSelectedDate(day.date);
-    }
+    if (!day.isAvailable) return;
+    setSelectedDate(day.date);    // подсветка происходит мгновенно через selectedDate
   };
 
-  // handleTimeSlotClick теперь работает с двумя слотами
+  /** ——————————————————— Time-slot click ——————————————————— */
   const handleTimeSlotClick = (slot: string) => {
-    if (!startTime || (startTime && endTime)) {
+    // Обработка специального значения для сброса выбора
+    if (slot === "reset") {
+      setStartTime(null);
+      setEndTime(null);
+      return;
+    }
+
+    // Проверяем, что слот доступен для выбора
+    if (loadingSlots || !availableTimeSlots.includes(slot)) return;
+
+    // сброс, если нажали на уже выбранное начало
+    if (startTime === slot) {
+      setStartTime(null);
+      setEndTime(null);
+      return;
+    }
+
+    // если нет начала или диапазон уже закончен ⇒ начинаем новый выбор
+    if (!startTime || endTime) {
       setStartTime(slot);
       setEndTime(null);
-    } else if (startTime && !endTime) {
-      if (slot === startTime) {
-        setStartTime(null);
-        setEndTime(null);
-      } else {
-        setEndTime(slot);
+      return;
+    }
+
+    // второй клик – пытаемся поставить конец
+    const startIdx = allDaySlots.findIndex(s => s.formattedTime === startTime);
+    const endIdx = allDaySlots.findIndex(s => s.formattedTime === slot);
+    if (endIdx <= startIdx) return;                        // назад нельзя
+
+    // убеждаемся, что весь промежуток свободен
+    let allSlotsAvailable = true;
+    for (let i = startIdx; i <= endIdx; i++) {
+      const currentSlot = allDaySlots[i].formattedTime;
+      if (!availableTimeSlots.includes(currentSlot)) {
+        allSlotsAvailable = false;
+        break;
       }
     }
+
+    // Устанавливаем конец только если все слоты доступны
+    if (allSlotsAvailable) {
+      setEndTime(slot);
+    }
   };
 
-  // Расчёт продолжительности аренды
-  let duration = null;
-  if (startTime && endTime) {
+  /** ——————————————————— Helpers ——————————————————— */
+  const getDuration = () => {
+    if (!startTime || !endTime) return null;
     const start = timeSlotData.find(s => s.formattedTime === startTime)?.start;
     const end = timeSlotData.find(s => s.formattedTime === endTime)?.start;
-    if (start && end) {
-      const diff = Math.abs((end.getTime() - start.getTime()) / (1000 * 60 * 60));
-      duration = diff > 0 ? diff : null;
-    }
-  }
-
-  // Добавление бронирования в корзину
-  const addBookingToCart = () => {
-    if (bookingDetails) {
-      const formattedDate = formatDate(bookingDetails.date);
-      const bookingItem = {
-        id: uuidv4(),
-        name: `${bookingDetails.plan.title} (${formattedDate}, ${bookingDetails.timeRange})`,
-        price: bookingDetails.totalPrice,
-        type: 'booking',
-        region: '',
-        details: `Бронирование на ${bookingDetails.duration.toFixed(2)} ч. | ${bookingDetails.timeRange}`,
-        icon: bookingDetails.plan.icon,
-      };
-      addToCart(bookingItem);
-      navigate('/');
-    }
+    if (!start || !end) return null;
+    return (end.getTime() - start.getTime()) / 3_600_000; // hours
   };
 
-  // Перейти в каталог с добавленным бронированием
-  const goToProducts = () => {
-    if (bookingDetails) {
-      const formattedDate = formatDate(bookingDetails.date);
-      const bookingItem = {
-        id: uuidv4(),
-        name: `${bookingDetails.plan.title} (${formattedDate}, ${bookingDetails.timeRange})`,
-        price: bookingDetails.totalPrice,
-        type: 'booking',
-        region: '',
-        details: `Бронирование на ${bookingDetails.duration.toFixed(2)} ч. | ${bookingDetails.timeRange}`,
-        icon: bookingDetails.plan.icon,
-      };
-      addToCart(bookingItem);
-      navigate('/products');
-    }
-  };
+  const duration = getDuration();
 
-  // Получение текущего месяца и года для заголовка
-  const currentMonthYear = `${months[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
+  const timeRange = duration !== null
+    ? `${startTime} — ${endTime}`
+    : '';
 
-  // Расчет итоговой стоимости
-  const calculateTotalPrice = () => {
-    if (!selectedPlan) return 0;
-    return selectedPlan.price * hours;
-  };
+  /** ——————————————————— All 24h slots (local) ——————————————————— */
+  const allDaySlots = Array.from({ length: 24 }, (_, h) => {
+    const start = `${h.toString().padStart(2, '0')}:00`;
+    const end = `${((h + 1) % 24).toString().padStart(2, '0')}:00`;
+    return { formattedTime: start, start, end };
+  });
 
-  const { selectedPlan, setSelectedPlan, hours, setHours, handlePlanClick, handleHoursChange, handleBooking } = useBooking();
-
-  // Формируем строку времени для отображения
-  let timeRange = '';
-  if (startTime && endTime) {
-    const startIdx = availableTimeSlots.indexOf(startTime);
-    const endIdx = availableTimeSlots.indexOf(endTime);
-    if (startIdx !== -1 && endIdx !== -1) {
-      const [from, to] = startIdx < endIdx ? [startIdx, endIdx] : [endIdx, startIdx];
-      timeRange = `${availableTimeSlots[from]} — ${availableTimeSlots[to]}`;
-    }
-  }
-  // duration
-  let calcDuration: number | null = null;
-  if (startTime && endTime) {
-    const start = timeSlotData.find(s => s.formattedTime === startTime)?.start;
-    const end = timeSlotData.find(s => s.formattedTime === endTime)?.start;
-    if (start && end) {
-      const diff = Math.abs((end.getTime() - start.getTime()) / (1000 * 60 * 60));
-      calcDuration = diff > 0 ? diff : null;
-    }
-  }
-  const totalPrice = selectedPlan && calcDuration ? selectedPlan.price * calcDuration : 0;
-
-  // onBook теперь сохраняет все нужные данные в bookingDetails
+  /** ——————————————————— Booking handlers ——————————————————— */
   const onBook = () => {
-    if (selectedDate && startTime && endTime && selectedPlan && calcDuration && timeRange) {
+    if (!selectedDate || !duration || !selectedPlan || !startTime || !endTime) return;
+    const totalPrice = selectedPlan.price * duration;
+    
+    // Если выбраны технические работы и пользователь - администратор, показываем модальное окно с предзаполненными полями
+    if (isAdmin && selectedPlan.id === 'tech') {
       setBookingDetails({
         date: selectedDate,
         timeRange,
-        duration: calcDuration,
+        duration,
         plan: selectedPlan,
-        totalPrice
+        totalPrice,
+      });
+      setShowBookingModal(true);
+    } else {
+      // Для всех остальных случаев используем стандартный поток
+      setBookingDetails({
+        date: selectedDate,
+        timeRange,
+        duration,
+        plan: selectedPlan,
+        totalPrice,
       });
       setBookingCompleted(true);
     }
   };
 
-  // Генерируем полный массив слотов за сутки (00:00-01:00 ... 23:00-00:00)
-  const allDaySlots: { formattedTime: string; start: string; end: string }[] = [];
-  for (let h = 0; h < 24; h++) {
-    const start = `${h < 10 ? '0' + h : h}:00`;
-    const end = `${(h + 1) < 10 ? '0' + (h + 1) : (h + 1 === 24 ? '00' : h + 1)}:00`;
-    allDaySlots.push({
-      formattedTime: start,
-      start,
-      end
+  // Обработчик завершения бронирования из модального окна
+  const handleBookingComplete = (formData: any) => {
+    console.log('Бронирование успешно завершено:', formData);
+    setShowBookingModal(false);
+    
+    // Сбрасываем выбранное время
+    setStartTime(null);
+    setEndTime(null);
+    
+    // Если мы находимся на странице администратора, перезагружаем страницу
+    if (isAdmin) {
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    }
+  };
+
+  const addBookingToCart = () => {
+    if (!bookingDetails) return;
+    const formattedDate = formatDate(bookingDetails.date);
+    addToCart({
+      id: uuidv4(),
+      name: `${bookingDetails.plan.title} (${formattedDate}, ${bookingDetails.timeRange})`,
+      price: bookingDetails.totalPrice,
+      type: 'booking',
+      region: '',
+      details: `Бронирование на ${bookingDetails.duration.toFixed(2)} ч. | ${bookingDetails.timeRange}`,
     });
-  }
+    navigate('/');
+  };
+
+  const goToProducts = () => {
+    addBookingToCart();
+    navigate('/products');
+  };
+
+  /** ——————————————————— Render ——————————————————— */
+  const currentMonthYear = `${months[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
 
   return (
     <div className={isAdmin ? `${styles.calendarContainer} ${styles.admin}` : styles.calendarContainer}>
+      {/* ——— header ——— */}
       {!bookingCompleted && (
         <div className={styles.calendarHeader}>
           <h1 className={styles.title}>Выберите дату и время</h1>
@@ -345,8 +321,11 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin }) => {
           )}
         </div>
       )}
+
+      {/* ——— main content ——— */}
       {!bookingCompleted ? (
         <div className={styles.calendarContent}>
+          {/* ——— calendar ——— */}
           <div className={styles.calendar}>
             <div className={styles.calendarNav}>
               <button className={styles.navButton} onClick={goToPreviousMonth}>&#10094;</button>
@@ -354,9 +333,7 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin }) => {
               <button className={styles.navButton} onClick={goToNextMonth}>&#10095;</button>
             </div>
             <div className={styles.weekdays}>
-              {weekDays.map(day => (
-                <div key={day} className={styles.weekday}>{day}</div>
-              ))}
+              {weekDays.map(day => <div key={day} className={styles.weekday}>{day}</div>)}
             </div>
             <CalendarMonth
               days={days}
@@ -365,6 +342,8 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin }) => {
               isSameDay={isSameDay}
             />
           </div>
+
+          {/* ——— booking panel ——— */}
           <div className={styles.bookingSelection}>
             <TimeSlots
               selectedDate={selectedDate}
@@ -377,6 +356,7 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin }) => {
               onTimeSlotClick={handleTimeSlotClick}
               formatDate={formatDate}
             />
+
             {duration && (
               <>
                 <PlanSelection
@@ -410,8 +390,31 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin }) => {
           />
         )
       )}
+      
+      {/* Модальное окно для технических работ с предзаполненными полями */}
+      {showBookingModal && bookingDetails && (
+        <BookingModal
+          isOpen={showBookingModal}
+          onClose={() => setShowBookingModal(false)}
+          startTime={startTime || ''}
+          endTime={endTime || ''}
+          service={{
+            serviceName: 'Технические работы',
+            price: 0
+          }}
+          onSubmit={handleBookingComplete}
+          selectedDate={selectedDate}
+          isAdmin={true}
+          prefilledData={{
+            name: 'Администратор',
+            phone: '+79999999999',
+            email: 'admin@admin.com',
+            telegramUserName: '@admin'
+          }}
+        />
+      )}
     </div>
   );
 };
 
-export default CalendarPage; 
+export default CalendarPage;

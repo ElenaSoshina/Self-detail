@@ -15,7 +15,11 @@ interface PlanSelectionProps {
   onPlanClick: (plan: PricingPlan) => void;
 }
 
-const PlanSelection: React.FC<PlanSelectionProps> = ({ pricingPlans, selectedPlan, onPlanClick }) => (
+const PlanSelection: React.FC<PlanSelectionProps> = ({ 
+  pricingPlans, 
+  selectedPlan, 
+  onPlanClick
+}) => (
   <div className={styles.planSelection}>
     <h3 className={styles.sectionTitle}>Выберите тариф</h3>
     <div className={styles.planGrid}>

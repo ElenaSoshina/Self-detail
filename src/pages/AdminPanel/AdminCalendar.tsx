@@ -566,7 +566,12 @@ const AdminCalendar: React.FC<{ onUserSelect: (userId: string) => void }> = ({ o
           {loading ? (
             <div className={styles.loading}>Загрузка...</div>
           ) : slots.length === 0 ? (
+            <>
             <div className={styles.loading}>Нет бронирований на этот день</div>
+            <button className={styles.addBookingBtn} onClick={handleAdminBooking}>
+                Добавить бронирование
+              </button>
+              </>
           ) : (
             <>
               {slots.map((slot) => (

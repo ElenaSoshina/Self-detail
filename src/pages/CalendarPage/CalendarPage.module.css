@@ -206,11 +206,11 @@
   transition: transform 0.3s, box-shadow 0.3s;
 }
 
-.timeSelection:hover, .planSelection:hover, .durationSelection:hover {
+/* .timeSelection:hover, .planSelection:hover, .durationSelection:hover {
   transform: translateY(-5px);
   box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4),
               inset 0 0 0 1px rgba(138, 110, 255, 0.3);
-}
+} */
 
 .sectionTitle {
   font-size: 20px;
@@ -242,17 +242,17 @@
   transition: all 0.2s ease;
 }
 
-.timeSlot:hover {
+/* .timeSlot:hover {
   background: rgba(70, 70, 75, 0.8);
   border-color: rgba(138, 110, 255, 0.4);
   transform: translateY(-2px);
-}
+} */
 
 .selectedTime {
   background: linear-gradient(to right, #8A6EFF, #00C2FF);
   color: white;
   font-weight: 600;
-  box-shadow: 0 4px 10px rgba(138, 110, 255, 0.3);
+
   border: none;
 }
 
@@ -946,4 +946,71 @@
   background: linear-gradient(90deg, #FF1F7A22, #8A6EFF22);
   color: #fff;
   box-shadow: 0 4px 16px #8A6EFF33;
+}
+
+.temporarySelected {
+  background: rgba(138, 110, 255, 0.4);
+  border-color: rgba(138, 110, 255, 0.6);
+  color: white;
+  font-weight: 500;
+}
+
+.invalidSelection {
+  border: 2px solid rgba(255, 60, 60, 0.6);
+  box-shadow: 0 0 8px rgba(255, 60, 60, 0.4);
+  position: relative;
+}
+
+/* Стиль для выбранного дня с усиленной специфичностью */
+.day.available.selected,
+.day.available.selected:hover {
+  background: linear-gradient(90deg, #ff1f7a, #8a6eff);
+  color: #fff;
+  font-weight: 700;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(255, 31, 122, 0.35);
+}
+
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.resetButton {
+  background: rgba(60, 60, 70, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #fff;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.resetButton:hover {
+  background: rgba(80, 80, 90, 0.7);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.quickBookBtn {
+  margin-top: 15px;
+  background: linear-gradient(to right, #1E88E5, #039BE5);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+  text-align: center;
+}
+
+.quickBookBtn:hover {
+  background: linear-gradient(to right, #039BE5, #1E88E5);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(3, 155, 229, 0.3);
 } 

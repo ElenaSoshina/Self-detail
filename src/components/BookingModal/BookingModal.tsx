@@ -27,6 +27,12 @@ interface BookingModalProps {
   onSubmit: (formData: any) => void;
   selectedDate: Date | null;
   isAdmin?: boolean;
+  prefilledData?: {
+    name: string;
+    phone: string;
+    email: string;
+    telegramUserName: string;
+  };
 }
 
 interface FormData {
@@ -44,15 +50,16 @@ const BookingModal: React.FC<BookingModalProps> = ({
   service,
   onSubmit,
   selectedDate,
-  isAdmin
+  isAdmin,
+  prefilledData
 }) => {
   console.log('BookingModal received selectedDate:', selectedDate, typeof selectedDate, selectedDate instanceof Date);
   
   const [formData, setFormData] = useState<FormData>({
-    name: '',
-    phone: '',
-    email: '',
-    telegramUserName: '',
+    name: prefilledData?.name || '',
+    phone: prefilledData?.phone || '',
+    email: prefilledData?.email || '',
+    telegramUserName: prefilledData?.telegramUserName || '',
   });
   const [showSuccess, setShowSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);

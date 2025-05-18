@@ -1,6 +1,5 @@
 import React from 'react';
 import styles from './CalendarPage.module.css';
-
 interface Day {
   date: Date;
   isCurrentMonth: boolean;
@@ -12,23 +11,21 @@ interface CalendarMonthProps {
   days: Day[];
   selectedDate: Date | null;
   onDateClick: (day: Day) => void;
-  isSameDay: (date1: Date, date2: Date) => boolean;
+  isSameDay: (d1: Date, d2: Date) => boolean;
 }
 
 const CalendarMonth: React.FC<CalendarMonthProps> = ({ days, selectedDate, onDateClick, isSameDay }) => (
   <div className={styles.daysGrid}>
-    {days.map((day, index) => (
+    {days.map((day, idx) => (
       <div
-        key={index}
-        className={
-          `
-            ${styles.day}
-            ${!day.isCurrentMonth ? styles.otherMonth : ''}
-            ${day.isAvailable ? styles.available : styles.unavailable}
-            ${day.isToday ? styles.today : ''}
-            ${selectedDate && isSameDay(day.date, selectedDate) ? styles.selected : ''}
-          `
-        }
+        key={idx}
+        className={`
+          ${styles.day}
+          ${!day.isCurrentMonth ? styles.otherMonth : ''}
+          ${day.isAvailable ? styles.available : styles.unavailable}
+          ${day.isToday ? styles.today : ''}
+          ${selectedDate && isSameDay(day.date, selectedDate) ? styles.selected : ''}
+        `}
         onClick={() => onDateClick(day)}
       >
         {day.date.getDate()}
@@ -37,4 +34,4 @@ const CalendarMonth: React.FC<CalendarMonthProps> = ({ days, selectedDate, onDat
   </div>
 );
 
-export default CalendarMonth; 
+export default CalendarMonth;
