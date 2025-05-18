@@ -200,7 +200,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
     e.preventDefault();
     if (!validate()) return;
     
-    alert('Начало отправки формы бронирования');
+    // alert('Начало отправки формы бронирования');
     
     setIsLoading(true);
     setError(null);
@@ -231,7 +231,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
         notes: ''
       };
 
-      alert('Отправка запроса на API календаря...');
+      // alert('Отправка запроса на API календаря...');
       
       const res = await api.post('/calendar/booking', payload);
       
@@ -240,7 +240,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
       const id = res.data?.data?.bookingId;
       if (!id) throw new Error('bookingId не вернулся');
       
-      alert(`Получен bookingId: ${id}`);
+      // alert(`Получен bookingId: ${id}`);
       
       setBookingId(id);
 
@@ -253,16 +253,16 @@ const BookingModal: React.FC<BookingModalProps> = ({
         end: new Date(endISO),
       });
 
-      alert('Детали события созданы. Открываем модальное окно календаря');
+      // alert('Детали события созданы. Открываем модальное окно календаря');
       
       // открываем наше модальное окно
       setShowCalendarModal(true);
       
-      alert('Флаг showCalendarModal установлен в true');
-
-      // уведомляем в Telegram
-      alert('Отправка уведомлений в Telegram...');
-      
+      // alert('Флаг showCalendarModal установлен в true');
+      //
+      // // уведомляем в Telegram
+      // alert('Отправка уведомлений в Telegram...');
+      //
       const adminMsg = formatAdminMessage(payload, { price: servicePrice }, service?.serviceName ?? '');
       const userMsg  = formatUserMessage(payload, { price: servicePrice }, service?.serviceName ?? '');
       if (isAdmin) {
@@ -274,7 +274,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
         ]);
       }
       
-      alert('Уведомления в Telegram отправлены успешно');
+      // alert('Уведомления в Telegram отправлены успешно');
 
     } catch (err: any) {
       alert(`Ошибка при бронировании: ${err.message}`);
@@ -312,7 +312,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
     
     // Показываем сообщение об успешном бронировании
     setTimeout(() => {
-      alert(`Бронирование успешно добавлено! ID: ${bookingId}`);
+      // alert(`Бронирование успешно добавлено! ID: ${bookingId}`);
       
       // Обработка успешного добавления
       if (onSubmit) {
