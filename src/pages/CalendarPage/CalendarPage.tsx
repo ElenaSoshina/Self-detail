@@ -27,16 +27,17 @@ import api from '../../api/apiService';
 
 interface CalendarPageProps {
   isAdmin?: boolean;
+  selectedDate?: Date | null;
 }
 
-const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin }) => {
+const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin, selectedDate: externalSelectedDate }) => {
   const navigate = useNavigate();
   const { addToCart } = useCart();
 
   /** ——————————————————— State ——————————————————— */
   const [currentDate, setCurrentDate] = useState(new Date());
   const [days, setDays] = useState<Day[]>([]);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(externalSelectedDate ?? null);
   const [availableTimeSlots, setAvailableTimeSlots] = useState<string[]>([]);
   const [timeSlotData, setTimeSlotData] = useState<TimeSlotWithData[]>([]);
   const [startTime, setStartTime] = useState<string | null>(null);
@@ -47,6 +48,7 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin }) => {
   const [slotsError, setSlotsError] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [showBookingModal, setShowBookingModal] = useState(false);
+  const [forcedAvailableSlot, setForcedAvailableSlot] = useState<string | null>(null);
 
   /** ——————————————————— Pricing ——————————————————— */
   const pricingPlans: PricingPlan[] = [
@@ -102,18 +104,23 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin }) => {
       const daysArray = generateDaysForMonth(currentDate.getFullYear(), currentDate.getMonth());
       setDays(daysArray);
 
-      const todayDay = daysArray.find(d => d.isToday && d.isAvailable);
+      let initialDay: Day | undefined;
+      if (externalSelectedDate) {
+        initialDay = daysArray.find(d => d.date.toDateString() === externalSelectedDate.toDateString());
+      } else {
+        initialDay = daysArray.find(d => d.isToday && d.isAvailable);
+      }
       setIsInitialized(true);
 
-      if (!todayDay) {
+      if (!initialDay) {
         setLoadingSlots(false);
         return;
       }
 
-      setSelectedDate(todayDay.date);
+      setSelectedDate(initialDay.date);
       setLoadingSlots(true);
       try {
-        const { formattedTimeSlots, timeSlotsWithData } = await fetchAvailableTimeSlots(todayDay.date);
+        const { formattedTimeSlots, timeSlotsWithData } = await fetchAvailableTimeSlots(initialDay.date);
         setAvailableTimeSlots(formattedTimeSlots);
         setTimeSlotData(timeSlotsWithData);
       } catch {
@@ -175,21 +182,26 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin }) => {
   };
 
   /** ——————————————————— Time-slot click ——————————————————— */
-  const handleTimeSlotClick = (slot: string) => {
+  const handleTimeSlotClick = (slot: string, isForced?: boolean) => {
     // Обработка специального значения для сброса выбора
     if (slot === "reset") {
       setStartTime(null);
       setEndTime(null);
+      setForcedAvailableSlot(null);
       return;
     }
 
-    // Проверяем, что слот доступен для выбора
-    if (loadingSlots || !availableTimeSlots.includes(slot)) return;
+    // Если идет загрузка или слот прошедший - игнорируем клик
+    if (loadingSlots) return;
+    
+    const past = isPastSlot(slot);
+    if (past) return;
 
     // сброс, если нажали на уже выбранное начало
     if (startTime === slot) {
       setStartTime(null);
       setEndTime(null);
+      setForcedAvailableSlot(null);
       return;
     }
 
@@ -205,9 +217,9 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin }) => {
     const endIdx = allDaySlots.findIndex(s => s.formattedTime === slot);
     if (endIdx <= startIdx) return;                        // назад нельзя
 
-    // убеждаемся, что весь промежуток свободен
+    // убеждаемся, что весь промежуток между границами свободен
     let allSlotsAvailable = true;
-    for (let i = startIdx; i <= endIdx; i++) {
+    for (let i = startIdx + 1; i < endIdx; i++) {
       const currentSlot = allDaySlots[i].formattedTime;
       if (!availableTimeSlots.includes(currentSlot)) {
         allSlotsAvailable = false;
@@ -215,18 +227,55 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin }) => {
       }
     }
 
-    // Устанавливаем конец только если все слоты доступны
-    if (allSlotsAvailable) {
+    // Устанавливаем конец только если все промежуточные слоты доступны
+    // или если слот следует сразу за начальным
+    if (allSlotsAvailable || endIdx === startIdx + 1) {
       setEndTime(slot);
+      setForcedAvailableSlot(null);
     }
   };
+  
+  // Вспомогательная функция для проверки, является ли слот прошедшим
+  const isPastSlot = (slotTime: string): boolean => {
+    if (!selectedDate) return false;
+    
+    const now = new Date();
+    const isToday = selectedDate.toDateString() === now.toDateString();
+    if (!isToday) return false;
+    
+    const [slotHour, slotMinute] = slotTime.split(":").map(Number);
+    const slotDate = new Date(selectedDate);
+    slotDate.setHours(slotHour, slotMinute, 0, 0);
+    
+    const buffer = 5 * 60 * 1000; // 5 минут в миллисекундах
+    return slotDate.getTime() <= (now.getTime() + buffer);
+  };
+
+  /** ——————————————————— All 24h slots (local) ——————————————————— */
+  const allDaySlots = Array.from({ length: 24 }, (_, h) => {
+    const start = `${h.toString().padStart(2, '0')}:00`;
+    const end = `${((h + 1) % 24).toString().padStart(2, '0')}:00`;
+    return { formattedTime: start, start, end };
+  });
 
   /** ——————————————————— Helpers ——————————————————— */
   const getDuration = () => {
     if (!startTime || !endTime) return null;
     const start = timeSlotData.find(s => s.formattedTime === startTime)?.start;
-    const end = timeSlotData.find(s => s.formattedTime === endTime)?.start;
-    if (!start || !end) return null;
+    let end = timeSlotData.find(s => s.formattedTime === endTime)?.start;
+    if (!start) return null;
+    if (!end) {
+      // Если endTime не найден в timeSlotData (занятый слот), ищем его индекс в allDaySlots
+      const allIdx = allDaySlots.findIndex(s => s.formattedTime === endTime);
+      if (allIdx !== -1 && allIdx > 0 && selectedDate) {
+        // Берём start этого слота как конец диапазона
+        const slotDate = new Date(selectedDate);
+        const [h, m] = endTime.split(":").map(Number);
+        slotDate.setHours(h, m, 0, 0);
+        end = slotDate;
+      }
+    }
+    if (!end) return null;
     return (end.getTime() - start.getTime()) / 3_600_000; // hours
   };
 
@@ -235,13 +284,6 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin }) => {
   const timeRange = duration !== null
     ? `${startTime} — ${endTime}`
     : '';
-
-  /** ——————————————————— All 24h slots (local) ——————————————————— */
-  const allDaySlots = Array.from({ length: 24 }, (_, h) => {
-    const start = `${h.toString().padStart(2, '0')}:00`;
-    const end = `${((h + 1) % 24).toString().padStart(2, '0')}:00`;
-    return { formattedTime: start, start, end };
-  });
 
   /** ——————————————————— Booking handlers ——————————————————— */
   const onBook = () => {
@@ -310,6 +352,17 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin }) => {
   /** ——————————————————— Render ——————————————————— */
   const currentMonthYear = `${months[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
 
+  const handleRangeSelect = (start: string | null, end: string | null) => {
+    setStartTime(start);
+    setEndTime(end);
+  };
+
+  // Обновление сетки дней при смене месяца
+  useEffect(() => {
+    const daysArray = generateDaysForMonth(currentDate.getFullYear(), currentDate.getMonth());
+    setDays(daysArray);
+  }, [currentDate]);
+
   return (
     <div className={isAdmin ? `${styles.calendarContainer} ${styles.admin}` : styles.calendarContainer}>
       {/* ——— header ——— */}
@@ -351,10 +404,11 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin }) => {
               slotsError={slotsError}
               allDaySlots={allDaySlots}
               availableTimeSlots={availableTimeSlots}
+              formatDate={formatDate}
+              timeSlotData={timeSlotData}
+              onRangeSelect={handleRangeSelect}
               startTime={startTime}
               endTime={endTime}
-              onTimeSlotClick={handleTimeSlotClick}
-              formatDate={formatDate}
             />
 
             {duration && (

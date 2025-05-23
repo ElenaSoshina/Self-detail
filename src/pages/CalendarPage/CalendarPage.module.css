@@ -1013,4 +1013,123 @@
   background: linear-gradient(to right, #039BE5, #1E88E5);
   transform: translateY(-2px);
   box-shadow: 0 4px 10px rgba(3, 155, 229, 0.3);
+}
+
+.nextAvailableSlot {
+  background: rgba(138, 110, 255, 0.3) !important;
+  border: 1px solid rgba(138, 110, 255, 0.4) !important;
+  color: white !important;
+  cursor: pointer !important;
+  pointer-events: auto !important;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(138, 110, 255, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(138, 110, 255, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(138, 110, 255, 0);
+  }
+}
+
+.timeSlotUnavailableRed {
+  background: rgba(255, 60, 60, 0.2);
+  color: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 60, 60, 0.3);
+  cursor: not-allowed;
+  opacity: 0.75;
+  box-shadow: none;
+  font-weight: 400;
+  pointer-events: none;
+  transition: none;
+}
+
+.timeSlotActive {
+  background: linear-gradient(to right, #8A6EFF, #00C2FF);
+  color: white;
+  font-weight: 600;
+  border: none;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(138, 110, 255, 0.3);
+}
+
+.timeSlotSelectedEdge {
+  position: relative;
+  z-index: 2;
+}
+
+.timeSlotSelectedEdge::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border-radius: 14px;
+  background: linear-gradient(90deg, #FF1F7A, #8A6EFF);
+  z-index: -1;
+  pointer-events: none;
+}
+
+.timeSlotLastAvailable {
+  display: none;
+}
+
+.timeSlotVirtual {
+  display: none;
+}
+
+.timeSlotBoundary {
+  position: relative;
+  overflow: visible;
+}
+
+.timeSlotBoundary::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(to bottom, #FF1F7A, #FF5555);
+  box-shadow: 0 0 8px rgba(255, 31, 122, 0.4);
+  z-index: 3;
+}
+
+.timeSlotSelectableBoundary {
+  background: rgba(255, 60, 60, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+  border: 1px dashed rgba(255, 60, 60, 0.5);
+  cursor: pointer;
+  position: relative;
+  overflow: visible;
+}
+
+.timeSlotSelectableBoundary:hover {
+  background: rgba(255, 60, 60, 0.2);
+  border-color: rgba(255, 60, 60, 0.6);
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(255, 60, 60, 0.2);
+}
+
+.timeSlotBeforeStart {
+  background: rgba(255, 60, 60, 0.12) !important;
+  color: rgba(255, 255, 255, 0.4) !important;
+  cursor: not-allowed !important;
+  border: 1px solid rgba(255, 60, 60, 0.18) !important;
+  box-shadow: none !important;
+  pointer-events: none;
+}
+
+.timeSlotAfterBooked {
+  background: rgba(255, 60, 60, 0.12) !important;
+  color: rgba(255, 255, 255, 0.4) !important;
+  cursor: not-allowed !important;
+  border: 1px solid rgba(255, 60, 60, 0.18) !important;
+  box-shadow: none !important;
+  pointer-events: none;
 } 

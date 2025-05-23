@@ -34,114 +34,81 @@ function toMoscowISOString(date: Date): string {
  * @returns Promise с массивом данных слотов из API
  */
 export async function fetchAvailableTimeSlotsApi(date: Date) {
-  const requestId = Math.random().toString(36).substring(2, 8); // Уникальный ID запроса для логов
+  const requestId = Math.random().toString(36).substring(2, 8);
   
-  // Сначала убедимся, что авторизация выполнена
+  // console.log(`[${requestId}] Начало запроса слотов`);
+  
   try {
-    // Сбросим токен перед повторной инициализацией, чтобы избежать использования поврежденного токена
     resetToken();
     await initAuth();
+    // console.log(`[${requestId}] Авторизация успешна`);
   } catch (error) {
+    console.error(`[${requestId}] Ошибка авторизации: ${error}`);
     throw error;
   }
   
-  // Проверяем, является ли запрашиваемая дата текущим днем
   const now = new Date();
   const isToday = date.toDateString() === now.toDateString();
   
-  // Создаем даты для диапазона запроса
   const startDate = new Date(date);
-  
-  // Создаем дату для следующего дня (00:00:00)
   const endDate = new Date(date);
   endDate.setDate(endDate.getDate() + 1);
   endDate.setHours(0, 0, 0, 0);
   
-  // Если это сегодняшний день, устанавливаем startDate на текущее время + 2 минуты
   if (isToday) {
+    // Для сегодняшнего дня начинаем с текущего времени + запас в 5 минут
     const currentTime = new Date();
-    currentTime.setMinutes(currentTime.getMinutes() + 2);
+    currentTime.setMinutes(currentTime.getMinutes() + 5);
     startDate.setHours(
       currentTime.getHours(),
       currentTime.getMinutes(),
       currentTime.getSeconds(),
       currentTime.getMilliseconds()
     );
-    console.log('Запрос слотов на сегодня: используем текущее время + 2 минуты');
+    // console.log(`[${requestId}] Запрос слотов на сегодня: ${startDate.toISOString()}`);
   } else {
-    // Для других дней используем начало дня
     startDate.setHours(0, 0, 0, 0);
+    // console.log(`[${requestId}] Запрос слотов на дату: ${startDate.toISOString()}`);
   }
   
-  // Формируем ISO-строки для запроса
   const startDateISO = toMoscowISOString(startDate);
   const endDateISO = toMoscowISOString(endDate);
   
-  console.log('Запрашиваем слоты для диапазона:', { startDateISO, endDateISO, isToday });
-  
-  // Проверяем токен и обновляем при необходимости
   let token = getToken();
   if (!token) {
     try {
-      console.log(`[API:${requestId}] Токен отсутствует, запрашиваем новый`);
+      console.log(`[${requestId}] Токен отсутствует, запрашиваем новый`);
       token = await login();
-      console.log(`[API:${requestId}] Получен новый токен:`, token ? `${token.substring(0, 10)}...` : 'ошибка');
+      // console.log(`[${requestId}] Получен новый токен`);
     } catch (error) {
-      console.error(`[API:${requestId}] Ошибка получения токена:`, error);
+      console.error(`[${requestId}] Ошибка получения токена: ${error}`);
     }
   }
   
-  // Выводим токен в консоль для проверки
-  console.log(`[API:${requestId}] Токен авторизации:`, token ? `Bearer ${token.substring(0, 10)}... (${token.length} символов)` : 'отсутствует');
-  
   try {
-    // Получаем полный URL запроса
     const fullApiUrl = `${API_BASE_URL}${API_PATH}`;
+    // console.log(`[${requestId}] Отправляем запрос на ${fullApiUrl}`);
     
-    // Используем экземпляр API, который уже имеет логику добавления токена
-    console.log(`[API:${requestId}] Отправляем запрос`);
-    console.log(`[API:${requestId}] Параметры запроса:`, { 
-      url: fullApiUrl, 
-      start: startDateISO, 
-      end: endDateISO,
-      token: getToken() ? 'Есть токен' : 'Нет токена'
-    });
-    
-    // Используем axios напрямую с полным URL
-    // Проверяем, начинается ли токен уже с Bearer, чтобы избежать дублирования
-    const tokenValue = token && token.startsWith('Bearer ') ? token : (token ? `Bearer ${token}` : '');
-    console.log(`[API:${requestId}] Используемый заголовок Authorization:`, tokenValue);
-    
-
     const params = {
       start: toMoscowISOString(startDate),
       end: toMoscowISOString(endDate),
     };
-
     
     const response = await api.get('/calendar/available', { params });
+    // console.log(`[${requestId}] Получен ответ от сервера: ${response.status}`);
     
-    
-    console.log(`[API:${requestId}] Успешный ответ от API слотов:`, response.status);
-    console.log(`[API:${requestId}] Данные ответа:`, response.data);
-    
-    // Проверяем на сообщения об ошибках авторизации в ответе
     if (response.data && response.data.message && 
        (response.data.message.includes('Unauthorized') || 
         response.data.message.includes('Access denied'))) {
       
-      console.error(`[API:${requestId}] Сервер вернул ошибку авторизации:`, response.data.message);
-      
-      
-      // Сбрасываем токен и пробуем получить новый
-      // Полностью сбрасываем авторизацию, а не только удаляем токен из localStorage
+      console.error(`[${requestId}] Ошибка авторизации, пробуем получить новый токен`);
       resetToken();
+      
       try {
         const newToken = await login();
         
-        // Повторяем запрос с новым токеном
         if (newToken) {
-          console.log(`[API:${requestId}] Повторный запрос с новым токеном`);
+          // console.log(`[${requestId}] Повторный запрос с новым токеном`);
           
           const retryResponse = await api.get('/calendar/available', {
             params: { 
@@ -150,40 +117,35 @@ export async function fetchAvailableTimeSlotsApi(date: Date) {
             }
           });
           
-          console.log(`[API:${requestId}] Результат повторного запроса:`, retryResponse.status);
-          // Используем ответ от повторного запроса
+          // console.log(`[${requestId}] Успешный повторный запрос`);
           return retryResponse.data.data || [];
         }
       } catch (authError: any) {
-
+        console.error(`[${requestId}] Ошибка при повторном запросе: ${authError}`);
       }
     }
-
     
-    // Обрабатываем ответ API для всех окружений
     const responseData = response.data;
+    // console.log(`[${requestId}] Обработка ответа сервера`);
     
-    // Определяем структуру ответа API
     if (Array.isArray(responseData)) {
-      // Если ответ сразу является массивом
+      // console.log(`[${requestId}] Получен массив слотов: ${responseData.length}`);
       return responseData;
     } else if (responseData.success && Array.isArray(responseData.data)) {
-      // Формат: {success: true, data: [...]}
-      console.log(`[API:${requestId}] Возвращаем массив ${responseData.data.length} слотов`);
+      // console.log(`[${requestId}] Получены слоты в формате success: ${responseData.data.length}`);
       return responseData.data;
     } else if (responseData.data && Array.isArray(responseData.data.slots)) {
-      // Формат: {data: {slots: [...]}}
+      // console.log(`[${requestId}] Получены слоты в формате data.slots: ${responseData.data.slots.length}`);
       return responseData.data.slots;
     } else if (responseData.slots && Array.isArray(responseData.slots)) {
-      // Формат: {slots: [...]}
+      // console.log(`[${requestId}] Получены слоты в формате slots: ${responseData.slots.length}`);
       return responseData.slots;
     }
     
+    console.warn(`[${requestId}] Нет данных о слотах`);
     return [];
   } catch (error) {
-    console.error('Ошибка при запросе слотов:', error);
-    
-    // В случае ошибок перебрасываем их дальше
+    console.error(`[${requestId}] Ошибка при запросе слотов: ${error}`);
     throw error;
   }
 }
@@ -203,18 +165,40 @@ export function formatTimeSlots(slotsData: any[]) {
     };
   }
   
-  // Фильтруем только доступные слоты
-  const availableSlots = slotsData.filter(slot => slot.available !== false);
+  // Создаем массив всех часов (0-23)
+  const allHours = Array.from({ length: 24 }, (_, i) => i);
   
+  // Создаем карту имеющихся в API слотов
+  const apiSlotsByHour = new Map();
+  
+  // Фильтруем только доступные слоты и добавляем в карту
+  slotsData.forEach(slot => {
+    if (slot.available !== false) {
+      const slotTime = new Date(slot.start);
+      const hour = slotTime.getHours();
+      apiSlotsByHour.set(hour, slot);
+    }
+  });
+  
+  // Дополнительно фильтруем по текущему времени для текущего дня
+  const now = new Date();
+  const filteredSlots = Array.from(apiSlotsByHour.entries())
+    .filter(([hour, slot]) => {
+      const slotTime = new Date(slot.start);
+      const isToday = slotTime.toDateString() === now.toDateString();
+      
+      // Если сегодня, то проверяем, что слот еще не прошел (с буфером в 5 минут)
+      if (isToday) {
+        const buffer = 5 * 60 * 1000; // 5 минут в миллисекундах
+        return slotTime.getTime() > (now.getTime() + buffer);
+      }
+      
+      return true;
+    })
+    .map(([hour, slot]) => slot);
   
   // Форматируем каждый слот
-  const timeSlotsWithData: TimeSlotData[] = availableSlots.map(slot => {
-    // Выводим информацию о дате из слота
-    console.log('Форматирование слота:', { 
-      originalStartTime: slot.start,
-      parsedTime: new Date(slot.start)
-    });
-    
+  const timeSlotsWithData: TimeSlotData[] = filteredSlots.map(slot => {
     const slotTime = new Date(slot.start);
     const hours = slotTime.getHours();
     const minutes = slotTime.getMinutes();

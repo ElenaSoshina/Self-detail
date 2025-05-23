@@ -41,67 +41,96 @@ export function useCalendarApi() {
     const dateKey = getDateKey(date);
     const now = Date.now();
     
-    // Проверяем кеш
+    // console.log(`[Cache] Проверка кеша для даты ${dateKey}`);
+    
     const cachedResult = requestCache.current[dateKey];
     if (cachedResult && (now - cachedResult.timestamp) < CACHE_DURATION) {
-      console.log(`[API] Используем кешированные данные для ${dateKey}`);
+      // console.log(`[Cache] Используем кешированные данные для ${dateKey}`);
+      
+      // Дополнительная обработка для текущего дня - фильтруем слоты, которые уже прошли
+      if (date.toDateString() === new Date().toDateString()) {
+        const filteredResult = filterPastSlots(cachedResult.data);
+        return filteredResult;
+      }
+      
       return cachedResult.data;
     }
     
-    // Проверяем, есть ли уже запрос в процессе для этой даты
     if (dateKey in pendingRequests.current) {
-      console.log(`[API] Используем существующий запрос для ${dateKey}`);
-      return pendingRequests.current[dateKey];
+      // console.log(`[Cache] Используем существующий запрос для ${dateKey}`);
+      const result = await pendingRequests.current[dateKey];
+      
+      // Дополнительная обработка для текущего дня
+      if (date.toDateString() === new Date().toDateString()) {
+        return filterPastSlots(result);
+      }
+      
+      return result;
     }
     
-    // Создаем новый запрос
     setLoading(true);
     setError(null);
     
-    // Сохраняем промис в списке активных запросов
+    // console.log(`[Cache] Создаем новый запрос для ${dateKey}`);
+    
     const requestPromise = (async () => {
       try {
-        // Получаем сырые данные от API
         const slots = await fetchAvailableTimeSlotsApi(date);
+        let formattedData = formatTimeSlots(slots);
         
-        // Форматируем полученные данные
-        const formattedData = formatTimeSlots(slots);
+        // Если это текущий день, фильтруем прошедшие слоты
+        if (date.toDateString() === new Date().toDateString()) {
+          formattedData = filterPastSlots(formattedData);
+        }
         
-        // Сохраняем результат в кеше
         requestCache.current[dateKey] = {
           data: formattedData,
           timestamp: Date.now()
         };
         
+        // console.log(`[Cache] Данные сохранены в кеш для ${dateKey}`);
         setLoading(false);
         return formattedData;
       } catch (e: any) {
         const errorMessage = e.message || 'Ошибка при получении слотов';
-        console.error(errorMessage, e);
+        console.error(`[Cache] Ошибка запроса: ${errorMessage}`);
         setError(errorMessage);
         setLoading(false);
         
-        // Возвращаем пустые данные при ошибке
         return {
           formattedTimeSlots: [],
           timeSlotsWithData: []
         };
       } finally {
-        // Удаляем запрос из списка активных
         delete pendingRequests.current[dateKey];
+        // console.log(`[Cache] Запрос удален из активных для ${dateKey}`);
       }
     })();
     
-    // Сохраняем промис в список активных запросов
     pendingRequests.current[dateKey] = requestPromise;
     
     return requestPromise;
   }, []);
+  
+  // Функция для фильтрации прошедших слотов
+  const filterPastSlots = (result: CalendarApiResult): CalendarApiResult => {
+    const now = new Date();
+    const buffer = 5 * 60 * 1000; // 5 минут буфера
+    
+    const filteredTimeSlots = result.timeSlotsWithData.filter(slot => {
+      return slot.start.getTime() > (now.getTime() + buffer);
+    });
+    
+    return {
+      formattedTimeSlots: filteredTimeSlots.map(slot => slot.formattedTime),
+      timeSlotsWithData: filteredTimeSlots
+    };
+  };
 
   // Функция для принудительной очистки кеша
   const clearCache = useCallback(() => {
     requestCache.current = {};
-    console.log('[API] Кеш запросов очищен');
+    // console.log('[Cache] Кеш запросов очищен');
   }, []);
 
   return { fetchAvailableTimeSlots, loading, error, clearCache };

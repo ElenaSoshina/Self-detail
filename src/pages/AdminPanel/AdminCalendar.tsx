@@ -624,7 +624,7 @@ const AdminCalendar: React.FC<{ onUserSelect: (userId: string) => void }> = ({ o
           <div className={styles.calendarModalOverlay}>
             <div className={styles.calendarModalContent}>
               <button className={styles.cancelButton} onClick={() => setShowCalendarPage(false)}>Отменить</button>
-              <CalendarPage isAdmin={true} />
+              <CalendarPage isAdmin={true} selectedDate={currentDate} />
             </div>
           </div>
         )}
