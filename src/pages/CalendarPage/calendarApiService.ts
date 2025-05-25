@@ -36,12 +36,9 @@ function toMoscowISOString(date: Date): string {
 export async function fetchAvailableTimeSlotsApi(date: Date) {
   const requestId = Math.random().toString(36).substring(2, 8);
   
-  // console.log(`[${requestId}] Начало запроса слотов`);
-  
   try {
     resetToken();
     await initAuth();
-    // console.log(`[${requestId}] Авторизация успешна`);
   } catch (error) {
     console.error(`[${requestId}] Ошибка авторизации: ${error}`);
     throw error;
@@ -49,6 +46,11 @@ export async function fetchAvailableTimeSlotsApi(date: Date) {
   
   const now = new Date();
   const isToday = date.toDateString() === now.toDateString();
+  
+  // Если это сегодняшний день и время уже позднее 22:00, возвращаем пустой массив
+  if (isToday && now.getHours() >= 22) {
+    return [];
+  }
   
   const startDate = new Date(date);
   const endDate = new Date(date);
@@ -65,10 +67,8 @@ export async function fetchAvailableTimeSlotsApi(date: Date) {
       currentTime.getSeconds(),
       currentTime.getMilliseconds()
     );
-    // console.log(`[${requestId}] Запрос слотов на сегодня: ${startDate.toISOString()}`);
   } else {
     startDate.setHours(0, 0, 0, 0);
-    // console.log(`[${requestId}] Запрос слотов на дату: ${startDate.toISOString()}`);
   }
   
   const startDateISO = toMoscowISOString(startDate);
@@ -77,9 +77,7 @@ export async function fetchAvailableTimeSlotsApi(date: Date) {
   let token = getToken();
   if (!token) {
     try {
-      console.log(`[${requestId}] Токен отсутствует, запрашиваем новый`);
       token = await login();
-      // console.log(`[${requestId}] Получен новый токен`);
     } catch (error) {
       console.error(`[${requestId}] Ошибка получения токена: ${error}`);
     }
@@ -87,7 +85,6 @@ export async function fetchAvailableTimeSlotsApi(date: Date) {
   
   try {
     const fullApiUrl = `${API_BASE_URL}${API_PATH}`;
-    // console.log(`[${requestId}] Отправляем запрос на ${fullApiUrl}`);
     
     const params = {
       start: toMoscowISOString(startDate),
@@ -95,7 +92,6 @@ export async function fetchAvailableTimeSlotsApi(date: Date) {
     };
     
     const response = await api.get('/calendar/available', { params });
-    // console.log(`[${requestId}] Получен ответ от сервера: ${response.status}`);
     
     if (response.data && response.data.message && 
        (response.data.message.includes('Unauthorized') || 
@@ -108,8 +104,6 @@ export async function fetchAvailableTimeSlotsApi(date: Date) {
         const newToken = await login();
         
         if (newToken) {
-          // console.log(`[${requestId}] Повторный запрос с новым токеном`);
-          
           const retryResponse = await api.get('/calendar/available', {
             params: { 
               start: startDateISO, 
@@ -117,7 +111,6 @@ export async function fetchAvailableTimeSlotsApi(date: Date) {
             }
           });
           
-          // console.log(`[${requestId}] Успешный повторный запрос`);
           return retryResponse.data.data || [];
         }
       } catch (authError: any) {
@@ -126,26 +119,24 @@ export async function fetchAvailableTimeSlotsApi(date: Date) {
     }
     
     const responseData = response.data;
-    // console.log(`[${requestId}] Обработка ответа сервера`);
     
     if (Array.isArray(responseData)) {
-      // console.log(`[${requestId}] Получен массив слотов: ${responseData.length}`);
       return responseData;
     } else if (responseData.success && Array.isArray(responseData.data)) {
-      // console.log(`[${requestId}] Получены слоты в формате success: ${responseData.data.length}`);
       return responseData.data;
     } else if (responseData.data && Array.isArray(responseData.data.slots)) {
-      // console.log(`[${requestId}] Получены слоты в формате data.slots: ${responseData.data.slots.length}`);
       return responseData.data.slots;
     } else if (responseData.slots && Array.isArray(responseData.slots)) {
-      // console.log(`[${requestId}] Получены слоты в формате slots: ${responseData.slots.length}`);
       return responseData.slots;
     }
     
-    console.warn(`[${requestId}] Нет данных о слотах`);
     return [];
-  } catch (error) {
-    console.error(`[${requestId}] Ошибка при запросе слотов: ${error}`);
+  } catch (error: any) {
+    // Если ошибка 400 и это сегодняшний день, вероятно запрашиваем время в прошлом
+    if (error.response?.status === 400 && isToday) {
+      return [];
+    }
+    
     throw error;
   }
 }

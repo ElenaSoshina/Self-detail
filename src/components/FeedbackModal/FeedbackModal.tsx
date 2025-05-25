@@ -20,7 +20,6 @@ const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose }) => {
 
   const handleSubmit = (data: FormData) => {
     // Здесь можно добавить отправку данных на сервер
-    console.log('Отправка данных:', data);
     
     // Показываем сообщение об успешной отправке
     setSuccess(true);

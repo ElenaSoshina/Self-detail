@@ -109,30 +109,13 @@ const AdminCalendar: React.FC<{ onUserSelect: (userId: string) => void }> = ({ o
         });
         
         const data = response.data;
-        console.log('Ответ от API:', data);
         
         if (!data || !data.data) {
           throw new Error('Неверный формат данных');
         }
         
-        console.log('Количество бронирований:', data.data.length);
-        console.log('Пример структуры первого бронирования:', data.data[0] ? {
-          bookingId: data.data[0].bookingId,
-          typeOfBookingId: typeof data.data[0].bookingId,
-          start: data.data[0].start,
-          end: data.data[0].end,
-          services: data.data[0].services
-        } : 'Нет бронирований');
-        
-        // Выводим для отладки все данные
-        for (const booking of data.data) {
-          console.log(`Бронирование ID=${booking.bookingId}, время: ${new Date(booking.start).toLocaleTimeString()} - ${new Date(booking.end).toLocaleTimeString()}`);
-        }
-        
         // Маппинг бронирований
         const bookedSlots = data.data.map((booking: any) => {
-          console.log('Данные бронирования из API:', booking);
-          
           // Получаем информацию об услуге
           const serviceName = booking.services && booking.services.length > 0 
             ? booking.services[0].serviceName 
@@ -200,21 +183,16 @@ const AdminCalendar: React.FC<{ onUserSelect: (userId: string) => void }> = ({ o
   }, [showDatePicker]);
 
   const handleSlotClick = (slot: BookingSlot) => {
-    console.log('Слот, на который нажали:', slot);
     setSelectedSlot(slot);
     
     // Если слот забронирован, показываем детали бронирования
     if (slot.isBooked) {
-      console.log('Слот забронирован. bookingId:', slot.bookingId, 'Тип:', typeof slot.bookingId);
-      
       // Тут важно проверить наличие bookingId и передать его в числовом формате
       if (slot.bookingId !== undefined) {
         // Преобразуем bookingId в число для API
         const numericBookingId = typeof slot.bookingId === 'string' ? 
           parseInt(slot.bookingId, 10) : 
           slot.bookingId;
-        
-        console.log('Устанавливаем selectedBookingId:', numericBookingId, 'Тип:', typeof numericBookingId);
         
         setSelectedBookingId(numericBookingId);
         setShowBookingDetails(true);
@@ -381,8 +359,6 @@ const AdminCalendar: React.FC<{ onUserSelect: (userId: string) => void }> = ({ o
     setBookingError(null);
     
     try {
-      console.log('Загрузка деталей бронирования, ID:', bookingId);
-      
       const response = await api.get(`/calendar/booking/${bookingId}`);
       
       if (!response.data) {
@@ -390,7 +366,6 @@ const AdminCalendar: React.FC<{ onUserSelect: (userId: string) => void }> = ({ o
       }
       
       const bookingData = response.data.data;
-      console.log('Получены данные бронирования:', bookingData);
       setBookingDetail(bookingData);
     } catch (error: any) {
       console.error('Ошибка при загрузке данных бронирования:', error);
@@ -402,7 +377,6 @@ const AdminCalendar: React.FC<{ onUserSelect: (userId: string) => void }> = ({ o
   };
 
   const handleCloseBookingDetails = () => {
-    console.log('Закрытие панели деталей бронирования');
     setShowBookingDetails(false);
     setSelectedBookingId(null);
   };
@@ -416,14 +390,13 @@ const AdminCalendar: React.FC<{ onUserSelect: (userId: string) => void }> = ({ o
 
   // Добавляем эффект для отслеживания изменений состояний
   useEffect(() => {
-    console.log('Состояние изменилось: showBookingDetails =', showBookingDetails, 'selectedBookingId =', selectedBookingId);
+    // Эффект для отслеживания изменений состояний
   }, [showBookingDetails, selectedBookingId]);
 
   // Функция для удаления бронирования
   const deleteBooking = async (bookingId: number | string) => {
     try {
       await api.delete(`/calendar/booking/${bookingId}`);
-      console.log('Бронирование успешно удалено:', bookingId);
       setDeleteSuccess(true);
       
       // Закрываем детали бронирования и обновляем список
@@ -517,7 +490,6 @@ const AdminCalendar: React.FC<{ onUserSelect: (userId: string) => void }> = ({ o
       return true;
     } catch (error: any) {
       console.error('Ошибка при удалении бронирования:', error);
-      alert(`Ошибка при удалении бронирования: ${error.message}`);
       return false;
     }
   };
@@ -579,7 +551,6 @@ const AdminCalendar: React.FC<{ onUserSelect: (userId: string) => void }> = ({ o
                   key={slot.id}
                   className={`${styles.slot} ${slot.isBooked ? styles.booked : ''}`}
                   onClick={() => {
-                    console.log('Клик по слоту:', slot.id, 'bookingId:', slot.bookingId);
                     handleSlotClick(slot);
                   }}
                 >
@@ -631,30 +602,24 @@ const AdminCalendar: React.FC<{ onUserSelect: (userId: string) => void }> = ({ o
       </div>
       
       {/* Используем новый компонент для отображения деталей бронирования */}
-      {showBookingDetails && selectedBookingId !== null && (() => {
-        console.log('Рендеринг BookingDetails с ID:', selectedBookingId, 'тип:', typeof selectedBookingId);
-        return (
-          <div className={styles.modalOverlay} onClick={handleModalOverlayClick}>
-            <div className={styles.modalContent}>
-              <BookingDetails 
-                bookingId={selectedBookingId} 
-                onClose={handleCloseBookingDetails} 
-                onEdit={(bookingId) => {
-                  console.log('Редактирование бронирования:', bookingId);
-                  // Здесь будет логика редактирования бронирования
-                  alert(`Редактирование бронирования #${bookingId} (в разработке)`);
-                }}
-                onCancel={(bookingId) => {
-                  console.log('Отмена бронирования:', bookingId);
-                  if (window.confirm(`Вы уверены, что хотите отменить бронирование #${bookingId}?`)) {
-                    deleteBooking(bookingId);
-                  }
-                }}
-              />
-            </div>
+      {showBookingDetails && selectedBookingId !== null && (
+        <div className={styles.modalOverlay} onClick={handleModalOverlayClick}>
+          <div className={styles.modalContent}>
+            <BookingDetails 
+              bookingId={selectedBookingId} 
+              onClose={handleCloseBookingDetails} 
+              onEdit={(bookingId) => {
+                // Здесь будет логика редактирования бронирования
+              }}
+              onCancel={(bookingId) => {
+                if (window.confirm(`Вы уверены, что хотите отменить бронирование #${bookingId}?`)) {
+                  deleteBooking(bookingId);
+                }
+              }}
+            />
           </div>
-        );
-      })()}
+        </div>
+      )}
       
       {deleteSuccess && (
         <div className={styles.successPopup}>

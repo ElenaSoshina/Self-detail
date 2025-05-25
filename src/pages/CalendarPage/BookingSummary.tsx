@@ -5,7 +5,7 @@ import { PricingPlan } from './calendarTypes';
 interface BookingSummaryProps {
   startTime: string | null;
   endTime: string | null;
-  duration: number;
+  duration: number | null;
   selectedPlan: PricingPlan;
   onBook: () => void;
   formatDate: (date: Date) => string;
@@ -20,30 +20,34 @@ const BookingSummary: React.FC<BookingSummaryProps> = ({
   onBook,
   formatDate,
   getDateRange
-}) => (
-  <div className={styles.totalPriceSection}>
-    <div className={styles.summaryInfo}>
-      <div>
-        <b>Дата:</b> {getDateRange()}
+}) => {
+  if (!duration) return null;
+  
+  return (
+    <div className={styles.totalPriceSection}>
+      <div className={styles.summaryInfo}>
+        <div>
+          <b>Дата:</b> {getDateRange()}
+        </div>
+        <div>
+          <b>Время:</b> {startTime} — {endTime}
+        </div>
+        <div>
+          <b>Продолжительность:</b> {duration.toFixed(2)} ч.
+        </div>
+        <div>
+          <b>Тариф:</b> {selectedPlan.title}
+        </div>
       </div>
-      <div>
-        <b>Время:</b> {startTime} — {endTime}
+      <div className={styles.totalPrice}>
+        <span>Итого:</span>
+        <span className={styles.priceValue}>{selectedPlan.price * duration} ₽</span>
       </div>
-      <div>
-        <b>Продолжительность:</b> {duration.toFixed(2)} ч.
-      </div>
-      <div>
-        <b>Тариф:</b> {selectedPlan.title}
-      </div>
+      <button className={styles.bookButton} onClick={onBook}>
+        Забронировать
+      </button>
     </div>
-    <div className={styles.totalPrice}>
-      <span>Итого:</span>
-      <span className={styles.priceValue}>{selectedPlan.price * duration} ₽</span>
-    </div>
-    <button className={styles.bookButton} onClick={onBook}>
-      Забронировать
-    </button>
-  </div>
-);
+  );
+};
 
 export default BookingSummary; 

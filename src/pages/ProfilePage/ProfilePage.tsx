@@ -143,8 +143,6 @@ const ProfilePage: React.FC = () => {
         throw new Error(data.errorMessage || 'Ошибка при получении данных');
       }
       
-      console.log('Полученные бронирования:', data.data);
-      
       // Преобразуем данные из API в нужный формат
       const formattedBookings = data.data.bookings.map((booking: ApiBooking) => {
         // Подсчет продолжительности в часах
@@ -223,7 +221,6 @@ const ProfilePage: React.FC = () => {
         throw new Error(data.errorMessage || 'Ошибка при удалении бронирования');
       }
       
-      console.log('Бронирование успешно удалено:', bookingId);
       setDeleteSuccess(true);
       
       // Закрываем модальное окно и обновляем список бронирований
@@ -240,7 +237,6 @@ const ProfilePage: React.FC = () => {
       return true;
     } catch (error: any) {
       console.error('Ошибка при удалении бронирования:', error);
-      alert(`Ошибка при удалении бронирования: ${error.message}`);
       return false;
     }
   };
@@ -359,12 +355,10 @@ const ProfilePage: React.FC = () => {
             <BookingDetails 
               bookingId={selectedBookingId} 
               onClose={handleCloseBookingDetails}
-              onEdit={() => {
-                console.log('Редактирование бронирования:', selectedBookingId);
-                handleCloseBookingDetails();
+              onEdit={(bookingId) => {
+                // Здесь будет логика редактирования бронирования
               }}
               onCancel={(bookingId) => {
-                console.log('Отмена бронирования:', bookingId);
                 if (window.confirm(`Вы уверены, что хотите отменить бронирование #${bookingId}?`)) {
                   deleteBooking(bookingId);
                 }

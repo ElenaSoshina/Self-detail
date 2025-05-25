@@ -43,14 +43,9 @@ const CalendarConfirmModal: React.FC<Props> = ({
                                                  onClose,
                                                }) => {
   useEffect(() => {
-    if (!isOpen) return;
-
-    // инициализируем авторизацию, когда модалка открывается
-    initAuth().catch((err) =>
-        console.error(`Ошибка получения токена авторизации: ${err.message}`)
-    );
-
-    console.log(`Модальное окно календаря отрисовано: bookingId=${bookingId}`, event);
+    if (isOpen && bookingId && event) {
+      // Модальное окно календаря отрисовано
+    }
   }, [isOpen, bookingId, event]);
 
   if (!isOpen) return null;
@@ -63,16 +58,14 @@ const CalendarConfirmModal: React.FC<Props> = ({
   }
 
   const handleGoogleCalendar = () => {
-    if (isLoading) return; // блокируем повторные клики
-
-    console.log('Нажата кнопка Google Calendar');
-    openGoogleCalendar(
-        event.title,
-        event.description,
-        event.location,
-        event.start,
-        event.end
-    );
+    if (!event) return;
+    
+    const startTime = event.start.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    const endTime = event.end.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    
+    const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(event.title)}&dates=${startTime}/${endTime}&details=${encodeURIComponent(event.description || '')}&location=${encodeURIComponent(event.location || '')}`;
+    
+    window.open(googleCalendarUrl, '_blank');
     onConfirm();
     closeTgWebApp();
   };

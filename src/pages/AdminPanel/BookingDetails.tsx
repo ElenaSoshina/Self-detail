@@ -29,15 +29,13 @@ interface BookingData {
 }
 
 const BookingDetails: React.FC<BookingDetailsProps> = ({ bookingId, onClose, onEdit, onCancel }) => {
-  console.log('BookingDetails рендерится, получен bookingId:', bookingId, 'Тип:', typeof bookingId);
-  
   const [booking, setBooking] = useState<BookingData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchBookingData = async () => {
-      if (!bookingId && bookingId !== 0) {
+    const fetchBookingDetails = async () => {
+      if (!bookingId) {
         setError('ID бронирования не указан');
         setLoading(false);
         return;
@@ -47,57 +45,37 @@ const BookingDetails: React.FC<BookingDetailsProps> = ({ bookingId, onClose, onE
         setLoading(true);
         setError(null);
         
-        console.log('Загрузка данных бронирования с ID:', bookingId, typeof bookingId);
-        
+        // Преобразуем bookingId в число для API запроса
         const bookingIdValue = typeof bookingId === 'string' ? parseInt(bookingId, 10) : bookingId;
-        console.log('Запрос к API:', `/calendar/booking/${bookingIdValue}`);
         
         const response = await api.get(`/calendar/booking/${bookingIdValue}`);
         
-        const data = response.data;
-        console.log('Полный ответ API:', data);
-        
-        if (!data) {
-          const errorMsg = 'Пустой ответ от сервера';
-          console.error('Ошибка в ответе API:', errorMsg);
-          throw new Error(errorMsg);
+        if (!response.data) {
+          throw new Error('Неверный формат ответа от сервера');
         }
+
+        const data = response.data;
         
         if (!data.success) {
-          const errorMsg = data.errorMessage || 'Неверный формат данных';
-          console.error('Ошибка в ответе API:', errorMsg);
-          throw new Error(errorMsg);
+          throw new Error(data.message || 'Ошибка при получении данных');
         }
-        
+
         if (!data.data) {
-          const errorMsg = 'Отсутствуют данные в ответе';
-          console.error('Ошибка в ответе API:', errorMsg);
-          throw new Error(errorMsg);
+          throw new Error('Данные бронирования не найдены');
         }
+
+        const bookingData = data.data;
         
-        console.log('Данные бронирования:', data.data);
-        console.log('Поля бронирования:', {
-          bookingId: data.data.bookingId,
-          clientName: data.data.clientName,
-          clientPhone: data.data.clientPhone,
-          clientEmail: data.data.clientEmail,
-          services: data.data.services,
-          telegramUserName: data.data.telegramUserName,
-          start: data.data.start,
-          end: data.data.end,
-          notes: data.data.notes
-        });
-        
-        setBooking(data.data);
-        setLoading(false);
+        setBooking(bookingData);
       } catch (error: any) {
-        console.error('Ошибка при загрузке данных бронирования:', error);
-        setError(`Не удалось загрузить данные бронирования: ${error.message || 'Неизвестная ошибка'}`);
+        console.error('Ошибка при загрузке деталей бронирования:', error);
+        setError(`Не удалось загрузить данные: ${error.message}`);
+      } finally {
         setLoading(false);
       }
     };
 
-    fetchBookingData();
+    fetchBookingDetails();
   }, [bookingId]);
 
   const renderServiceInfo = () => {
@@ -246,13 +224,13 @@ const BookingDetails: React.FC<BookingDetailsProps> = ({ bookingId, onClose, onE
         
         <div className={styles.actionButtons}>
           {/* <button 
-            onClick={() => onEdit ? onEdit(booking.bookingId) : console.log('Редактирование бронирования', booking.bookingId)}
+            onClick={() => onEdit ? onEdit(booking.bookingId) : undefined}
             className={styles.editButton}
           >
             Изменить
           </button> */}
           <button 
-            onClick={() => onCancel ? onCancel(booking.bookingId) : console.log('Отмена бронирования', booking.bookingId)}
+            onClick={() => onCancel ? onCancel(booking.bookingId) : undefined}
             className={styles.cancelButton}
           >
             Отменить

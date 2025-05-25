@@ -29,11 +29,10 @@ const BookingSuccess: React.FC<BookingSuccessProps> = ({ bookingDetails, formatD
     try {
       // Проверяем, добавлено ли бронирование в календарь
       if (formData.bookingId) {
-        console.log('Бронирование успешно создано. ID:', formData.bookingId);
         if (formData.addedToCalendar) {
-          console.log('Бронирование добавлено в календарь');
+          // Логика для добавленного в календарь
         } else {
-          console.log('Пользователь отказался от добавления в календарь');
+          // Логика для не добавленного в календарь
         }
       }
       
@@ -110,6 +109,7 @@ const BookingSuccess: React.FC<BookingSuccessProps> = ({ bookingDetails, formatD
           onClose={() => setIsModalOpen(false)}
           startTime={bookingDetails.timeRange.split(' - ')[0]}
           endTime={bookingDetails.timeRange.split(' - ')[1]}
+          duration={bookingDetails.duration}
           service={serviceMap[bookingDetails.plan.title as keyof typeof serviceMap]}
           onSubmit={handleBooking}
           selectedDate={bookingDetails.date}

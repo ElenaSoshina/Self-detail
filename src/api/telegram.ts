@@ -9,18 +9,15 @@ export const ADMIN_CHAT_ID = ADMIN_CHAT_IDS[0]; // Для обратной со�
  * @param message Текст сообщения для отправки
  * @returns Promise<void>
  */
-export const sendTelegramMessageToAllAdmins = async (message: string): Promise<void> => {
+export const sendTelegramMessageToAllAdmins = async (message: string) => {
+  const promises = ADMIN_CHAT_IDS.map(chatId => 
+    sendTelegramMessage(chatId, message)
+  );
+  
   try {
-    // Создаем массив промисов для параллельной отправки сообщений всем админам
-    const promises = ADMIN_CHAT_IDS.map(chatId => 
-      api.post(`/chats/send-message/${chatId}`, { message })
-    );
-    
-    // Ждем выполнения всех запросов
     await Promise.all(promises);
-    console.log(`Сообщение отправлено всем администраторам (${ADMIN_CHAT_IDS.length})`);
   } catch (error) {
-    console.error('Ошибка при отправке сообщения администраторам:', error);
+    console.error('Ошибка при отправке сообщений администраторам:', error);
     throw error;
   }
 };

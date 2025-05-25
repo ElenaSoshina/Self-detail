@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import styles from './BookingModal.module.css';
 import SuccessPopup from '../SuccessPopup/SuccessPopup';
 import {
@@ -19,6 +19,7 @@ interface BookingModalProps {
   onClose: () => void;
   startTime: string;
   endTime: string;
+  duration?: number;
   service?: {
     serviceName: string;
     price: number;
@@ -32,6 +33,8 @@ interface BookingModalProps {
     email: string;
     telegramUserName: string;
   };
+  startTimeContext?: 'current' | 'next' | null;
+  endTimeContext?: 'current' | 'next' | null;
 }
 
 interface FormData {
@@ -46,13 +49,29 @@ const BookingModal: React.FC<BookingModalProps> = ({
   onClose,
   startTime,
   endTime,
+  duration,
   service,
   onSubmit,
   selectedDate,
   isAdmin,
-  prefilledData
+  prefilledData,
+  startTimeContext,
+  endTimeContext
 }) => {
-  console.log('BookingModal received selectedDate:', selectedDate, typeof selectedDate, selectedDate instanceof Date);
+  console.log('📄 BookingModal - Получены props:', {
+    isOpen: isOpen,
+    startTime: startTime,
+    endTime: endTime,
+    duration: duration,
+    service: service,
+    selectedDate: selectedDate,
+    selectedDateFormatted: selectedDate ? selectedDate.toLocaleDateString('ru-RU', { 
+      day: 'numeric', 
+      month: 'long', 
+      year: 'numeric' 
+    }) : 'null',
+    isAdmin: isAdmin
+  });
   
   const [formData, setFormData] = useState<FormData>({
     name: prefilledData?.name || '',
@@ -122,21 +141,53 @@ const BookingModal: React.FC<BookingModalProps> = ({
   };
 
   // Вычисление количества часов бронирования
-  const getDurationHours = () => {
+  const durationHours = useMemo(() => {
+    // Если передана готовая продолжительность из родительского компонента - используем её
+    if (duration !== undefined) {
+      return duration;
+    }
+    
+    // Fallback для случаев когда duration не передан (например, при вызове из корзины)
     try {
-      const parts = startTime.split(/[—-]/).map(s => s.trim());
-      const start = parts[0];
-      const end = parts[1] || parts[0];
+      let start, end;
+      
+      // Проверяем, содержит ли startTime диапазон
+      if (startTime.includes('—') || startTime.includes('-')) {
+        const parts = startTime.split(/[—-]/).map(s => s.trim());
+        start = parts[0];
+        end = parts[1];
+      } else {
+        start = startTime;
+        end = endTime;
+      }
+      
+      if (!start || !end) {
+        return 1;
+      }
+      
       const [startH, startM] = start.split(':').map(Number);
       const [endH, endM] = end.split(':').map(Number);
+      
       let hours = endH - startH;
-      if (endM - startM > 0) hours += 1;
+      
+      // Если время окончания меньше времени начала, значит переход через день
+      if (endH < startH || (endH === startH && endM < startM)) {
+        hours = (24 - startH) + endH;
+      }
+      
+      // Учитываем минуты
+      if (endM > startM) hours += 1;
+      
       return hours > 0 ? hours : 1;
-    } catch {
+    } catch (error) {
+      console.error('Error in duration calculation:', error);
       return 1;
     }
+  }, [startTime, endTime, duration]);
+
+  const getDurationHours = () => {
+    return durationHours;
   };
-  const durationHours = getDurationHours();
   
   // Проверяем источник данных
   const checkSource = () => {
@@ -158,7 +209,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
   // Определяем итоговую стоимость услуги
   // Если пришли из корзины, цена уже включает длительность
   // Если не из корзины, нужно умножить на длительность
-  const servicePrice = isFromCart ? baseServicePrice : baseServicePrice * durationHours;
+  const servicePrice = isFromCart ? baseServicePrice : baseServicePrice * getDurationHours();
   
   const serviceRu = hasService && service?.serviceName ? (serviceNameMap[service.serviceName] || service.serviceName) : '';
   
@@ -197,14 +248,22 @@ const BookingModal: React.FC<BookingModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validate()) return;
+    console.log('🔄 BookingModal - Начало handleSubmit');
     
-    // alert('Начало отправки формы бронирования');
+    if (!validate()) {
+      console.log('❌ BookingModal - Валидация не прошла, ошибки:', fieldErrors);
+      return;
+    }
+    
+    console.log('✅ BookingModal - Валидация прошла успешно');
     
     setIsLoading(true);
     setError(null);
+    console.log('🔄 BookingModal - Начинаем обработку данных');
+    
     try {
-      if (!chatId) throw new Error('Telegram ID не получен');
+      console.log('🔄 BookingModal - Парсим время:', { startTime, endTime });
+      
       // подготовить дату
       let startTimeStr = startTime;
       let endTimeStr = endTime;
@@ -218,36 +277,88 @@ const BookingModal: React.FC<BookingModalProps> = ({
         }
       }
       
-      console.log('Parsed times:', { startTimeStr, endTimeStr, originalStartTime: startTime, originalEndTime: endTime });
+      console.log('🔄 BookingModal - Обработанное время:', { startTimeStr, endTimeStr });
       
       const date = selectedDate || new Date();
-      const yyyy = date.getFullYear();
-      const mm = String(date.getMonth() + 1).padStart(2, '0');
-      const dd = String(date.getDate()).padStart(2, '0');
+      console.log('🔄 BookingModal - Выбранная дата:', date);
       
-      // Создаем даты для начала и конца
+      // Создаем даты для начала и конца с учетом контекста
       let startDate = new Date(date);
       let endDate = new Date(date);
+      
+      // Если startTime из секции "следующего дня"
+      if (startTimeContext === 'next') {
+        startDate.setDate(startDate.getDate() + 1);
+      }
+      
+      // Если endTime из секции "следующего дня"
+      if (endTimeContext === 'next') {
+        endDate.setDate(endDate.getDate() + 1);
+      }
+      
+      // Fallback логика для случаев когда контекст не передан (например, из корзины)
+      if (!startTimeContext && !endTimeContext) {
+        // Парсим время для определения межсуточного перехода
+        let start, end;
+        
+        if (startTime.includes('—') || startTime.includes('-')) {
+          const parts = startTime.split(/[—-]/).map(s => s.trim());
+          start = parts[0];
+          end = parts[1];
+        } else {
+          start = startTime;
+          end = endTime;
+        }
+        
+        if (start && end) {
+          const [startH] = start.split(':').map(Number);
+          const [endH] = end.split(':').map(Number);
+          
+          // Если время окончания меньше времени начала, значит переход на следующий день
+          if (endH < startH) {
+            endDate.setDate(endDate.getDate() + 1);
+          }
+        }
+      }
+      
+      console.log('🔄 BookingModal - Фактические даты с учетом контекста:', {
+        originalDate: date,
+        startDate: startDate,
+        endDate: endDate,
+        startTimeContext: startTimeContext,
+        endTimeContext: endTimeContext,
+        usedFallbackLogic: !startTimeContext && !endTimeContext
+      });
       
       // Парсим время
       const [startHour, startMinute] = startTimeStr.split(':').map(Number);
       const [endHour, endMinute] = endTimeStr.split(':').map(Number);
       
+      console.log('🔄 BookingModal - Парсинг времени:', { startHour, startMinute, endHour, endMinute });
+      
       startDate.setHours(startHour, startMinute, 0, 0);
       endDate.setHours(endHour, endMinute, 0, 0);
       
-      // Если время окончания меньше времени начала, значит оно на следующий день
-      if (endDate <= startDate) {
-        endDate.setDate(endDate.getDate() + 1);
-      }
+      // ИСПРАВЛЕНО: Создаем ISO строки с московским временем, а не UTC
+      const formatToMoscowISO = (date: Date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const seconds = String(date.getSeconds()).padStart(2, '0');
+        
+        // Возвращаем строку в формате ISO но с московским временем
+        return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+      };
       
-      const startISO = startDate.toISOString();
-      const endISO = endDate.toISOString();
+      const startISO = formatToMoscowISO(startDate);
+      const endISO = formatToMoscowISO(endDate);
       
-      console.log('Final ISO dates:', { startISO, endISO });
+      console.log('🔄 BookingModal - ISO даты:', { startISO, endISO });
 
       const payload = {
-        telegramUserId: parseInt(chatId),
+        telegramUserId: chatId || "0",
         telegramUserName: formData.telegramUserName,
         clientName: formData.name,
         clientPhone: formData.phone.replace('+',''),
@@ -255,22 +366,16 @@ const BookingModal: React.FC<BookingModalProps> = ({
         start: startISO,
         end: endISO,
         service: hasService ? [{ serviceName: service!.serviceName, price: servicePrice }] : [],
-        products: products.length
-          ? products.map(p => ({ name: p.name, price: p.price, quantity: p.quantity }))
-          : undefined,
         notes: ''
       };
 
-      // alert('Отправка запроса на API календаря...');
-      
+      console.log('🚀 BookingModal - Данные для отправки на сервер:', payload);
+
+      console.log('🔄 BookingModal - Отправляем запрос на сервер...');
       const res = await api.post('/calendar/booking', payload);
-      
-      // alert('Получен ответ от API. Проверяем наличие bookingId');
       
       const id = res.data?.data?.bookingId;
       if (!id) throw new Error('bookingId не вернулся');
-      
-      // alert(`Получен bookingId: ${id}`);
       
       setBookingId(id);
 
@@ -282,32 +387,34 @@ const BookingModal: React.FC<BookingModalProps> = ({
         start: new Date(startISO),
         end: new Date(endISO),
       });
-
-      // alert('Детали события созданы. Открываем модальное окно календаря');
       
       // открываем наше модальное окно
       setShowCalendarModal(true);
       
-      // alert('Флаг showCalendarModal установлен в true');
-      //
-      // // уведомляем в Telegram
-      // alert('Отправка уведомлений в Telegram...');
-      //
       const adminMsg = formatAdminMessage(payload, { price: servicePrice }, service?.serviceName ?? '');
       const userMsg  = formatUserMessage(payload, { price: servicePrice }, service?.serviceName ?? '');
+      
+      console.log('📲 BookingModal - Данные для отправки в Telegram:', {
+        payload: payload,
+        servicePrice: servicePrice,
+        serviceName: service?.serviceName ?? '',
+        adminMsg: adminMsg,
+        userMsg: userMsg,
+        isAdmin: isAdmin,
+        chatId: chatId,
+        timestamp: new Date().toISOString()
+      });
+      
       if (isAdmin) {
         await sendTelegramMessageToAllAdmins(adminMsg);
       } else {
-        await Promise.all([
-          sendTelegramMessage(userMsg, chatId),
-          sendTelegramMessageToAllAdmins(adminMsg)
-        ]);
+        if (chatId) {
+          await sendTelegramMessage(userMsg, chatId);
+        }
+        await sendTelegramMessageToAllAdmins(adminMsg);
       }
-      
-      // alert('Уведомления в Telegram отправлены успешно');
 
     } catch (err: any) {
-      alert(`Ошибка при бронировании: ${err.message}`);
       setError(err.message || 'Ошибка бронирования');
     } finally {
       setIsLoading(false);
@@ -342,8 +449,6 @@ const BookingModal: React.FC<BookingModalProps> = ({
     
     // Показываем сообщение об успешном бронировании
     setTimeout(() => {
-      // alert(`Бронирование успешно добавлено! ID: ${bookingId}`);
-      
       // Обработка успешного добавления
       if (onSubmit) {
         const submittedData = {
@@ -408,12 +513,6 @@ const BookingModal: React.FC<BookingModalProps> = ({
 
   if (!isOpen) return null;
 
-  console.log('Состояние модального окна:', {
-    showCalendarModal,
-    bookingId,
-    hasEventDetails: !!eventDetails
-  });
-
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
       <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
@@ -428,6 +527,87 @@ const BookingModal: React.FC<BookingModalProps> = ({
           {hasService && (
             <>
               <div className={styles.infoRow}>
+                <span className={styles.infoLabel}>Дата:</span>
+                <span className={styles.infoValue}>
+                  {(() => {
+                    if (!selectedDate) return '';
+                    
+                    console.log('📅 BookingModal - Расчет даты для отображения:', {
+                      selectedDate: selectedDate,
+                      selectedDateFormatted: selectedDate.toLocaleDateString('ru-RU'),
+                      startTime: startTime,
+                      endTime: endTime,
+                      startTimeContext: startTimeContext,
+                      endTimeContext: endTimeContext
+                    });
+                    
+                    const formatDate = (date: Date) => {
+                      return date.toLocaleDateString('ru-RU', { 
+                        day: 'numeric', 
+                        month: 'long', 
+                        year: 'numeric' 
+                      });
+                    };
+                    
+                    // Определяем фактические даты начала и конца с учетом контекста
+                    let actualStartDate = new Date(selectedDate);
+                    let actualEndDate = new Date(selectedDate);
+                    
+                    // Если startTime из секции "следующего дня"
+                    if (startTimeContext === 'next') {
+                      actualStartDate.setDate(actualStartDate.getDate() + 1);
+                    }
+                    
+                    // Если endTime из секции "следующего дня"  
+                    if (endTimeContext === 'next') {
+                      actualEndDate.setDate(actualEndDate.getDate() + 1);
+                    }
+                    
+                    // Fallback логика для случаев когда контекст не передан (например, из корзины)
+                    if (!startTimeContext && !endTimeContext) {
+                      // Парсим время для определения межсуточного перехода
+                      let start, end;
+                      
+                      if (startTime.includes('—') || startTime.includes('-')) {
+                        const parts = startTime.split(/[—-]/).map(s => s.trim());
+                        start = parts[0];
+                        end = parts[1];
+                      } else {
+                        start = startTime;
+                        end = endTime;
+                      }
+                      
+                      if (start && end) {
+                        const [startH] = start.split(':').map(Number);
+                        const [endH] = end.split(':').map(Number);
+                        
+                        // Если время окончания меньше времени начала, значит переход на следующий день
+                        if (endH < startH) {
+                          actualEndDate.setDate(actualEndDate.getDate() + 1);
+                        }
+                      }
+                    }
+                    
+                    console.log('📅 BookingModal - Фактические даты с учетом контекста:', {
+                      originalSelectedDate: formatDate(selectedDate),
+                      actualStartDate: formatDate(actualStartDate),
+                      actualEndDate: formatDate(actualEndDate),
+                      startTimeContext: startTimeContext,
+                      endTimeContext: endTimeContext,
+                      usedFallbackLogic: !startTimeContext && !endTimeContext
+                    });
+                    
+                    // Если даты начала и конца разные - показываем диапазон
+                    if (actualStartDate.toDateString() !== actualEndDate.toDateString()) {
+                      return `${formatDate(actualStartDate)} — ${formatDate(actualEndDate)}`;
+                    } else {
+                      // Если даты одинаковые - показываем одну дату
+                      return formatDate(actualStartDate);
+                    }
+                  })()}
+                </span>
+              </div>
+              <div className={styles.infoRow}>
                 <span className={styles.infoLabel}>Услуга:</span>
                 <span className={styles.infoValue}>{serviceRu}</span>
               </div>
@@ -439,7 +619,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
               </div>
               <div className={styles.infoRow}>
                 <span className={styles.infoLabel}>Длительность:</span>
-                <span className={styles.infoValue}>{durationHours} ч.</span>
+                <span className={styles.infoValue}>{getDurationHours()} ч.</span>
               </div>
               <div className={styles.infoRow}>
                 <span className={styles.infoLabel}>Стоимость услуги: </span>

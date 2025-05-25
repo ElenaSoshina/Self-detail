@@ -53,9 +53,6 @@ const CartPage: React.FC = () => {
 
   const handleBooking = async (formData: any) => {
     try {
-      alert('Создание бронирования');
-      alert('Выбранная дата: ' + formData.selectedDate.toLocaleDateString());
-      
       // Извлекаем время для запроса
       const timeMatches = formData.startTime.match(/\d{1,2}:\d{2}/g);
       if (!timeMatches || timeMatches.length === 0) {
@@ -65,9 +62,6 @@ const CartPage: React.FC = () => {
       // Определяем начальное и конечное время
       const startTimeFormatted = timeMatches[0];  // Первое найденное время
       const endTimeFormatted = timeMatches.length > 1 ? timeMatches[1] : startTimeFormatted;  // Второе время или первое, если второго нет
-      
-      // Форматируем дату для API
-      alert('Изначальная дата: ' + (formData.selectedDate instanceof Date ? formData.selectedDate.toISOString() : String(formData.selectedDate)));
 
       // Гарантируем, что у нас есть валидный объект Date
       const selectedDateObj = formData.selectedDate instanceof Date 
@@ -79,9 +73,6 @@ const CartPage: React.FC = () => {
       const actualMonth = selectedDateObj.getMonth() + 1; // Месяц (1-12)
       const actualYear = selectedDateObj.getFullYear(); // Год в 4-х значном формате
 
-      // Проверяем, что у нас правильная дата
-      alert(`Правильная дата: День=${actualDay}, Месяц=${actualMonth}, Год=${actualYear}`);
-
       // Форматируем с ведущими нулями
       const year = actualYear.toString();
       const month = actualMonth.toString().padStart(2, '0');
@@ -92,8 +83,6 @@ const CartPage: React.FC = () => {
       // Создаем ISO строки для начала и конца бронирования
       const startISODate = `${dateStr}T${startTimeFormatted}:00`;
       const endISODate = `${dateStr}T${endTimeFormatted}:00`;
-      
-      alert('Данные для API: start=' + startISODate + ', end=' + endISODate);
       
       // Вычисляем общую стоимость
       const bookingCost = formData.service?.price || 0;
@@ -118,7 +107,7 @@ const CartPage: React.FC = () => {
       // Формируем данные для API
       const chatId = '0';
       const apiData = {
-        telegramUserId: parseInt(chatId || '0'),
+        telegramUserId: chatId,
         telegramUserName: formData.telegramUserName?.startsWith('@') 
           ? formData.telegramUserName 
           : `@${formData.telegramUserName || ''}`,
@@ -133,14 +122,7 @@ const CartPage: React.FC = () => {
               price: formData.service.price || 0
             }]
           : [],
-        notes: '',
-        products: items
-          .filter(item => item.type === 'product')
-          .map(item => ({
-            productName: item.name,
-            price: item.price,
-            quantity: item.quantity
-          }))
+        notes: ''
       };
       
       // Отправляем запрос на API для создания бронирования
@@ -148,18 +130,23 @@ const CartPage: React.FC = () => {
       
       // Получаем результат
       const result = response.data;
-      alert('Бронирование успешно создано');
       
       // Отправляем сообщения в Telegram
       const isTech = (formData.service?.serviceName || '').toLowerCase().includes('техничес');
+      
+      console.log('📲 CartPage - Данные для отправки в Telegram:', {
+        apiData: apiData,
+        serviceData: formData.service || { price: 0 },
+        serviceName: formData.service?.serviceName || '',
+        isTech: isTech,
+        timestamp: new Date().toISOString()
+      });
       
       try {
         // Отправляем сообщение всем администраторам
         await sendTelegramMessageToAllAdmins(
           formatAdminMessage(apiData, formData.service || { price: 0 }, formData.service?.serviceName || '')
         );
-
-        alert('Уведомления в Telegram отправлены');
       } catch (telegramError) {
         console.error('Ошибка при отправке уведомлений в Telegram:', telegramError);
       }
@@ -168,7 +155,6 @@ const CartPage: React.FC = () => {
       setSuccessBookingDetails(bookingDetails);
     } catch (error) {
       console.error('Ошибка при бронировании:', error);
-      alert(`Ошибка при бронировании: ${error}`);
     }
   };
 
@@ -288,13 +274,6 @@ const CartPage: React.FC = () => {
                     }
                   }
                 }
-                
-                console.log('Передача в модальное окно:', {
-                  bookingItem,
-                  serviceObj,
-                  startTime: startTimeStr,
-                  endTime: endTimeStr
-                });
               } else if (bookingData) {
                 // Если нет бронирования, но есть данные из location state
                 const hourlyRate = 800; // Базовая ставка за час
@@ -304,19 +283,6 @@ const CartPage: React.FC = () => {
                 };
                 startTimeStr = bookingData.startTime;
                 endTimeStr = bookingData.endTime;
-                
-                console.log('Передача в модальное окно из bookingData:', {
-                  bookingData,
-                  serviceObj,
-                  startTime: startTimeStr,
-                  endTime: endTimeStr
-                });
-              }
-              
-              // Диагностика данных о дате
-              if (bookingData?.selectedDate) {
-                const dateObj = bookingData.selectedDate;
-                console.log('Выбранная дата для бронирования:', dateObj);
               }
               
               // Устанавливаем время и сервис для модального окна
@@ -342,10 +308,13 @@ const CartPage: React.FC = () => {
           onClose={() => setIsModalOpen(false)}
           startTime={selectedTime.start}
           endTime={selectedTime.end}
+          // duration намеренно не передается - BookingModal использует fallback логику
           service={selectedService}
           onSubmit={handleBooking}
           selectedDate={bookingData?.selectedDate}
           isAdmin={false}
+          startTimeContext={undefined}
+          endTimeContext={undefined}
         />
       )}
     </div>

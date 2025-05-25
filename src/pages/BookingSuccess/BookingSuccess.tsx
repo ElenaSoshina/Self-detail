@@ -18,11 +18,8 @@ const BookingSuccess: React.FC<BookingSuccessProps> = ({ bookingDetails }) => {
 
   // Эффект для форматирования времени при загрузке компонента
   useEffect(() => {
-    console.log('Исходная строка времени:', bookingDetails.timeRange);
-    
     // Ищем все числа в формате ЧЧ:ММ
     const timeMatches = bookingDetails.timeRange.match(/\d{1,2}:\d{2}/g);
-    console.log('Найденные совпадения времени:', timeMatches);
     
     if (timeMatches && timeMatches.length >= 2) {
       // Используем только первые два совпадения
@@ -42,6 +39,26 @@ const BookingSuccess: React.FC<BookingSuccessProps> = ({ bookingDetails }) => {
     : typeof bookingDetails.date === 'string' 
       ? new Date(bookingDetails.date).toLocaleDateString('ru-RU')
       : 'Дата не указана';
+
+  // Извлекаем время из строки времени
+  const extractTimeFromRange = (timeRange: string) => {
+    
+    // Ищем все вхождения времени в формате HH:MM
+    const timeMatches = timeRange.match(/\d{1,2}:\d{2}/g);
+    
+    if (timeMatches && timeMatches.length >= 2) {
+      return {
+        startTime: timeMatches[0],
+        endTime: timeMatches[1]
+      };
+    }
+    
+    // Если не удалось извлечь время, возвращаем пустые строки
+    return {
+      startTime: '',
+      endTime: ''
+    };
+  };
 
   return (
     <div className={styles.successPage}>

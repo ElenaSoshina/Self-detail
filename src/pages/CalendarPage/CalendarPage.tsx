@@ -44,6 +44,8 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin, selectedDate: exte
   const [nextDayTimeSlotData, setNextDayTimeSlotData] = useState<TimeSlotWithData[]>([]);
   const [startTime, setStartTime] = useState<string | null>(null);
   const [endTime, setEndTime] = useState<string | null>(null);
+  const [startTimeContext, setStartTimeContext] = useState<'current' | 'next' | null>(null);
+  const [endTimeContext, setEndTimeContext] = useState<'current' | 'next' | null>(null);
   const [bookingDetails, setBookingDetails] = useState<BookingDetails | null>(null);
   const [bookingCompleted, setBookingCompleted] = useState(false);
   const [loadingSlots, setLoadingSlots] = useState(true);
@@ -180,17 +182,16 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin, selectedDate: exte
           };
         });
 
-        console.log('Next day slots:', firstFourHours); // Для отладки
-        console.log('Next day data:', firstFourData); // Для отладки
         setNextDayTimeSlots(firstFourHours);
         setNextDayTimeSlotData(firstFourData);
 
         setStartTime(null);
         setEndTime(null);
+        setStartTimeContext(null);
+        setEndTimeContext(null);
         setBookingDetails(null);
         setBookingCompleted(false);
       } catch (error) {
-        console.error('Error loading slots:', error); // Для отладки
         if (!cancelled) {
           setSlotsError('Ошибка загрузки слотов.');
           setAvailableTimeSlots([]);
@@ -299,7 +300,7 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin, selectedDate: exte
   };
 
   /** ——————————————————— All 24h slots (local) ——————————————————— */
-  const allDaySlots = Array.from({ length: 24 }, (_, h) => {
+  const allDaySlots = Array.from({ length: 25 }, (_, h) => {
     const start = `${h.toString().padStart(2, '0')}:00`;
     const end = `${((h + 1) % 24).toString().padStart(2, '0')}:00`;
     return { formattedTime: start, start, end };
@@ -333,11 +334,9 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin, selectedDate: exte
     let startDate = new Date(selectedDate);
     let endDate = new Date(selectedDate);
     
-    // Определяем, в каком дне находится startTime и endTime
-    // Используем простую логику: если слот есть в nextDayTimeSlots и НЕ доступен в текущем дне,
-    // то он принадлежит следующему дню
-    const startTimeInNextDay = nextDayTimeSlots.includes(startTime) && !isSlotAvailableInCurrentDay(startTime);
-    const endTimeInNextDay = nextDayTimeSlots.includes(endTime) && !isSlotAvailableInCurrentDay(endTime);
+    // Используем контекст для определения дня
+    const startTimeInNextDay = startTimeContext === 'next';
+    const endTimeInNextDay = endTimeContext === 'next';
     
     // Если startTime в следующем дне
     if (startTimeInNextDay) {
@@ -355,17 +354,6 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin, selectedDate: exte
     const durationMs = endDate.getTime() - startDate.getTime();
     const durationHours = durationMs / 3_600_000;
     
-    console.log('Duration calculation:', {
-      startTime,
-      endTime,
-      startTimeInNextDay,
-      endTimeInNextDay,
-      startDate: startDate.toISOString(),
-      endDate: endDate.toISOString(),
-      durationMs,
-      durationHours
-    });
-
     return durationHours;
   };
 
@@ -375,11 +363,9 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin, selectedDate: exte
     let startDate = new Date(selectedDate);
     let endDate = new Date(selectedDate);
     
-    // Определяем, в каком дне находится startTime и endTime
-    // Используем простую логику: если слот есть в nextDayTimeSlots и НЕ доступен в текущем дне,
-    // то он принадлежит следующему дню
-    const startTimeInNextDay = nextDayTimeSlots.includes(startTime) && !isSlotAvailableInCurrentDay(startTime);
-    const endTimeInNextDay = nextDayTimeSlots.includes(endTime) && !isSlotAvailableInCurrentDay(endTime);
+    // Используем контекст для определения дня
+    const startTimeInNextDay = startTimeContext === 'next';
+    const endTimeInNextDay = endTimeContext === 'next';
     
     // Если startTime в следующем дне
     if (startTimeInNextDay) {
@@ -435,12 +421,13 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin, selectedDate: exte
 
   // Обработчик завершения бронирования из модального окна
   const handleBookingComplete = (formData: any) => {
-    console.log('Бронирование успешно завершено:', formData);
     setShowBookingModal(false);
     
     // Сбрасываем выбранное время
     setStartTime(null);
     setEndTime(null);
+    setStartTimeContext(null);
+    setEndTimeContext(null);
     
     // Если мы находимся на странице администратора, перезагружаем страницу
     if (isAdmin) {
@@ -472,13 +459,20 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin, selectedDate: exte
   /** ——————————————————— Render ——————————————————— */
   const currentMonthYear = `${months[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
 
-  const handleRangeSelect = (start: string | null, end: string | null) => {
-    console.log('=== handleRangeSelect called ===');
-    console.log('Previous state:', { startTime, endTime });
-    console.log('New values:', { start, end });
+  const handleRangeSelect = (start: string | null, end: string | null, startContext?: 'current' | 'next', endContext?: 'current' | 'next') => {
+    console.log('📅 CalendarPage - handleRangeSelect вызвана:', {
+      start: start,
+      end: end,
+      startContext: startContext,
+      endContext: endContext,
+      selectedDate: selectedDate,
+      selectedDateFormatted: selectedDate ? formatDate(selectedDate) : 'null'
+    });
+    
     setStartTime(start);
     setEndTime(end);
-    console.log('State should be updated to:', { startTime: start, endTime: end });
+    setStartTimeContext(startContext || null);
+    setEndTimeContext(endContext || null);
   };
 
   // Обновление сетки дней при смене месяца
@@ -535,6 +529,8 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin, selectedDate: exte
               onRangeSelect={handleRangeSelect}
               startTime={startTime}
               endTime={endTime}
+              startTimeContext={startTimeContext}
+              endTimeContext={endTimeContext}
             />
 
             {duration && (
@@ -579,6 +575,7 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin, selectedDate: exte
           onClose={() => setShowBookingModal(false)}
           startTime={startTime || ''}
           endTime={endTime || ''}
+          duration={duration || undefined}
           service={{
             serviceName: 'Технические работы',
             price: 0
@@ -592,6 +589,8 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin, selectedDate: exte
             email: 'admin@admin.com',
             telegramUserName: '@admin'
           }}
+          startTimeContext={startTimeContext}
+          endTimeContext={endTimeContext}
         />
       )}
     </div>

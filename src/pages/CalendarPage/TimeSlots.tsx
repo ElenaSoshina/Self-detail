@@ -12,9 +12,11 @@ interface TimeSlotsProps {
   formatDate: (date: Date) => string;
   timeSlotData: TimeSlotData[];
   nextDayTimeSlotData: TimeSlotData[];
-  onRangeSelect: (start: string | null, end: string | null) => void;
+  onRangeSelect: (start: string | null, end: string | null, startContext?: 'current' | 'next', endContext?: 'current' | 'next') => void;
   startTime: string | null;
   endTime: string | null;
+  startTimeContext?: 'current' | 'next' | null;
+  endTimeContext?: 'current' | 'next' | null;
 }
 
 const TimeSlots: React.FC<TimeSlotsProps> = ({
@@ -29,31 +31,31 @@ const TimeSlots: React.FC<TimeSlotsProps> = ({
   nextDayTimeSlotData,
   onRangeSelect,
   startTime: externalStartTime,
-  endTime: externalEndTime
+  endTime: externalEndTime,
+  startTimeContext,
+  endTimeContext
 }) => {
   const [startTime, setStartTime] = useState<string | null>(externalStartTime);
   const [endTime, setEndTime] = useState<string | null>(externalEndTime);
   
   // Добавляем состояние для отслеживания контекста выбора
-  const [startTimeContext, setStartTimeContext] = useState<'current' | 'next' | null>(null);
-  const [endTimeContext, setEndTimeContext] = useState<'current' | 'next' | null>(null);
+  const [startTimeContextState, setStartTimeContextState] = useState<'current' | 'next' | null>(startTimeContext || null);
+  const [endTimeContextState, setEndTimeContextState] = useState<'current' | 'next' | null>(endTimeContext || null);
 
   useEffect(() => {
-    console.log('=== TimeSlots useEffect triggered ===');
-    console.log('External props:', { externalStartTime, externalEndTime });
-    console.log('Current internal state:', { startTime, endTime });
     setStartTime(externalStartTime);
     setEndTime(externalEndTime);
-    console.log('Updated internal state to:', { startTime: externalStartTime, endTime: externalEndTime });
-  }, [externalStartTime, externalEndTime]);
+    setStartTimeContextState(startTimeContext || null);
+    setEndTimeContextState(endTimeContext || null);
+  }, [externalStartTime, externalEndTime, startTimeContext, endTimeContext]);
 
   // Функция для сброса выбранного времени
   const resetTimeSelection = () => {
     setStartTime(null);
     setEndTime(null);
-    setStartTimeContext(null);
-    setEndTimeContext(null);
-    onRangeSelect(null, null);
+    setStartTimeContextState(null);
+    setEndTimeContextState(null);
+    onRangeSelect(null, null, undefined, undefined);
   };
 
   // Вспомогательная функция для проверки, доступен ли слот в текущем дне (включая граничные)
@@ -84,18 +86,34 @@ const TimeSlots: React.FC<TimeSlotsProps> = ({
     return availableTimeSlots.includes(slotTime);
   };
 
-  // Проверка, является ли слот занятым (нет в availableTimeSlots)
+  // Проверка, является ли слот занятым (явно помечен как unavailable в API)
   const isSlotBooked = (slotTime: string, isNextDay: boolean = false): boolean => {
+    if (isNextDay) {
+      // Для следующего дня проверяем в nextDayTimeSlotData
+      const slotData = nextDayTimeSlotData.find(data => data.formattedTime === slotTime);
+      // Слот занят только если он существует в данных И помечен как недоступный
+      return slotData ? !slotData.available : false;
+    }
+    
+    // Для текущего дня проверяем в timeSlotData
+    const slotData = timeSlotData.find(data => data.formattedTime === slotTime);
+    // Слот занят только если он существует в данных И помечен как недоступный
+    // Если слота нет в данных - он не занят, а просто недоступен (разрыв в расписании)
+    return slotData ? !slotData.available : false;
+  };
+
+  // Проверка, является ли слот недоступным (нет в расписании - разрыв в работе)
+  const isSlotUnavailable = (slotTime: string, isNextDay: boolean = false): boolean => {
     return !isSlotAvailable(slotTime, isNextDay);
   };
 
-  // Проверка, является ли слот границей (первый занятый после свободного)
+  // Проверка, является ли слот границей (конец доступного диапазона)
   const isBoundary = (slotTime: string, isNextDay: boolean = false): boolean => {
     if (isNextDay) {
       // Для следующего дня проверяем границы в nextDayTimeSlots
       const idx = nextDayTimeSlots.findIndex(s => s === slotTime);
       if (idx === -1) return false;
-      if (!isSlotBooked(slotTime, true)) return false;
+      if (!isSlotUnavailable(slotTime, true)) return false;
       // Если предыдущий слот свободен
       if (idx > 0 && isSlotAvailable(nextDayTimeSlots[idx - 1], true)) return true;
       return false;
@@ -103,9 +121,19 @@ const TimeSlots: React.FC<TimeSlotsProps> = ({
     
     const idx = allDaySlots.findIndex(s => s.formattedTime === slotTime);
     if (idx === -1) return false;
-    if (!isSlotBooked(slotTime)) return false;
-    // Если предыдущий слот свободен
+    
+    // Специальная обработка для слота 24:00 - он всегда может быть границей если предыдущий слот доступен
+    if (slotTime === '24:00') {
+      const prevSlot = allDaySlots[idx - 1]?.formattedTime;
+      return prevSlot ? isSlotAvailable(prevSlot) : false;
+    }
+    
+    // Слот является граничным если он недоступен, но предыдущий слот доступен
+    if (!isSlotUnavailable(slotTime)) return false;
+    
+    // Если предыдущий слот свободен - это граница
     if (idx > 0 && isSlotAvailable(allDaySlots[idx - 1].formattedTime)) return true;
+    
     return false;
   };
 
@@ -118,6 +146,32 @@ const TimeSlots: React.FC<TimeSlotsProps> = ({
   const canBeSelectedAsEnd = (slotTime: string, isNextDay: boolean = false): boolean => {
     if (isSlotAvailable(slotTime, isNextDay)) return true;
     if (!startTime) return false;
+    
+    // Специальная проверка: может ли слот быть концом диапазона согласно API
+    if (!isNextDay) {
+      const correspondingSlot = timeSlotData.find(data => {
+        const endTime = new Date(data.end);
+        const slotHour = parseInt(slotTime.split(':')[0]);
+        return endTime.getHours() === slotHour && data.available;
+      });
+      
+      // Если найден доступный диапазон, который заканчивается в этом слоте
+      if (correspondingSlot) {
+        const startIdx = allDaySlots.findIndex(s => s.formattedTime === startTime);
+        const endIdx = allDaySlots.findIndex(s => s.formattedTime === slotTime);
+        
+        // Проверяем что endTime идет после startTime
+        if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+          return true;
+        }
+      }
+    }
+    
+    // Специальная обработка для слота 24:00 - он может быть выбран как конец если предыдущий слот доступен
+    if (slotTime === '24:00' && !isNextDay) {
+      const prevSlotTime = '23:00';
+      return isSlotAvailable(prevSlotTime) && startTime !== '24:00';
+    }
     
     // Проверяем, где находится startTime - в текущем или следующем дне
     const startTimeInNextDay = nextDayTimeSlots.includes(startTime);
@@ -157,8 +211,12 @@ const TimeSlots: React.FC<TimeSlotsProps> = ({
     if (isNextDay) {
       // Сначала проверяем, есть ли занятые слоты после startTime в текущем дне
       for (let i = startIdx + 1; i < allDaySlots.length; i++) {
-        if (isSlotBooked(allDaySlots[i].formattedTime)) {
-          // Если есть занятый слот после startTime в текущем дне - 
+        const checkSlot = allDaySlots[i].formattedTime;
+        // Пропускаем слот 24:00 если он есть (мы его не отображаем)
+        if (checkSlot === '24:00') continue;
+        
+        if (isSlotUnavailable(checkSlot)) {
+          // Если есть недоступный слот после startTime в текущем дне - 
           // нельзя переходить на следующий день, так как будет наложение
           return false;
         }
@@ -193,14 +251,18 @@ const TimeSlots: React.FC<TimeSlotsProps> = ({
       return true;
     }
 
-    // Проверяем все промежуточные слоты
+    // Проверяем все промежуточные слоты - если есть недоступные, блокируем выбор
     for (let i = startIdx + 1; i < endIdx; i++) {
-      if (isSlotBooked(allDaySlots[i].formattedTime)) return false;
+      const intermediateSlot = allDaySlots[i].formattedTime;
+      // Если промежуточный слот недоступен (нет в данных или помечен как недоступный)
+      if (isSlotUnavailable(intermediateSlot)) {
+        return false;
+      }
     }
     return true;
   };
 
-  // Проверка, есть ли занятые слоты после startTime в текущем дне
+  // Проверка, есть ли недоступные слоты после startTime в текущем дне
   const hasBookedSlotsAfterStart = (): boolean => {
     if (!startTime) return false;
     
@@ -212,7 +274,7 @@ const TimeSlots: React.FC<TimeSlotsProps> = ({
     if (startIdx === -1) return false;
     
     for (let i = startIdx + 1; i < allDaySlots.length; i++) {
-      if (isSlotBooked(allDaySlots[i].formattedTime)) {
+      if (isSlotUnavailable(allDaySlots[i].formattedTime)) {
         return true;
       }
     }
@@ -224,34 +286,23 @@ const TimeSlots: React.FC<TimeSlotsProps> = ({
     return canBeSelectedAsEnd(slotTime);
   };
 
-  // Проверка, находится ли слот до выбранного начала
+  // Проверка, находится ли слот до выбранного начала (чтобы предотвратить выбор времени назад)
   const isBeforeStart = (slotTime: string, isNextDay: boolean = false): boolean => {
     if (!startTime) return false;
     
     // Используем контекст для определения дня startTime
-    const startTimeInNextDay = startTimeContext === 'next';
-    
-    console.log(`isBeforeStart check for ${slotTime} (isNextDay: ${isNextDay}):`, {
-      startTime,
-      startTimeContext,
-      startTimeInNextDay,
-      slotTime,
-      isNextDay
-    });
+    const startTimeInNextDay = startTimeContextState === 'next';
     
     // Случай 1: startTime в следующем дне
     if (startTimeInNextDay) {
       if (!isNextDay) {
-        // Проверяем слот текущего дня - все слоты текущего дня "до начала"
-        console.log(`${slotTime} is before start (current day, start in next day)`);
+        // Все слоты текущего дня считаются "до начала" когда startTime в следующем дне
         return true;
       } else {
         // Проверяем слот следующего дня - сравниваем с startTime в том же дне
         const slotIdx = nextDayTimeSlots.findIndex(s => s === slotTime);
         const startIdx = nextDayTimeSlots.findIndex(s => s === startTime);
-        const result = slotIdx !== -1 && startIdx !== -1 && slotIdx < startIdx;
-        console.log(`${slotTime} comparison in next day: slotIdx=${slotIdx}, startIdx=${startIdx}, result=${result}`);
-        return result;
+        return slotIdx !== -1 && startIdx !== -1 && slotIdx < startIdx;
       }
     }
     
@@ -260,12 +311,9 @@ const TimeSlots: React.FC<TimeSlotsProps> = ({
       // Проверяем слот текущего дня - сравниваем с startTime в том же дне
       const slotIdx = allDaySlots.findIndex(s => s.formattedTime === slotTime);
       const startIdx = allDaySlots.findIndex(s => s.formattedTime === startTime);
-      const result = slotIdx !== -1 && startIdx !== -1 && slotIdx < startIdx;
-      console.log(`${slotTime} comparison in current day: slotIdx=${slotIdx}, startIdx=${startIdx}, result=${result}`);
-      return result;
+      return slotIdx !== -1 && startIdx !== -1 && slotIdx < startIdx;
     } else {
-      // Проверяем слот следующего дня - никогда не "до начала" если startTime в текущем дне
-      console.log(`${slotTime} is not before start (next day, start in current day)`);
+      // Проверяем слот следующего дня - НЕ "до начала" если startTime в текущем дне
       return false;
     }
   };
@@ -275,15 +323,7 @@ const TimeSlots: React.FC<TimeSlotsProps> = ({
     if (!startTime) return false;
     
     // Используем контекст для определения дня startTime
-    const startTimeInNextDay = startTimeContext === 'next';
-    
-    console.log(`isAfterFirstBooked check for ${slotTime} (isNextDay: ${isNextDay}):`, {
-      startTime,
-      startTimeContext,
-      startTimeInNextDay,
-      slotTime,
-      isNextDay
-    });
+    const startTimeInNextDay = startTimeContextState === 'next';
     
     // Если startTime в следующем дне, слоты текущего дня не могут быть "после занятого"
     if (startTimeInNextDay && !isNextDay) {
@@ -293,52 +333,53 @@ const TimeSlots: React.FC<TimeSlotsProps> = ({
     // Если startTime в текущем дне
     if (!startTimeInNextDay) {
       if (!isNextDay) {
-        // Ищем первый занятый слот после startTime в текущем дне
+        // Ищем первый НЕДОСТУПНЫЙ слот после startTime в текущем дне (включая разрывы в расписании)
         const startIdx = allDaySlots.findIndex(s => s.formattedTime === startTime);
-        let firstBookedIdx = -1;
-        
-        console.log(`Looking for first booked slot after ${startTime} (startIdx: ${startIdx})`);
+        let firstUnavailableIdx = -1;
         
         for (let i = startIdx + 1; i < allDaySlots.length; i++) {
           const checkSlot = allDaySlots[i].formattedTime;
-          const isBooked = !availableTimeSlots.includes(checkSlot);
-          console.log(`Checking slot ${checkSlot}: isBooked = ${isBooked}`);
-          
-          if (isBooked) {
-            firstBookedIdx = i;
-            console.log(`Found first booked slot at index ${i}: ${checkSlot}`);
+          // Слот недоступен если он не в availableTimeSlots (разрыв в расписании) 
+          // или помечен как занятый в API
+          if (isSlotUnavailable(checkSlot)) {
+            firstUnavailableIdx = i;
             break;
           }
         }
         
-        if (firstBookedIdx === -1) {
-          console.log('No booked slots found after startTime');
+        if (firstUnavailableIdx === -1) {
           return false;
         }
         
         const slotIdx = allDaySlots.findIndex(s => s.formattedTime === slotTime);
-        const result = slotIdx > firstBookedIdx;
-        console.log(`${slotTime} is after first booked: slotIdx=${slotIdx}, firstBookedIdx=${firstBookedIdx}, result=${result}`);
+        const result = slotIdx > firstUnavailableIdx;
         return result;
       } else {
-        // Для слотов следующего дня - если есть занятые слоты в текущем дне после startTime,
-        // то все слоты следующего дня "после занятого"
+        // Для слотов следующего дня - если есть НЕДОСТУПНЫЕ слоты в текущем дне после startTime,
+        // то все слоты следующего дня "после недоступного"
         const startIdx = allDaySlots.findIndex(s => s.formattedTime === startTime);
         
-        console.log(`Checking next day slots for isAfterFirstBooked. StartTime: ${startTime} (startIdx: ${startIdx})`);
+        // Особый случай: если startTime - это последний слот текущего дня (например 23:00),
+        // то слоты следующего дня НЕ должны блокироваться
+        const isLastSlotOfDay = startIdx === allDaySlots.length - 1 || 
+                               (startIdx === allDaySlots.length - 2 && allDaySlots[allDaySlots.length - 1].formattedTime === '24:00');
+        
+        if (isLastSlotOfDay) {
+          return false; // Не блокируем слоты следующего дня
+        }
         
         for (let i = startIdx + 1; i < allDaySlots.length; i++) {
           const checkSlot = allDaySlots[i].formattedTime;
-          const isBooked = !availableTimeSlots.includes(checkSlot);
-          console.log(`Checking current day slot ${checkSlot} after startTime: isBooked = ${isBooked}`);
+          // Пропускаем слот 24:00 если он есть (мы его не отображаем)
+          if (checkSlot === '24:00') continue;
           
-          if (isBooked) {
-            console.log(`Found booked slot ${checkSlot} in current day after startTime - all next day slots are after booked`);
+          // Слот недоступен если он не в availableTimeSlots (разрыв в расписании) 
+          // или помечен как занятый в API
+          if (isSlotUnavailable(checkSlot)) {
             return true;
           }
         }
         
-        console.log('No booked slots found in current day after startTime - next day slots are not after booked');
         return false;
       }
     }
@@ -348,7 +389,10 @@ const TimeSlots: React.FC<TimeSlotsProps> = ({
       const startIdx = nextDayTimeSlots.findIndex(s => s === startTime);
       let firstBookedIdx = -1;
       for (let i = startIdx + 1; i < nextDayTimeSlots.length; i++) {
-        if (isSlotBooked(nextDayTimeSlots[i], true)) {
+        const checkSlot = nextDayTimeSlots[i];
+        const slotData = nextDayTimeSlotData.find(data => data.formattedTime === checkSlot);
+        const isReallyBooked = slotData && !slotData.available;
+        if (isReallyBooked) {
           firstBookedIdx = i;
           break;
         }
@@ -386,18 +430,9 @@ const TimeSlots: React.FC<TimeSlotsProps> = ({
     if (!startTime || !endTime) return false;
 
     // Используем контекст для определения дней
-    const startTimeInNextDay = startTimeContext === 'next';
-    const endTimeInNextDay = endTimeContext === 'next';
+    const startTimeInNextDay = startTimeContextState === 'next';
+    const endTimeInNextDay = endTimeContextState === 'next';
     
-    console.log(`isInSelectedRange for ${slotTime} (isNextDay: ${isNextDay}):`, {
-      startTime,
-      endTime,
-      startTimeContext,
-      endTimeContext,
-      startTimeInNextDay,
-      endTimeInNextDay
-    });
-
     // Случай 1: Диапазон внутри текущего дня (startTime и endTime в текущем дне)
     if (!startTimeInNextDay && !endTimeInNextDay) {
       if (isNextDay) return false; // Слоты следующего дня не в диапазоне
@@ -412,14 +447,17 @@ const TimeSlots: React.FC<TimeSlotsProps> = ({
     
     // Случай 2: Диапазон внутри следующего дня (startTime и endTime в следующем дне)
     if (startTimeInNextDay && endTimeInNextDay) {
-      if (!isNextDay) return false; // Слоты текущего дня не в диапазоне
+      if (!isNextDay) return false; // Слоты текущего дня НЕ в диапазоне
       
       const startIdx = nextDayTimeSlots.findIndex(s => s === startTime);
       const endIdx = nextDayTimeSlots.findIndex(s => s === endTime);
       const currentIdx = nextDayTimeSlots.findIndex(s => s === slotTime);
       
-      return startIdx !== -1 && endIdx !== -1 && currentIdx !== -1 && 
-             currentIdx > startIdx && currentIdx < endIdx;
+      // Включаем краевые слоты: >= startIdx && <= endIdx
+      const result = startIdx !== -1 && endIdx !== -1 && currentIdx !== -1 && 
+             currentIdx >= startIdx && currentIdx <= endIdx;
+      
+      return result;
     }
     
     // Случай 3: Диапазон между днями (startTime в текущем дне, endTime в следующем дне)
@@ -427,14 +465,14 @@ const TimeSlots: React.FC<TimeSlotsProps> = ({
       const startIdx = allDaySlots.findIndex(s => s.formattedTime === startTime);
       
       if (!isNextDay) {
-        // Для текущего дня: все слоты после startTime
+        // Для текущего дня: все слоты после startTime ВКЛЮЧАЯ startTime
         const currentIdx = allDaySlots.findIndex(s => s.formattedTime === slotTime);
-        return startIdx !== -1 && currentIdx !== -1 && currentIdx > startIdx;
+        return startIdx !== -1 && currentIdx !== -1 && currentIdx >= startIdx;
       } else {
-        // Для следующего дня: все слоты до endTime
+        // Для следующего дня: все слоты до endTime ВКЛЮЧАЯ endTime
         const endIdx = nextDayTimeSlots.findIndex(s => s === endTime);
         const currentIdx = nextDayTimeSlots.findIndex(s => s === slotTime);
-        return endIdx !== -1 && currentIdx !== -1 && currentIdx < endIdx;
+        return endIdx !== -1 && currentIdx !== -1 && currentIdx <= endIdx;
       }
     }
     
@@ -445,22 +483,23 @@ const TimeSlots: React.FC<TimeSlotsProps> = ({
 
   // Обработчик клика по слоту
   const handleSlotClick = (time: string, isNextDay: boolean = false) => {
-    console.log('=== handleSlotClick start ===');
-    console.log('Params:', { time, isNextDay });
-    console.log('Current state:', { startTime, endTime });
-
-    if (loadingSlots) {
-      console.log('Loading slots, returning');
-      return;
-    }
-    if (isPastSlot(time, isNextDay)) {
-      console.log('Past slot, returning');
-      return;
-    }
+    console.log('🕐 TimeSlots - Клик по слоту:', {
+      time: time,
+      isNextDay: isNextDay,
+      selectedDate: selectedDate,
+      formattedSelectedDate: selectedDate ? formatDate(selectedDate) : 'null',
+      currentStartTime: startTime,
+      currentEndTime: endTime,
+      currentStartTimeContext: startTimeContextState,
+      currentEndTimeContext: endTimeContextState
+    });
+    
+    if (loadingSlots) return;
+    if (isPastSlot(time, isNextDay)) return;
 
     // сброс, если нажали на уже выбранное начало
     if (startTime === time) {
-      console.log('Resetting selection');
+      console.log('🔄 TimeSlots - Сброс выбора (нажали на уже выбранное начало)');
       resetTimeSelection();
       return;
     }
@@ -468,56 +507,62 @@ const TimeSlots: React.FC<TimeSlotsProps> = ({
     // если нет начала или диапазон уже закончен ⇒ начинаем новый выбор
     if (!startTime || endTime) {
       if (isSlotAvailable(time, isNextDay)) {
-        console.log('Setting new start time:', time);
-        console.log('About to call setStartTime with:', time);
+        console.log('🎯 TimeSlots - Новый выбор начала:', {
+          selectedTime: time,
+          isNextDay: isNextDay,
+          context: isNextDay ? 'next' : 'current'
+        });
         setStartTime(time);
         setEndTime(null);
-        setStartTimeContext(isNextDay ? 'next' : 'current');
-        setEndTimeContext(null);
-        onRangeSelect(time, null);
-        console.log('Called setStartTime and onRangeSelect');
+        const newStartContext = isNextDay ? 'next' : 'current';
+        setStartTimeContextState(newStartContext);
+        setEndTimeContextState(null);
+        onRangeSelect(time, null, newStartContext, undefined);
       } else {
-        console.log('Slot not available:', time);
+        console.log('❌ TimeSlots - Слот недоступен для выбора как начало:', time);
       }
       return;
     }
 
-    console.log('Second click logic - trying to set end time');
-    console.log('isNextDay:', isNextDay);
-    console.log('isSlotAvailable(time, isNextDay):', isSlotAvailable(time, isNextDay));
-
     // второй клик – пытаемся поставить конец
+    console.log('🎯 TimeSlots - Попытка установить конец диапазона:', {
+      selectedTime: time,
+      isNextDay: isNextDay,
+      startTime: startTime,
+      startTimeContext: startTimeContextState
+    });
+    
     if (!isNextDay) {
-      console.log('Processing current day end slot');
       // оба слота в текущем дне
       const isAvailable = isSlotAvailable(time, false);
       const isBoundarySlot = isBoundary(time, false);
       const canBeEnd = canBeSelectedAsEnd(time, false);
       
-      console.log('Slot availability check:', {
-        time,
-        isAvailable,
-        isBoundarySlot,
-        canBeEnd
+      console.log('🔍 TimeSlots - Проверка слота текущего дня:', {
+        time: time,
+        isAvailable: isAvailable,
+        isBoundarySlot: isBoundarySlot,
+        canBeEnd: canBeEnd
       });
       
       if (isAvailable || canBeEnd) {
-        console.log('Slot is available or can be selected as end, checking indices');
         const startIdx = allDaySlots.findIndex(s => s.formattedTime === startTime);
         const endIdx = allDaySlots.findIndex(s => s.formattedTime === time);
-        console.log('startIdx:', startIdx, 'endIdx:', endIdx);
+        
+        console.log('📍 TimeSlots - Индексы слотов:', {
+          startTime: startTime,
+          endTime: time,
+          startIdx: startIdx,
+          endIdx: endIdx
+        });
         
         if (endIdx > startIdx) {
-          console.log('End index is after start, checking intermediate slots');
-          
           // Для граничных слотов не проверяем промежуточные слоты, если это соседний слот
           if (isBoundarySlot && endIdx === startIdx + 1) {
-            console.log('Boundary slot right after start - allowing selection');
-            console.log('Setting endTime to:', time);
+            console.log('✅ TimeSlots - Установка граничного слота как конец диапазона');
             setEndTime(time);
-            setEndTimeContext('current');
-            onRangeSelect(startTime, time);
-            console.log('After setting endTime, calling onRangeSelect with:', startTime, time);
+            setEndTimeContextState('current');
+            onRangeSelect(startTime, time, startTimeContextState || 'current', 'current');
             return;
           }
           
@@ -527,63 +572,61 @@ const TimeSlots: React.FC<TimeSlotsProps> = ({
             for (let i = startIdx + 1; i < endIdx; i++) {
               const intermediateSlot = allDaySlots[i].formattedTime;
               const isIntermediateAvailable = availableTimeSlots.includes(intermediateSlot);
-              console.log(`Intermediate slot ${intermediateSlot}: available = ${isIntermediateAvailable}`);
               if (!isIntermediateAvailable) {
                 allIntermediateSlotsAvailable = false;
                 break;
               }
             }
             
-            console.log('All intermediate slots available:', allIntermediateSlotsAvailable);
+            console.log('🔍 TimeSlots - Проверка промежуточных слотов:', {
+              allIntermediateSlotsAvailable: allIntermediateSlotsAvailable
+            });
             
             if (allIntermediateSlotsAvailable) {
-              console.log('Setting end time for current day:', time);
+              console.log('✅ TimeSlots - Установка конца диапазона (все промежуточные слоты доступны)');
               setEndTime(time);
-              setEndTimeContext('current');
-              onRangeSelect(startTime, time);
-            } else {
-              console.log('Some intermediate slots are not available');
+              setEndTimeContextState('current');
+              onRangeSelect(startTime, time, startTimeContextState || 'current', 'current');
             }
           } else if (canBeEnd) {
-            console.log('Slot can be selected as end via canBeSelectedAsEnd logic');
+            console.log('✅ TimeSlots - Установка конца диапазона (canBeEnd)');
             setEndTime(time);
-            setEndTimeContext('current');
-            onRangeSelect(startTime, time);
+            setEndTimeContextState('current');
+            onRangeSelect(startTime, time, startTimeContextState || 'current', 'current');
           }
         } else {
-          console.log('End index is not after start index');
+          console.log('❌ TimeSlots - Недопустимый порядок слотов (endIdx <= startIdx)');
         }
       } else {
-        console.log('End slot is not available and cannot be selected as end');
+        console.log('❌ TimeSlots - Слот недоступен как конец диапазона');
       }
       return;
     }
 
     // если конец в следующем дне
     if (isNextDay) {
-      console.log('Processing next day end slot');
+      console.log('🌅 TimeSlots - Обработка слота следующего дня как конец');
       const isAvailable = isSlotAvailable(time, true);
       const isBoundarySlot = isBoundary(time, true);
       const canBeEnd = canBeSelectedAsEnd(time, true);
       
-      console.log('Next day slot check:', {
-        time,
-        isAvailable,
-        isBoundarySlot,
-        canBeEnd
+      console.log('🔍 TimeSlots - Проверка слота следующего дня:', {
+        time: time,
+        isAvailable: isAvailable,
+        isBoundarySlot: isBoundarySlot,
+        canBeEnd: canBeEnd
       });
       
       if (isAvailable || canBeEnd) {
-        console.log('Setting end time for next day:', time);
+        console.log('✅ TimeSlots - Установка слота следующего дня как конец диапазона');
         setEndTime(time);
-        setEndTimeContext('next');
-        onRangeSelect(startTime, time);
+        setEndTimeContextState('next');
+        onRangeSelect(startTime, time, startTimeContextState || 'current', 'next');
       } else {
-        console.log('Next day slot not available and cannot be selected as end');
+        console.log('❌ TimeSlots - Слот следующего дня недоступен как конец диапазона');
       }
       return;
     }
-    console.log('=== handleSlotClick end ===');
   };
 
   return (
@@ -606,13 +649,18 @@ const TimeSlots: React.FC<TimeSlotsProps> = ({
             <div className={styles.loadingMessage}>Загрузка доступных слотов...</div>
           ) : slotsError ? (
             <div className={styles.errorMessage}>{slotsError}</div>
-          ) : allDaySlots.length > 0 ? (
+          ) : availableTimeSlots.length > 0 || startTime || endTime ? (
             <>
               <div className={styles.timeSlots}>
                 {allDaySlots.map(slot => {
+                  // Не отображаем слот 24:00
+                  if (slot.formattedTime === '24:00') {
+                    return null;
+                  }
+                  
                   // Используем контекст для определения принадлежности слотов
-                  const isStart = startTime === slot.formattedTime && startTimeContext === 'current';
-                  const isEnd = endTime === slot.formattedTime && endTimeContext === 'current';
+                  const isStart = startTime === slot.formattedTime && startTimeContextState === 'current';
+                  const isEnd = endTime === slot.formattedTime && endTimeContextState === 'current';
                   
                   const isInRange = isInSelectedRange(slot.formattedTime, false);
                   const hasBoundary = isBoundary(slot.formattedTime, false);
@@ -620,26 +668,11 @@ const TimeSlots: React.FC<TimeSlotsProps> = ({
                   const isEdge = isStart || isEnd;
                   const past = isPastSlot(slot.formattedTime);
                   const isAvailable = isSlotAvailable(slot.formattedTime);
-                  const isBooked = isSlotBooked(slot.formattedTime);
+                  const isBooked = isSlotBooked(slot.formattedTime, false);
+                  const isUnavailable = isSlotUnavailable(slot.formattedTime, false);
                   const isSelectableAsBoundary = canBeSelectedAsBoundary(slot.formattedTime);
                   const isBefore = isBeforeStart(slot.formattedTime, false);
                   const isAfterBooked = isAfterFirstBooked(slot.formattedTime, false);
-
-                  // Логирование для отладки
-                  if (slot.formattedTime === '00:00' || slot.formattedTime === '01:00' || slot.formattedTime === '17:00') {
-                    console.log(`Current day ${slot.formattedTime} slot logic:`, {
-                      slotTime: slot.formattedTime,
-                      startTime,
-                      endTime,
-                      startTimeContext,
-                      endTimeContext,
-                      isStart,
-                      isEnd,
-                      isInRange,
-                      isSelected,
-                      hasBoundary
-                    });
-                  }
 
                   return (
                     <button
@@ -649,27 +682,21 @@ const TimeSlots: React.FC<TimeSlotsProps> = ({
                         ${isSelected ? styles.timeSlotActive : ''}
                         ${isEdge ? styles.timeSlotSelectedEdge : ''}
                         ${hasBoundary ? styles.timeSlotBoundary : ''}
-                        ${(isBooked && !hasBoundary && !isSelected && !isSelectableAsBoundary) ? styles.timeSlotUnavailableRed : ''}
+                        ${isUnavailable && !hasBoundary ? styles.timeSlotUnavailableRed : ''}
                         ${isBefore ? styles.timeSlotBeforeStart : ''}
                         ${isAfterBooked ? styles.timeSlotAfterBooked : ''}
                       `}
                       onClick={() => {
-                        console.log('=== CLICKING CURRENT DAY SLOT ===');
-                        console.log('Slot:', slot.formattedTime);
-                        console.log('Current state before click:', { startTime, endTime });
-                        console.log('startTimeInNextDay:', startTime ? nextDayTimeSlots.includes(startTime) : false);
-                        console.log('isBefore:', isBefore);
-                        // Разрешаем клик только если слот не прошедший, не до начала, не после занятого и не заблокирован
-                        const allowClick = !past && !isBefore && !isAfterBooked;
-                        console.log('allowClick:', allowClick);
+                        // Разрешаем клик если слот не прошедший, не до начала, не после занятого и (доступен ИЛИ может быть границей)
+                        const allowClick = !past && !isBefore && !isAfterBooked && (isAvailable || isSelectableAsBoundary || hasBoundary);
                         allowClick && handleSlotClick(slot.formattedTime);
                       }}
-                      disabled={past || isBefore || isAfterBooked || (isBooked && !isSelectableAsBoundary)}
+                      disabled={past || isBefore || isAfterBooked || (!isAvailable && !isSelectableAsBoundary && !hasBoundary)}
                     >
                       {slot.formattedTime}
                     </button>
                   );
-                })}
+                }).filter(Boolean)}
               </div>
 
               {nextDayTimeSlots.length > 0 && (
@@ -682,65 +709,38 @@ const TimeSlots: React.FC<TimeSlotsProps> = ({
                   <div className={styles.timeSlots}>
                     {nextDayTimeSlots.map(slot => {
                       // Используем контекст для определения принадлежности слотов
-                      const isStart = startTime === slot && startTimeContext === 'next';
-                      const isEnd = endTime === slot && endTimeContext === 'next';
+                      const isStart = startTime === slot && startTimeContextState === 'next';
+                      const isEnd = endTime === slot && endTimeContextState === 'next';
                       
                       const isInRange = isInSelectedRange(slot, true);
                       const isAvailable = isSlotAvailable(slot, true);
                       const isBooked = isSlotBooked(slot, true);
+                      const isUnavailable = isSlotUnavailable(slot, true);
                       const hasBoundary = isBoundary(slot, true);
-                      const hasBookedAfterStart = hasBookedSlotsAfterStart();
                       const isBefore = isBeforeStart(slot, true);
                       const isAfterBooked = isAfterFirstBooked(slot, true);
-                      const canBeSelected = startTime && !endTime && (canBeSelectedAsEnd(slot, true) || hasBoundary) && !hasBookedAfterStart && !isBefore && !isAfterBooked;
+                      const canBeSelected = startTime && !endTime && (canBeSelectedAsEnd(slot, true) || hasBoundary) && !isBefore && !isAfterBooked;
                       const isSelected = isStart || isEnd || isInRange;
-                      
-                      // Логирование для отладки
-                      if (slot === '00:00' || slot === '01:00') {
-                        console.log(`Next day ${slot} detailed logic:`, {
-                          slotTime: slot,
-                          startTime,
-                          endTime,
-                          startTimeContext,
-                          endTimeContext,
-                          isStart,
-                          isEnd,
-                          isInRange,
-                          isSelected,
-                          isAvailable,
-                          isBooked,
-                          hasBoundary,
-                          canBeSelected
-                        });
-                      }
                       
                       return (
                         <button
                           key={`next-${slot}`}
                           className={`
                             ${styles.timeSlot}
-                            ${!isAvailable && !hasBoundary ? styles.timeSlotUnavailableRed : ''}
+                            ${isUnavailable && !hasBoundary && !isAvailable ? styles.timeSlotUnavailableRed : ''}
                             ${hasBoundary ? styles.timeSlotBoundary : ''}
                             ${canBeSelected ? styles.timeSlotSelectable : ''}
                             ${isSelected ? styles.timeSlotActive : ''}
                             ${(isStart || isEnd) ? styles.timeSlotSelectedEdge : ''}
-                            ${hasBookedAfterStart ? styles.timeSlotUnavailableRed : ''}
                             ${isBefore ? styles.timeSlotBeforeStart : ''}
                             ${isAfterBooked ? styles.timeSlotAfterBooked : ''}
                           `}
                           onClick={() => {
-                            console.log('=== CLICKING NEXT DAY SLOT ===');
-                            console.log('Slot:', slot);
-                            console.log('Current state before click:', { startTime, endTime });
-                            console.log('hasBookedAfterStart:', hasBookedAfterStart);
-                            console.log('isBefore:', isBefore);
-                            console.log('isAfterBooked:', isAfterBooked);
-                            console.log('isAvailable:', isAvailable);
-                            console.log('hasBoundary:', hasBoundary);
-                            console.log('canBeSelected:', canBeSelected);
-                            !hasBookedAfterStart && !isBefore && !isAfterBooked && handleSlotClick(slot, true);
+                            // Разрешаем клик если слот доступен или может быть выбран как конец
+                            const allowClick = !isBefore && !isAfterBooked && (isAvailable || canBeSelected || hasBoundary);
+                            allowClick && handleSlotClick(slot, true);
                           }}
-                          disabled={hasBookedAfterStart || isBefore || isAfterBooked || (!isAvailable && !hasBoundary && !canBeSelected)}
+                          disabled={isBefore || isAfterBooked || (!isAvailable && !hasBoundary && !canBeSelected)}
                         >
                           {slot}
                         </button>
@@ -751,7 +751,12 @@ const TimeSlots: React.FC<TimeSlotsProps> = ({
               )}
             </>
           ) : (
-            <div className={styles.noTimeSlotsMessage}>Нет доступных слотов на выбранную дату</div>
+            <div className={styles.noTimeSlotsMessage}>
+              {selectedDate && selectedDate.toDateString() === new Date().toDateString() && new Date().getHours() >= 22
+                ? 'Слишком поздно для бронирования на сегодня. Выберите другую дату'
+                : 'Нет доступных слотов на выбранную дату. Выберите другую дату'
+              }
+            </div>
           )}
         </>
       ) : (
