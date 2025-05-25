@@ -13,7 +13,6 @@ import 'react-phone-number-input/style.css';
 import { useCart } from '../../context/CartContex';
 import api from '../../api/apiService';
 import CalendarConfirmModal from '../CalendarConfirmModal/CalendarConfirmModal';
-import { openICS } from '../../utils/calendarLinks';
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -207,14 +206,45 @@ const BookingModal: React.FC<BookingModalProps> = ({
     try {
       if (!chatId) throw new Error('Telegram ID не получен');
       // подготовить дату
-      const times = startTime.match(/\d{1,2}:\d{2}/g)!;
-      const s = times[0], eT = times[1] || times[0];
+      let startTimeStr = startTime;
+      let endTimeStr = endTime;
+      
+      // Если startTime содержит диапазон времени (например, "17:00 — 01:00")
+      if (startTime.includes('—') || startTime.includes('-')) {
+        const times = startTime.match(/\d{1,2}:\d{2}/g);
+        if (times && times.length >= 2) {
+          startTimeStr = times[0];
+          endTimeStr = times[1];
+        }
+      }
+      
+      console.log('Parsed times:', { startTimeStr, endTimeStr, originalStartTime: startTime, originalEndTime: endTime });
+      
       const date = selectedDate || new Date();
       const yyyy = date.getFullYear();
-      const mm   = String(date.getMonth()+1).padStart(2,'0');
-      const dd   = String(date.getDate()).padStart(2,'0');
-      const startISO = `${yyyy}-${mm}-${dd}T${s}:00`;
-      const endISO   = `${yyyy}-${mm}-${dd}T${eT}:00`;
+      const mm = String(date.getMonth() + 1).padStart(2, '0');
+      const dd = String(date.getDate()).padStart(2, '0');
+      
+      // Создаем даты для начала и конца
+      let startDate = new Date(date);
+      let endDate = new Date(date);
+      
+      // Парсим время
+      const [startHour, startMinute] = startTimeStr.split(':').map(Number);
+      const [endHour, endMinute] = endTimeStr.split(':').map(Number);
+      
+      startDate.setHours(startHour, startMinute, 0, 0);
+      endDate.setHours(endHour, endMinute, 0, 0);
+      
+      // Если время окончания меньше времени начала, значит оно на следующий день
+      if (endDate <= startDate) {
+        endDate.setDate(endDate.getDate() + 1);
+      }
+      
+      const startISO = startDate.toISOString();
+      const endISO = endDate.toISOString();
+      
+      console.log('Final ISO dates:', { startISO, endISO });
 
       const payload = {
         telegramUserId: parseInt(chatId),

@@ -334,9 +334,10 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin, selectedDate: exte
     let endDate = new Date(selectedDate);
     
     // Определяем, в каком дне находится startTime и endTime
-    // Слот принадлежит следующему дню, если он есть в nextDayTimeSlots
-    const startTimeInNextDay = nextDayTimeSlots.includes(startTime);
-    const endTimeInNextDay = nextDayTimeSlots.includes(endTime);
+    // Используем простую логику: если слот есть в nextDayTimeSlots и НЕ доступен в текущем дне,
+    // то он принадлежит следующему дню
+    const startTimeInNextDay = nextDayTimeSlots.includes(startTime) && !isSlotAvailableInCurrentDay(startTime);
+    const endTimeInNextDay = nextDayTimeSlots.includes(endTime) && !isSlotAvailableInCurrentDay(endTime);
     
     // Если startTime в следующем дне
     if (startTimeInNextDay) {
@@ -375,9 +376,10 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin, selectedDate: exte
     let endDate = new Date(selectedDate);
     
     // Определяем, в каком дне находится startTime и endTime
-    // Слот принадлежит следующему дню, если он есть в nextDayTimeSlots
-    const startTimeInNextDay = nextDayTimeSlots.includes(startTime);
-    const endTimeInNextDay = nextDayTimeSlots.includes(endTime);
+    // Используем простую логику: если слот есть в nextDayTimeSlots и НЕ доступен в текущем дне,
+    // то он принадлежит следующему дню
+    const startTimeInNextDay = nextDayTimeSlots.includes(startTime) && !isSlotAvailableInCurrentDay(startTime);
+    const endTimeInNextDay = nextDayTimeSlots.includes(endTime) && !isSlotAvailableInCurrentDay(endTime);
     
     // Если startTime в следующем дне
     if (startTimeInNextDay) {
