@@ -7,6 +7,7 @@ import { useCart } from '../../context/CartContex';
 interface BookingSuccessProps {
   bookingDetails: BookingDetails;
   formatDate: (date: Date) => string;
+  getDateRange: () => string;
   goToProducts: () => void;
   addBookingToCart: () => void;
   onBack: () => void;
@@ -19,7 +20,7 @@ const serviceMap = {
   'Полировка':    { serviceName: 'Полировка', price: 800 }
 };
 
-const BookingSuccess: React.FC<BookingSuccessProps> = ({ bookingDetails, formatDate, goToProducts, addBookingToCart, onBack }) => {
+const BookingSuccess: React.FC<BookingSuccessProps> = ({ bookingDetails, formatDate, getDateRange, goToProducts, addBookingToCart, onBack }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { items } = useCart();
   const products = items.filter(item => item.type !== 'booking');
@@ -51,7 +52,7 @@ const BookingSuccess: React.FC<BookingSuccessProps> = ({ bookingDetails, formatD
         <div className={styles.bookingDetails}>
           <div className={styles.bookingDetail}>
             <span className={styles.detailLabel}>Дата:</span>
-            <span className={styles.detailValue}>{formatDate(bookingDetails.date)}</span>
+            <span className={styles.detailValue}>{getDateRange()}</span>
           </div>
           <div className={styles.bookingDetail}>
             <span className={styles.detailLabel}>Время:</span>

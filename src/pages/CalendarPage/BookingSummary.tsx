@@ -3,28 +3,28 @@ import styles from './CalendarPage.module.css';
 import { PricingPlan } from './calendarTypes';
 
 interface BookingSummaryProps {
-  selectedDate: Date | null;
   startTime: string | null;
   endTime: string | null;
   duration: number;
   selectedPlan: PricingPlan;
   onBook: () => void;
   formatDate: (date: Date) => string;
+  getDateRange: () => string;
 }
 
 const BookingSummary: React.FC<BookingSummaryProps> = ({
-  selectedDate,
   startTime,
   endTime,
   duration,
   selectedPlan,
   onBook,
-  formatDate
+  formatDate,
+  getDateRange
 }) => (
   <div className={styles.totalPriceSection}>
     <div className={styles.summaryInfo}>
       <div>
-        <b>Дата:</b> {selectedDate ? formatDate(selectedDate) : '-'}
+        <b>Дата:</b> {getDateRange()}
       </div>
       <div>
         <b>Время:</b> {startTime} — {endTime}

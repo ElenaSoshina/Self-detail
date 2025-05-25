@@ -39,7 +39,9 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin, selectedDate: exte
   const [days, setDays] = useState<Day[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | null>(externalSelectedDate ?? null);
   const [availableTimeSlots, setAvailableTimeSlots] = useState<string[]>([]);
+  const [nextDayTimeSlots, setNextDayTimeSlots] = useState<string[]>([]);
   const [timeSlotData, setTimeSlotData] = useState<TimeSlotWithData[]>([]);
+  const [nextDayTimeSlotData, setNextDayTimeSlotData] = useState<TimeSlotWithData[]>([]);
   const [startTime, setStartTime] = useState<string | null>(null);
   const [endTime, setEndTime] = useState<string | null>(null);
   const [bookingDetails, setBookingDetails] = useState<BookingDetails | null>(null);
@@ -142,19 +144,59 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin, selectedDate: exte
     (async () => {
       setLoadingSlots(true);
       try {
+        // Получаем слоты текущего дня
         const { formattedTimeSlots, timeSlotsWithData } = await fetchAvailableTimeSlots(selectedDate);
         if (cancelled) return;
         setAvailableTimeSlots(formattedTimeSlots);
         setTimeSlotData(timeSlotsWithData);
+
+        // Получаем слоты следующего дня
+        const nextDay = new Date(selectedDate);
+        nextDay.setDate(nextDay.getDate() + 1);
+        const { formattedTimeSlots: nextDaySlots, timeSlotsWithData: nextDayData } = await fetchAvailableTimeSlots(nextDay);
+        if (cancelled) return;
+
+        // Создаем первые 4 слота следующего дня (00:00, 01:00, 02:00, 03:00) независимо от доступности
+        const firstFourHours = ['00:00', '01:00', '02:00', '03:00'];
+        const firstFourData = firstFourHours.map(time => {
+          // Ищем данные для этого времени в ответе API
+          const existingData = nextDayData.find(slot => slot.formattedTime === time);
+          if (existingData) {
+            return existingData;
+          }
+          
+          // Если слота нет в API ответе, создаем его как недоступный
+          const nextDayDate = new Date(nextDay);
+          const [hour] = time.split(':').map(Number);
+          nextDayDate.setHours(hour, 0, 0, 0);
+          
+          return {
+            formattedTime: time,
+            originalData: null,
+            sortKey: hour * 60,
+            start: nextDayDate,
+            end: new Date(nextDayDate.getTime() + 60 * 60 * 1000), // +1 час
+            available: false
+          };
+        });
+
+        console.log('Next day slots:', firstFourHours); // Для отладки
+        console.log('Next day data:', firstFourData); // Для отладки
+        setNextDayTimeSlots(firstFourHours);
+        setNextDayTimeSlotData(firstFourData);
+
         setStartTime(null);
         setEndTime(null);
         setBookingDetails(null);
         setBookingCompleted(false);
-      } catch {
+      } catch (error) {
+        console.error('Error loading slots:', error); // Для отладки
         if (!cancelled) {
           setSlotsError('Ошибка загрузки слотов.');
           setAvailableTimeSlots([]);
           setTimeSlotData([]);
+          setNextDayTimeSlots([]);
+          setNextDayTimeSlotData([]);
         }
       } finally {
         if (!cancelled) setLoadingSlots(false);
@@ -196,6 +238,11 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin, selectedDate: exte
     
     const past = isPastSlot(slot);
     if (past) return;
+
+    // Если это слот следующего дня - не обрабатываем здесь
+    if (nextDayTimeSlots.includes(slot)) {
+      return;
+    }
 
     // сброс, если нажали на уже выбранное начало
     if (startTime === slot) {
@@ -259,24 +306,95 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin, selectedDate: exte
   });
 
   /** ——————————————————— Helpers ——————————————————— */
-  const getDuration = () => {
-    if (!startTime || !endTime) return null;
-    const start = timeSlotData.find(s => s.formattedTime === startTime)?.start;
-    let end = timeSlotData.find(s => s.formattedTime === endTime)?.start;
-    if (!start) return null;
-    if (!end) {
-      // Если endTime не найден в timeSlotData (занятый слот), ищем его индекс в allDaySlots
-      const allIdx = allDaySlots.findIndex(s => s.formattedTime === endTime);
-      if (allIdx !== -1 && allIdx > 0 && selectedDate) {
-        // Берём start этого слота как конец диапазона
-        const slotDate = new Date(selectedDate);
-        const [h, m] = endTime.split(":").map(Number);
-        slotDate.setHours(h, m, 0, 0);
-        end = slotDate;
-      }
+  // Вспомогательная функция для проверки, доступен ли слот в текущем дне (включая граничные)
+  const isSlotAvailableInCurrentDay = (slotTime: string): boolean => {
+    // Проверяем, есть ли слот в доступных слотах текущего дня
+    if (availableTimeSlots.includes(slotTime)) return true;
+    
+    // Проверяем, является ли слот граничным (может быть выбран как конец диапазона)
+    const slotIndex = allDaySlots.findIndex(s => s.formattedTime === slotTime);
+    if (slotIndex === -1) return false;
+    
+    // Слот является граничным, если предыдущий слот доступен, а текущий - нет
+    if (slotIndex > 0) {
+      const prevSlot = allDaySlots[slotIndex - 1].formattedTime;
+      return availableTimeSlots.includes(prevSlot) && !availableTimeSlots.includes(slotTime);
     }
-    if (!end) return null;
-    return (end.getTime() - start.getTime()) / 3_600_000; // hours
+    
+    return false;
+  };
+
+  const getDuration = () => {
+    if (!startTime || !endTime || !selectedDate) return null;
+    
+    const [startHour, startMinute] = startTime.split(':').map(Number);
+    const [endHour, endMinute] = endTime.split(':').map(Number);
+
+    let startDate = new Date(selectedDate);
+    let endDate = new Date(selectedDate);
+    
+    // Определяем, в каком дне находится startTime и endTime
+    // Слот принадлежит следующему дню, если он есть в nextDayTimeSlots
+    const startTimeInNextDay = nextDayTimeSlots.includes(startTime);
+    const endTimeInNextDay = nextDayTimeSlots.includes(endTime);
+    
+    // Если startTime в следующем дне
+    if (startTimeInNextDay) {
+      startDate.setDate(startDate.getDate() + 1);
+    }
+    
+    // Если endTime в следующем дне
+    if (endTimeInNextDay) {
+      endDate.setDate(endDate.getDate() + 1);
+    }
+    
+    startDate.setHours(startHour, startMinute, 0, 0);
+    endDate.setHours(endHour, endMinute, 0, 0);
+
+    const durationMs = endDate.getTime() - startDate.getTime();
+    const durationHours = durationMs / 3_600_000;
+    
+    console.log('Duration calculation:', {
+      startTime,
+      endTime,
+      startTimeInNextDay,
+      endTimeInNextDay,
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+      durationMs,
+      durationHours
+    });
+
+    return durationHours;
+  };
+
+  const getDateRange = () => {
+    if (!startTime || !endTime || !selectedDate) return '-';
+    
+    let startDate = new Date(selectedDate);
+    let endDate = new Date(selectedDate);
+    
+    // Определяем, в каком дне находится startTime и endTime
+    // Слот принадлежит следующему дню, если он есть в nextDayTimeSlots
+    const startTimeInNextDay = nextDayTimeSlots.includes(startTime);
+    const endTimeInNextDay = nextDayTimeSlots.includes(endTime);
+    
+    // Если startTime в следующем дне
+    if (startTimeInNextDay) {
+      startDate.setDate(startDate.getDate() + 1);
+    }
+    
+    // Если endTime в следующем дне
+    if (endTimeInNextDay) {
+      endDate.setDate(endDate.getDate() + 1);
+    }
+    
+    // Если даты разные - показываем диапазон
+    if (startDate.toDateString() !== endDate.toDateString()) {
+      return `${formatDate(startDate)} — ${formatDate(endDate)}`;
+    }
+    
+    return formatDate(startDate);
   };
 
   const duration = getDuration();
@@ -353,8 +471,12 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin, selectedDate: exte
   const currentMonthYear = `${months[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
 
   const handleRangeSelect = (start: string | null, end: string | null) => {
+    console.log('=== handleRangeSelect called ===');
+    console.log('Previous state:', { startTime, endTime });
+    console.log('New values:', { start, end });
     setStartTime(start);
     setEndTime(end);
+    console.log('State should be updated to:', { startTime: start, endTime: end });
   };
 
   // Обновление сетки дней при смене месяца
@@ -404,8 +526,10 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin, selectedDate: exte
               slotsError={slotsError}
               allDaySlots={allDaySlots}
               availableTimeSlots={availableTimeSlots}
+              nextDayTimeSlots={nextDayTimeSlots}
               formatDate={formatDate}
               timeSlotData={timeSlotData}
+              nextDayTimeSlotData={nextDayTimeSlotData}
               onRangeSelect={handleRangeSelect}
               startTime={startTime}
               endTime={endTime}
@@ -420,13 +544,13 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin, selectedDate: exte
                 />
                 {selectedPlan && (
                   <BookingSummary
-                    selectedDate={selectedDate}
                     startTime={startTime}
                     endTime={endTime}
                     duration={duration}
                     selectedPlan={selectedPlan}
                     onBook={onBook}
                     formatDate={formatDate}
+                    getDateRange={getDateRange}
                   />
                 )}
               </>
@@ -438,6 +562,7 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin, selectedDate: exte
           <BookingSuccess
             bookingDetails={bookingDetails}
             formatDate={formatDate}
+            getDateRange={getDateRange}
             goToProducts={goToProducts}
             addBookingToCart={addBookingToCart}
             onBack={() => setBookingCompleted(false)}
