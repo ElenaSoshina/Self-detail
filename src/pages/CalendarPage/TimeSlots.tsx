@@ -42,12 +42,43 @@ const TimeSlots: React.FC<TimeSlotsProps> = ({
   const [startTimeContextState, setStartTimeContextState] = useState<'current' | 'next' | null>(startTimeContext || null);
   const [endTimeContextState, setEndTimeContextState] = useState<'current' | 'next' | null>(endTimeContext || null);
 
+  // Состояние для предупреждения
+  const [warningMessage, setWarningMessage] = useState<string | null>(null);
+  const [warningTimeout, setWarningTimeout] = useState<NodeJS.Timeout | null>(null);
+
   useEffect(() => {
     setStartTime(externalStartTime);
     setEndTime(externalEndTime);
     setStartTimeContextState(startTimeContext || null);
     setEndTimeContextState(endTimeContext || null);
   }, [externalStartTime, externalEndTime, startTimeContext, endTimeContext]);
+
+  // Очистка таймера при размонтировании компонента
+  useEffect(() => {
+    return () => {
+      if (warningTimeout) {
+        clearTimeout(warningTimeout);
+      }
+    };
+  }, [warningTimeout]);
+
+  // Функция для показа предупреждения
+  const showWarning = (message: string) => {
+    // Очищаем предыдущий таймер если есть
+    if (warningTimeout) {
+      clearTimeout(warningTimeout);
+    }
+    
+    setWarningMessage(message);
+    
+    // Автоматически скрываем предупреждение через 3 секунды
+    const timeout = setTimeout(() => {
+      setWarningMessage(null);
+      setWarningTimeout(null);
+    }, 3000);
+    
+    setWarningTimeout(timeout);
+  };
 
   // Функция для сброса выбранного времени
   const resetTimeSelection = () => {
@@ -520,6 +551,11 @@ const TimeSlots: React.FC<TimeSlotsProps> = ({
         onRangeSelect(time, null, newStartContext, undefined);
       } else {
         console.log('❌ TimeSlots - Слот недоступен для выбора как начало:', time);
+        // Проверяем, является ли это граничным слотом
+        const isBoundarySlot = isBoundary(time, isNextDay);
+        if (isBoundarySlot) {
+          showWarning('Этот слот может быть выбран только как время окончания. Сначала выберите время начала.');
+        }
       }
       return;
     }
@@ -544,6 +580,12 @@ const TimeSlots: React.FC<TimeSlotsProps> = ({
         isBoundarySlot: isBoundarySlot,
         canBeEnd: canBeEnd
       });
+      
+      // Проверяем клик на граничный слот без начала выбора
+      if (isBoundarySlot && !startTime) {
+        showWarning('Этот слот может быть выбран только как время окончания. Сначала выберите время начала.');
+        return;
+      }
       
       if (isAvailable || canBeEnd) {
         const startIdx = allDaySlots.findIndex(s => s.formattedTime === startTime);
@@ -617,6 +659,12 @@ const TimeSlots: React.FC<TimeSlotsProps> = ({
         canBeEnd: canBeEnd
       });
       
+      // Проверяем клик на граничный слот без начала выбора
+      if (isBoundarySlot && !startTime) {
+        showWarning('Этот слот может быть выбран только как время окончания. Сначала выберите время начала.');
+        return;
+      }
+      
       if (isAvailable || canBeEnd) {
         console.log('✅ TimeSlots - Установка слота следующего дня как конец диапазона');
         setEndTime(time);
@@ -644,6 +692,14 @@ const TimeSlots: React.FC<TimeSlotsProps> = ({
               </button>
             )}
           </div>
+
+          {/* Предупреждение для пользователя */}
+          {warningMessage && (
+            <div className={styles.warningMessage}>
+              <span className={styles.warningIcon}>⚠️</span>
+              <span className={styles.warningText}>{warningMessage}</span>
+            </div>
+          )}
 
           {loadingSlots ? (
             <div className={styles.loadingMessage}>Загрузка доступных слотов...</div>
