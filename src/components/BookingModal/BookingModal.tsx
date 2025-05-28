@@ -204,9 +204,23 @@ const BookingModal: React.FC<BookingModalProps> = ({
             
             if (userData) {
               console.log('📋 Автозаполнение формы данными:', userData);
+              
+              // Форматируем номер телефона для валидации
+              let formattedPhone = userData.clientPhone || '';
+              if (formattedPhone && !formattedPhone.startsWith('+7')) {
+                // Если номер не начинается с +7, добавляем его
+                if (formattedPhone.startsWith('7')) {
+                  formattedPhone = '+' + formattedPhone;
+                } else if (formattedPhone.startsWith('8')) {
+                  formattedPhone = '+7' + formattedPhone.substring(1);
+                } else {
+                  formattedPhone = '+7' + formattedPhone;
+                }
+              }
+              
               setFormData({
                 name: userData.clientName || '',
-                phone: userData.clientPhone || '',
+                phone: formattedPhone,
                 email: userData.clientEmail || '',
                 telegramUserName: userData.telegramUserName || '',
               });
