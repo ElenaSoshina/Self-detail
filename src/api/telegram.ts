@@ -122,8 +122,26 @@ export const formatUserMessage = (bookingData: any, service: any, serviceRu: str
     
     return `${hours}:${minutes}`;
   };
-  const dateStr = formatDate(bookingData.start);
-  const timeStr = `${formatTime(bookingData.start)} - ${formatTime(bookingData.end)}`;
+  
+  const startDate = new Date(bookingData.start);
+  const endDate = new Date(bookingData.end);
+  const startDateStr = formatDate(bookingData.start);
+  const endDateStr = formatDate(bookingData.end);
+  const startTimeStr = formatTime(bookingData.start);
+  const endTimeStr = formatTime(bookingData.end);
+  
+  // Проверяем, переходит ли бронирование на следующий день
+  const isCrossingDays = startDate.toDateString() !== endDate.toDateString();
+  
+  let dateTimeStr;
+  if (isCrossingDays) {
+    // Межсуточное бронирование
+    dateTimeStr = `📅 Дата: ${startDateStr} — ${endDateStr}\n🕒 Время: ${startTimeStr} — ${endTimeStr}`;
+  } else {
+    // Обычное бронирование в пределах дня
+    dateTimeStr = `📅 Дата: ${startDateStr}\n🕒 Время: ${startTimeStr} — ${endTimeStr}`;
+  }
+  
   let productsBlock = '';
   if (bookingData.products && Array.isArray(bookingData.products) && bookingData.products.length > 0) {
     const productsTotal = bookingData.products.reduce((sum: number, p: any) => sum + p.price * p.quantity, 0);
@@ -132,7 +150,7 @@ export const formatUserMessage = (bookingData: any, service: any, serviceRu: str
       (bookingData.totalPrice ? `\n\n💵 Итоговая сумма: ${bookingData.totalPrice}₽` : '');
   }
   const serviceText = serviceRu || service?.serviceName || 'Технические работы';
-  return `\nВаше бронирование успешно создано!\n\n📅 Дата: ${dateStr}\n🕒 Время: ${timeStr}\n\n📋 Услуга: ${serviceText}\n💰 Стоимость: ${service.price}₽${productsBlock}`;
+  return `\nВаше бронирование успешно создано!\n\n${dateTimeStr}\n\n📋 Услуга: ${serviceText}\n💰 Стоимость: ${service.price}₽${productsBlock}`;
 };
 
 export const formatAdminMessage = (bookingData: any, service: any, serviceRu: string) => {
@@ -152,8 +170,26 @@ export const formatAdminMessage = (bookingData: any, service: any, serviceRu: st
     
     return `${hours}:${minutes}`;
   };
-  const dateStr = formatDate(bookingData.start);
-  const timeStr = `${formatTime(bookingData.start)} - ${formatTime(bookingData.end)}`;
+  
+  const startDate = new Date(bookingData.start);
+  const endDate = new Date(bookingData.end);
+  const startDateStr = formatDate(bookingData.start);
+  const endDateStr = formatDate(bookingData.end);
+  const startTimeStr = formatTime(bookingData.start);
+  const endTimeStr = formatTime(bookingData.end);
+  
+  // Проверяем, переходит ли бронирование на следующий день
+  const isCrossingDays = startDate.toDateString() !== endDate.toDateString();
+  
+  let dateTimeStr;
+  if (isCrossingDays) {
+    // Межсуточное бронирование
+    dateTimeStr = `📅 Дата: ${startDateStr} — ${endDateStr}\n🕒 Время: ${startTimeStr} — ${endTimeStr}`;
+  } else {
+    // Обычное бронирование в пределах дня
+    dateTimeStr = `📅 Дата: ${startDateStr}\n🕒 Время: ${startTimeStr} — ${endTimeStr}`;
+  }
+  
   let productsBlock = '';
   if (bookingData.products && Array.isArray(bookingData.products) && bookingData.products.length > 0) {
     const productsTotal = bookingData.products.reduce((sum: number, p: any) => sum + p.price * p.quantity, 0);
@@ -162,7 +198,7 @@ export const formatAdminMessage = (bookingData: any, service: any, serviceRu: st
       (bookingData.totalPrice ? `\n\n💵 Итоговая сумма: ${bookingData.totalPrice}₽` : '');
   }
   const serviceText = serviceRu || service?.serviceName || 'Технические работы';
-  return `\nНовое бронирование\n\n👤 Клиент: ${bookingData.clientName}\n📱 Телефон: ${bookingData.clientPhone}\n📧 Email: ${bookingData.clientEmail}\n📱 Telegram: ${bookingData.telegramUserName}\n\n📅 Дата: ${dateStr}\n🕒 Время: ${timeStr}\n\n📋 Услуга: ${serviceText}\n💰 Стоимость: ${service.price}₽${productsBlock}`;
+  return `\nНовое бронирование\n\n👤 Клиент: ${bookingData.clientName}\n📱 Телефон: ${bookingData.clientPhone}\n📧 Email: ${bookingData.clientEmail}\n📱 Telegram: ${bookingData.telegramUserName}\n\n${dateTimeStr}\n\n📋 Услуга: ${serviceText}\n💰 Стоимость: ${service.price}₽${productsBlock}`;
 };
 
 /**

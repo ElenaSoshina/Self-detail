@@ -110,15 +110,28 @@ const AdminCalendar: React.FC<{ onUserSelect: (userId: string) => void }> = ({ o
         const year = currentDate.getFullYear();
         const month = (currentDate.getMonth() + 1).toString().padStart(2, '0');
         const day = currentDate.getDate().toString().padStart(2, '0');
-        const startDate = `${year}-${month}-${day}T00:00:00`;
         
-        // Следующий день для запроса
+        // Начинаем с предыдущего дня чтобы захватить межсуточные бронирования
+        const prevDay = new Date(currentDate);
+        prevDay.setDate(prevDay.getDate() - 1);
+        const prevYear = prevDay.getFullYear();
+        const prevMonth = (prevDay.getMonth() + 1).toString().padStart(2, '0');
+        const prevDayNum = prevDay.getDate().toString().padStart(2, '0');
+        const startDate = `${prevYear}-${prevMonth}-${prevDayNum}T00:00:00`;
+        
+        // Следующий день для запроса (до конца следующего дня)
         const nextDay = new Date(currentDate);
-        nextDay.setDate(nextDay.getDate() + 1);
+        nextDay.setDate(nextDay.getDate() + 2);
         const nextYear = nextDay.getFullYear();
         const nextMonth = (nextDay.getMonth() + 1).toString().padStart(2, '0');
         const nextDayNum = nextDay.getDate().toString().padStart(2, '0');
         const endDate = `${nextYear}-${nextMonth}-${nextDayNum}T00:00:00`;
+        
+        console.log('📅 AdminCalendar - Запрос бронирований:', {
+          currentDate: currentDate.toISOString(),
+          startDate: startDate,
+          endDate: endDate
+        });
         
         // Запрос к API для получения бронирований
         const response = await api.get('/calendar/booking', {
@@ -131,8 +144,38 @@ const AdminCalendar: React.FC<{ onUserSelect: (userId: string) => void }> = ({ o
           throw new Error('Неверный формат данных');
         }
         
+        console.log('📊 AdminCalendar - Получено бронирований:', data.data.length);
+        
+        // Начало и конец текущего дня для фильтрации
+        const currentDayStart = new Date(currentDate);
+        currentDayStart.setHours(0, 0, 0, 0);
+        const currentDayEnd = new Date(currentDate);
+        currentDayEnd.setHours(23, 59, 59, 999);
+        
+        // Фильтруем и маппим бронирования для текущего дня
+        const relevantBookings = data.data.filter((booking: any) => {
+          const bookingStart = new Date(booking.start);
+          const bookingEnd = new Date(booking.end);
+          
+          // Проверяем пересечение с текущим днем
+          const intersects = bookingStart <= currentDayEnd && bookingEnd >= currentDayStart;
+          
+          if (intersects) {
+            console.log('✅ AdminCalendar - Бронирование пересекается с текущим днем:', {
+              bookingId: booking.bookingId,
+              start: booking.start,
+              end: booking.end,
+              currentDay: currentDate.toDateString()
+            });
+          }
+          
+          return intersects;
+        });
+        
+        console.log('🎯 AdminCalendar - Отфильтровано бронирований для текущего дня:', relevantBookings.length);
+        
         // Маппинг бронирований
-        const bookedSlots = data.data.map((booking: any) => {
+        const bookedSlots = relevantBookings.map((booking: any) => {
           // Получаем информацию об услуге
           const serviceName = booking.services && booking.services.length > 0 
             ? booking.services[0].serviceName 
@@ -429,11 +472,18 @@ const AdminCalendar: React.FC<{ onUserSelect: (userId: string) => void }> = ({ o
             const year = currentDate.getFullYear();
             const month = (currentDate.getMonth() + 1).toString().padStart(2, '0');
             const day = currentDate.getDate().toString().padStart(2, '0');
-            const startDate = `${year}-${month}-${day}T00:00:00`;
             
-            // Следующий день для запроса
+            // Начинаем с предыдущего дня чтобы захватить межсуточные бронирования
+            const prevDay = new Date(currentDate);
+            prevDay.setDate(prevDay.getDate() - 1);
+            const prevYear = prevDay.getFullYear();
+            const prevMonth = (prevDay.getMonth() + 1).toString().padStart(2, '0');
+            const prevDayNum = prevDay.getDate().toString().padStart(2, '0');
+            const startDate = `${prevYear}-${prevMonth}-${prevDayNum}T00:00:00`;
+            
+            // Следующий день для запроса (до конца следующего дня)
             const nextDay = new Date(currentDate);
-            nextDay.setDate(nextDay.getDate() + 1);
+            nextDay.setDate(nextDay.getDate() + 2);
             const nextYear = nextDay.getFullYear();
             const nextMonth = (nextDay.getMonth() + 1).toString().padStart(2, '0');
             const nextDayNum = nextDay.getDate().toString().padStart(2, '0');
@@ -450,8 +500,23 @@ const AdminCalendar: React.FC<{ onUserSelect: (userId: string) => void }> = ({ o
               throw new Error('Неверный формат данных');
             }
             
+            // Начало и конец текущего дня для фильтрации
+            const currentDayStart = new Date(currentDate);
+            currentDayStart.setHours(0, 0, 0, 0);
+            const currentDayEnd = new Date(currentDate);
+            currentDayEnd.setHours(23, 59, 59, 999);
+            
+            // Фильтруем и маппим бронирования для текущего дня
+            const relevantBookings = data.data.filter((booking: any) => {
+              const bookingStart = new Date(booking.start);
+              const bookingEnd = new Date(booking.end);
+              
+              // Проверяем пересечение с текущим днем
+              return bookingStart <= currentDayEnd && bookingEnd >= currentDayStart;
+            });
+            
             // Маппинг бронирований
-            const bookedSlots = data.data.map((booking: any) => {
+            const bookedSlots = relevantBookings.map((booking: any) => {
               // Получаем информацию об услуге
               const serviceName = booking.services && booking.services.length > 0 
                 ? booking.services[0].serviceName 
@@ -572,7 +637,32 @@ const AdminCalendar: React.FC<{ onUserSelect: (userId: string) => void }> = ({ o
                   }}
                 >
                   <div className={styles.time}>
-                    {new Date(slot.start).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })} — {new Date(slot.end).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+                    {(() => {
+                      const startDate = new Date(slot.start);
+                      const endDate = new Date(slot.end);
+                      const currentDayStart = new Date(currentDate);
+                      currentDayStart.setHours(0, 0, 0, 0);
+                      const currentDayEnd = new Date(currentDate);
+                      currentDayEnd.setHours(23, 59, 59, 999);
+                      
+                      const startTime = startDate.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+                      const endTime = endDate.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+                      
+                      // Проверяем, если бронирование начинается до текущего дня
+                      if (startDate < currentDayStart) {
+                        const startDateStr = startDate.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
+                        return `↪️ ${startDateStr} ${startTime} — ${endTime}`;
+                      }
+                      
+                      // Проверяем, если бронирование заканчивается после текущего дня
+                      if (endDate > currentDayEnd) {
+                        const endDateStr = endDate.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
+                        return `${startTime} — ${endDateStr} ${endTime} ↩️`;
+                      }
+                      
+                      // Обычное отображение для бронирований в пределах дня
+                      return `${startTime} — ${endTime}`;
+                    })()}
                   </div>
                   <div className={styles.bookingInfo}>
                     <b>{slot.bookingDetails?.userName}</b><br/>
