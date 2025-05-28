@@ -293,12 +293,12 @@ const BookingDetails: React.FC<BookingDetailsProps> = ({ bookingId, onClose, onE
         </div>
       )}
       
-      <div className={styles.bookingTotalSection}>
+      {/* <div className={styles.bookingTotalSection}>
         <div className={styles.detailItem}>
           <span><strong>Общая сумма:</strong></span>
           <span><strong>{getServicePrice()} ₽</strong></span>
         </div>
-      </div>
+      </div> */}
     </div>
   );
 };
