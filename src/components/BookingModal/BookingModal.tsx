@@ -44,6 +44,75 @@ interface FormData {
   telegramUserName: string;
 }
 
+// Интерфейс для данных пользователя
+interface UserData {
+  id: number;
+  telegramUserId: number;
+  telegramUserName: string;
+  clientName: string;
+  clientPhone: string;
+  clientEmail: string;
+  createdAt: string;
+}
+
+// Функция для проверки существования пользователя по telegramUserId
+const checkUserExists = async (telegramUserId: number): Promise<boolean> => {
+  try {
+    const response = await api.get('/users');
+    const data = response.data;
+    
+    if (data.success && data.data && data.data.content) {
+      return data.data.content.some((user: UserData) => user.telegramUserId === telegramUserId);
+    }
+    return false;
+  } catch (error) {
+    console.error('Ошибка при проверке существования пользователя:', error);
+    return false;
+  }
+};
+
+// Функция для получения данных пользователя по telegramUserId
+const getUserData = async (telegramUserId: number): Promise<UserData | null> => {
+  try {
+    const response = await api.get(`/users/${telegramUserId}`);
+    const data = response.data;
+    
+    if (data.success && data.data) {
+      return data.data;
+    }
+    return null;
+  } catch (error) {
+    console.error('Ошибка при получении данных пользователя:', error);
+    return null;
+  }
+};
+
+// Функция для сохранения данных пользователя
+const saveUserData = async (userData: {
+  telegramUserId: number;
+  telegramUserName: string;
+  clientName: string;
+  clientPhone: string;
+  clientEmail: string;
+}): Promise<boolean> => {
+  try {
+    console.log('💾 Сохраняем данные пользователя:', userData);
+    const response = await api.post('/users', userData);
+    const data = response.data;
+    
+    if (data.success) {
+      console.log('✅ Данные пользователя сохранены успешно');
+      return true;
+    } else {
+      console.warn('⚠️ Не удалось сохранить данные пользователя:', data.errorMessage);
+      return false;
+    }
+  } catch (error) {
+    console.error('❌ Ошибка при сохранении данных пользователя:', error);
+    return false;
+  }
+};
+
 const BookingModal: React.FC<BookingModalProps> = ({
   isOpen,
   onClose,
@@ -112,6 +181,47 @@ const BookingModal: React.FC<BookingModalProps> = ({
       tg.ready?.();
     }
   }, []);
+
+  // Автозаполнение формы данными пользователя
+  useEffect(() => {
+    const loadUserData = async () => {
+      // Если форма уже заполнена через prefilledData, не перезаписываем
+      if (prefilledData && (prefilledData.name || prefilledData.phone || prefilledData.email)) {
+        return;
+      }
+
+      const tg = (window as any).Telegram?.WebApp;
+      if (tg?.initDataUnsafe?.user?.id && isOpen) {
+        const telegramUserId = tg.initDataUnsafe.user.id;
+        
+        try {
+          console.log('🔍 Проверяем существование пользователя:', telegramUserId);
+          const userExists = await checkUserExists(telegramUserId);
+          
+          if (userExists) {
+            console.log('✅ Пользователь найден, загружаем данные...');
+            const userData = await getUserData(telegramUserId);
+            
+            if (userData) {
+              console.log('📋 Автозаполнение формы данными:', userData);
+              setFormData({
+                name: userData.clientName || '',
+                phone: userData.clientPhone || '',
+                email: userData.clientEmail || '',
+                telegramUserName: userData.telegramUserName || '',
+              });
+            }
+          } else {
+            console.log('ℹ️ Пользователь не найден, форма остается пустой');
+          }
+        } catch (error) {
+          console.error('❌ Ошибка при загрузке данных пользователя:', error);
+        }
+      }
+    };
+
+    loadUserData();
+  }, [isOpen, prefilledData]);
 
   // Корректная обработка даты в useEffect без зависимости от selectedDate
   useEffect(() => {
@@ -431,6 +541,35 @@ const BookingModal: React.FC<BookingModalProps> = ({
         });
         // Не прерываем выполнение из-за ошибок Telegram, но логируем их
         console.warn('⚠️ Бронирование создано, но возникла проблема с уведомлениями');
+      }
+
+      // Сохраняем данные пользователя для будущих бронирований
+      try {
+        const tg = (window as any).Telegram?.WebApp;
+        if (tg?.initDataUnsafe?.user?.id) {
+          const telegramUserId = tg.initDataUnsafe.user.id;
+          
+          // Проверяем, нужно ли создавать или обновлять данные пользователя
+          const userExists = await checkUserExists(telegramUserId);
+          
+          if (!userExists) {
+            // Пользователь не существует, создаем новую запись
+            const userDataToSave = {
+              telegramUserId: telegramUserId,
+              telegramUserName: formData.telegramUserName,
+              clientName: formData.name,
+              clientPhone: formData.phone.replace('+', ''),
+              clientEmail: formData.email
+            };
+            
+            await saveUserData(userDataToSave);
+          } else {
+            console.log('ℹ️ Пользователь уже существует, пропускаем сохранение');
+          }
+        }
+      } catch (userSaveError) {
+        console.error('❌ Ошибка при сохранении данных пользователя:', userSaveError);
+        // Не прерываем выполнение, так как основное бронирование создано
       }
 
     } catch (err: any) {
