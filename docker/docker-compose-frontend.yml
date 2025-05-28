@@ -8,8 +8,8 @@ services:
 
     environment:
       - VIRTUAL_PORT=80
-      - VIRTUAL_HOST=frontend.self-detailing.duckdns.org
-      - LETSENCRYPT_HOST=frontend.self-detailing.duckdns.org
+      - VIRTUAL_HOST=frontend.self-detail.ru
+      - LETSENCRYPT_HOST=frontend.self-detail.ru
       - LETSENCRYPT_EMAIL=soshinaalena6415@gmail.com
       # - BACKEND_PASSWORD=${BACKEND_PASSWORD}
       # - BACKEND_USERNAME=${BACKEND_USERNAME}
