@@ -33,6 +33,43 @@ const BookingDetails: React.FC<BookingDetailsProps> = ({ bookingId, onClose, onE
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Функция для проверки межсуточного бронирования
+  const isCrossingDays = (start: string, end: string): boolean => {
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+    return startDate.toDateString() !== endDate.toDateString();
+  };
+
+  // Функция для форматирования отображения дат
+  const formatDateDisplay = (start: string, end: string) => {
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+    
+    if (isCrossingDays(start, end)) {
+      return `${startDate.toLocaleDateString('ru-RU')} — ${endDate.toLocaleDateString('ru-RU')}`;
+    } else {
+      return startDate.toLocaleDateString('ru-RU');
+    }
+  };
+
+  // Функция для форматирования отображения времени с индикаторами
+  const formatTimeDisplay = (start: string, end: string) => {
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+    const startTime = startDate.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    const endTime = endDate.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    
+    if (isCrossingDays(start, end)) {
+      return (
+        <span>
+          <span>↪️ {startDate.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })} {startTime} — {endDate.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })} {endTime} ↩️</span>
+        </span>
+      );
+    } else {
+      return `${startTime} — ${endTime}`;
+    }
+  };
+
   useEffect(() => {
     const fetchBookingDetails = async () => {
       if (!bookingId) {
@@ -192,14 +229,15 @@ const BookingDetails: React.FC<BookingDetailsProps> = ({ bookingId, onClose, onE
         
         <div className={styles.detailItem}>
           <span>Дата:</span>
-          <span>{new Date(booking.start).toLocaleDateString('ru-RU')}</span>
+          <span className={isCrossingDays(booking.start, booking.end) ? styles.crossingDate : ''}>
+            {formatDateDisplay(booking.start, booking.end)}
+          </span>
         </div>
         
         <div className={styles.detailItem}>
           <span>Время:</span>
-          <span>
-            {new Date(booking.start).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })} — 
-            {new Date(booking.end).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+          <span className={isCrossingDays(booking.start, booking.end) ? styles.crossingTime : ''}>
+            {formatTimeDisplay(booking.start, booking.end)}
           </span>
         </div>
         

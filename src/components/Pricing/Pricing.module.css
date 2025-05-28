@@ -152,6 +152,87 @@
   border-left: 3px solid #8A6EFF;
 }
 
+/* Стили для кнопки "Подробнее" и выпадающего списка */
+.detailsButton {
+  width: 100%;
+  margin-top: 15px;
+  padding: 12px 18px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: rgba(220, 220, 255, 0.9);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+}
+
+.detailsButton::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 10px;
+  padding: 1px;
+  background: linear-gradient(45deg, rgba(138, 110, 255, 0.5), rgba(255, 31, 122, 0.5));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  transition: all 0.3s ease;
+  opacity: 0.7;
+}
+
+.detailsButton:hover {
+  background: rgba(138, 110, 255, 0.1);
+  color: #fff;
+}
+
+.detailsButton:hover::before {
+  opacity: 1;
+  background: linear-gradient(45deg, #8A6EFF, #FF1F7A);
+}
+
+.detailsArrow {
+  font-size: 13px;
+  transition: transform 0.3s ease;
+  color: rgba(220, 220, 255, 0.9);
+}
+
+.detailsButton:hover .detailsArrow {
+  color: #fff;
+}
+
+.detailsArrowOpen {
+  transform: rotate(180deg);
+}
+
+.detailsSection {
+  margin-top: 15px;
+  padding: 15px;
+  background: rgba(20, 20, 40, 0.8);
+  border-radius: 8px;
+  border: 1px solid rgba(138, 110, 255, 0.2);
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .heroButton {
   display: inline-flex;
   align-items: center;
