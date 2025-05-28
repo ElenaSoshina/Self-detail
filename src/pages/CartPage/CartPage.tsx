@@ -142,13 +142,20 @@ const CartPage: React.FC = () => {
         timestamp: new Date().toISOString()
       });
       
+      console.log('📤 CartPage - Начинаем отправку уведомлений администраторам...');
+      
       try {
         // Отправляем сообщение всем администраторам
         await sendTelegramMessageToAllAdmins(
           formatAdminMessage(apiData, formData.service || { price: 0 }, formData.service?.serviceName || '')
         );
-      } catch (telegramError) {
-        console.error('Ошибка при отправке уведомлений в Telegram:', telegramError);
+        console.log('✅ CartPage - Уведомления администраторам отправлены успешно');
+      } catch (telegramError: any) {
+        console.error('❌ CartPage - Ошибка при отправке уведомлений в Telegram:', {
+          error: telegramError.message,
+          stack: telegramError.stack
+        });
+        console.warn('⚠️ CartPage - Бронирование создано, но возникла проблема с уведомлениями');
       }
       
       // После успешного запроса устанавливаем данные
