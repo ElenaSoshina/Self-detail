@@ -69,6 +69,54 @@ const calculateNextDiscountThreshold = (hours: number): number => {
   return 50; // Максимальная скидка уже достигнута
 };
 
+// Функция для проверки межсуточного бронирования
+const isCrossingDays = (start: string, end: string): boolean => {
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+  return startDate.toDateString() !== endDate.toDateString();
+};
+
+// Функция для форматирования отображения времени с учетом межсуточности
+const formatBookingTimeDisplay = (booking: Booking) => {
+  const startDate = new Date(booking.date);
+  const endDate = new Date(booking.date);
+  
+  // Парсим время начала и конца
+  const [startHour, startMinute] = booking.timeStart.split(':').map(Number);
+  const [endHour, endMinute] = booking.timeEnd.split(':').map(Number);
+  
+  // Устанавливаем время
+  startDate.setHours(startHour, startMinute, 0, 0);
+  endDate.setHours(endHour, endMinute, 0, 0);
+  
+  // Если время окончания меньше времени начала, значит бронирование переходит на следующий день
+  if (endDate.getTime() <= startDate.getTime()) {
+    endDate.setDate(endDate.getDate() + 1);
+  }
+  
+  const formatDateShort = (date: Date) => {
+    return date.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
+  };
+  
+  const crossing = startDate.toDateString() !== endDate.toDateString();
+  
+  if (crossing) {
+    // Межсуточное бронирование
+    return {
+      dateDisplay: `${formatDateShort(startDate)} — ${formatDateShort(endDate)}`,
+      timeDisplay: `${booking.timeStart} — ${booking.timeEnd}`,
+      isCrossing: true
+    };
+  } else {
+    // Обычное бронирование
+    return {
+      dateDisplay: formatDate(booking.date),
+      timeDisplay: `${booking.timeStart} — ${booking.timeEnd}`,
+      isCrossing: false
+    };
+  }
+};
+
 const ProfilePage: React.FC = () => {
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -323,8 +371,19 @@ const ProfilePage: React.FC = () => {
                   onClick={() => handleBookingClick(booking.id)}
                 >
                   <div className={styles.bookingDate}>
-                    <div className={styles.date}>{formatDate(booking.date)}</div>
-                    <div className={styles.time}>{booking.timeStart} - {booking.timeEnd}</div>
+                    {(() => {
+                      const timeInfo = formatBookingTimeDisplay(booking);
+                      return (
+                        <>
+                          <div className={`${styles.date} ${timeInfo.isCrossing ? styles.crossingDate : ''}`}>
+                            {timeInfo.isCrossing && <span className={styles.crossingIcon}>↪️ </span>}
+                            {timeInfo.dateDisplay}
+                            {timeInfo.isCrossing && <span className={styles.crossingIcon}> ↩️</span>}
+                          </div>
+                          <div className={styles.time}>{timeInfo.timeDisplay}</div>
+                        </>
+                      );
+                    })()}
                   </div>
                   <div className={styles.bookingInfo}>
                     <div className={styles.serviceName}>{booking.service}</div>
