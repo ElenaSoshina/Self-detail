@@ -14,10 +14,7 @@ interface BookingSuccessProps {
 }
 
 const serviceMap = {
-  'Мойка авто':   { serviceName: 'Мойка авто', price: 800 },
-  'Сухой пост':   { serviceName: 'Сухой пост', price: 500 },
-  'Химчистка':    { serviceName: 'Химчистка', price: 800 },
-  'Полировка':    { serviceName: 'Полировка', price: 800 }
+  'Все включено': { serviceName: 'Все включено', price: 800 }
 };
 
 const BookingSuccess: React.FC<BookingSuccessProps> = ({ bookingDetails, formatDate, getDateRange, goToProducts, addBookingToCart, onBack }) => {

@@ -133,11 +133,9 @@ const BookingModal: React.FC<BookingModalProps> = ({
   }, [startTime, endTime]);
 
   // Соответствие serviceName <-> serviceRu
-  const serviceNameMap: Record<string, string> = {
-    'Мойка авто': 'Мойка авто',
-    'Сухой пост': 'Сухой пост',
-    'Химчистка': 'Химчистка',
-    'Полировка': 'Полировка',
+  const serviceNameMap: { [key: string]: string } = {
+    'Все включено': 'Все включено',
+    'Технические работы': 'Технические работы'
   };
 
   // Вычисление количества часов бронирования

@@ -22,10 +22,9 @@
 } */
 
 .cardsContainer {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 30px;
-  max-width: 1200px;
+  display: flex;
+  justify-content: center;
+  max-width: 800px;
   margin: 0 auto;
 }
 
@@ -36,7 +35,8 @@
   position: relative;
   transition: transform 0.3s ease;
   overflow: hidden;
-  height: 100%;
+  width: 100%;
+  max-width: 600px;
   display: flex;
   flex-direction: column;
 }
@@ -96,7 +96,60 @@
 .description {
   color: #ccc;
   line-height: 1.6;
-  flex-grow: 1;
+  margin-bottom: 20px;
+}
+
+.detailsSection {
+  margin-top: 20px;
+}
+
+.sectionTitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+  margin: 15px 0 10px 0;
+  background: linear-gradient(90deg, #FF1F7A, #8A6EFF);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.sectionTitle:first-child {
+  margin-top: 0;
+}
+
+.detailsList {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 15px 0;
+}
+
+.detailsList li {
+  color: #ccc;
+  font-size: 14px;
+  line-height: 1.5;
+  padding: 4px 0;
+  padding-left: 15px;
+  position: relative;
+}
+
+.detailsList li::before {
+  content: '•';
+  color: #8A6EFF;
+  font-weight: bold;
+  position: absolute;
+  left: 0;
+}
+
+.note {
+  color: #999;
+  font-size: 13px;
+  font-style: italic;
+  margin-top: 15px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  border-left: 3px solid #8A6EFF;
 }
 
 .heroButton {

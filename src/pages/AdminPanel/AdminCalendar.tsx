@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styles from './AdminCalendar.module.css';
-import { mockSlots, BookingSlot } from './mockData';
 import api from '../../api/apiService';
 import TimeSlots from '../CalendarPage/TimeSlots';
 import CalendarPage from '../CalendarPage/CalendarPage';
@@ -8,6 +7,24 @@ import BookingDetails from './BookingDetails';
 import { fetchAvailableTimeSlotsApi, formatTimeSlots } from '../../pages/CalendarPage/calendarApiService';
 
 const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+
+interface BookingSlot {
+  id: string;
+  bookingId?: number | string;
+  start: string;
+  end: string;
+  isBooked: boolean;
+  bookingDetails?: {
+    userId: string;
+    userName: string;
+    phone: string;
+    plan: {
+      title: string;
+      price: number;
+    };
+    hours: number;
+  };
+}
 
 interface TimeSlot {
   start: string;

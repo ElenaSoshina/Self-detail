@@ -1,7 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import styles from './UserProfile.module.css';
-import { mockUsers, User } from './mockData';
+import api from '../../api/apiService';
+
+interface User {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+  bookings: {
+    id: string;
+    start: string;
+    end: string;
+    plan: {
+      title: string;
+      price: number;
+    };
+    hours: number;
+    totalPrice: number;
+  }[];
+  purchases: {
+    id: string;
+    date: string;
+    product: string;
+    amount: number;
+    price: number;
+  }[];
+  totalSpent: number;
+}
 
 const UserProfile: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
@@ -15,23 +41,85 @@ const UserProfile: React.FC = () => {
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        // Имитация задержки загрузки
-        await new Promise(resolve => setTimeout(resolve, 500));
+        setLoading(true);
         
-        const foundUser = mockUsers.find(u => u.id === userId);
-        if (foundUser) {
-          setUser(foundUser);
-        } else {
+        // Получаем данные о бронированиях пользователя
+        const bookingsResponse = await api.get('/calendar/booking', {
+          params: { telegramUserId: userId }
+        });
+        
+        if (!bookingsResponse.data || !bookingsResponse.data.data) {
           setError('Пользователь не найден');
+          return;
         }
-        setLoading(false);
+        
+        const bookings = bookingsResponse.data.data;
+        
+        if (bookings.length === 0) {
+          setError('Пользователь не найден');
+          return;
+        }
+        
+        // Берем данные первого бронирования для получения информации о пользователе
+        const firstBooking = bookings[0];
+        
+        // Вычисляем общую потраченную сумму
+        const totalSpent = bookings.reduce((sum: number, booking: any) => {
+          const servicePrice = booking.services && booking.services.length > 0 
+            ? booking.services[0].price 
+            : 0;
+          return sum + servicePrice;
+        }, 0);
+        
+        // Формируем объект пользователя
+        const userData: User = {
+          id: String(firstBooking.telegramUserId),
+          name: firstBooking.clientName || 'Клиент',
+          phone: firstBooking.clientPhone || 'Телефон не указан',
+          email: firstBooking.clientEmail || 'Email не указан',
+          bookings: bookings.map((booking: any) => {
+            const serviceName = booking.services && booking.services.length > 0 
+              ? booking.services[0].serviceName 
+              : 'Услуга';
+            
+            const servicePrice = booking.services && booking.services.length > 0 
+              ? booking.services[0].price 
+              : 0;
+              
+            // Вычисляем продолжительность в часах
+            const startDate = new Date(booking.start);
+            const endDate = new Date(booking.end);
+            const diffMs = endDate.getTime() - startDate.getTime();
+            const hours = Math.max(1, Math.round(diffMs / (1000 * 60 * 60)));
+            
+            return {
+              id: String(booking.bookingId),
+              start: booking.start,
+              end: booking.end,
+              plan: {
+                title: serviceName,
+                price: servicePrice
+              },
+              hours: hours,
+              totalPrice: servicePrice
+            };
+          }),
+          purchases: [], // Пока нет API для покупок
+          totalSpent: totalSpent
+        };
+        
+        setUser(userData);
       } catch (error) {
+        console.error('Ошибка при загрузке данных пользователя:', error);
         setError('Ошибка при загрузке данных пользователя');
+      } finally {
         setLoading(false);
       }
     };
 
-    fetchUserData();
+    if (userId) {
+      fetchUserData();
+    }
   }, [userId]);
 
   if (loading) {

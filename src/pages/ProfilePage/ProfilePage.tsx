@@ -427,24 +427,4 @@ const ProfilePage: React.FC = () => {
   );
 };
 
-// Заглушка для тестовых данных покупок (используется только если нет доступа к Telegram)
-const mockPurchases: Purchase[] = [
-  {
-    id: 'p1',
-    name: 'Шампунь для авто',
-    date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-    price: 350,
-    quantity: 1,
-    imageUrl: 'https://via.placeholder.com/60'
-  },
-  {
-    id: 'p2',
-    name: 'Микрофибра',
-    date: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
-    price: 200,
-    quantity: 2,
-    imageUrl: 'https://via.placeholder.com/60'
-  }
-];
-
 export default ProfilePage; 
