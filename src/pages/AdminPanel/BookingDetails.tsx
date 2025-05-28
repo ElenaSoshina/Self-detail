@@ -60,11 +60,7 @@ const BookingDetails: React.FC<BookingDetailsProps> = ({ bookingId, onClose, onE
     const endTime = endDate.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
     
     if (isCrossingDays(start, end)) {
-      return (
-        <span>
-          <span>↪️ {startDate.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })} {startTime} — {endDate.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })} {endTime} ↩️</span>
-        </span>
-      );
+      return `${startTime} — ${endTime}`;
     } else {
       return `${startTime} — ${endTime}`;
     }
@@ -229,14 +225,14 @@ const BookingDetails: React.FC<BookingDetailsProps> = ({ bookingId, onClose, onE
         
         <div className={styles.detailItem}>
           <span>Дата:</span>
-          <span className={isCrossingDays(booking.start, booking.end) ? styles.crossingDate : ''}>
+          <span>
             {formatDateDisplay(booking.start, booking.end)}
           </span>
         </div>
         
         <div className={styles.detailItem}>
           <span>Время:</span>
-          <span className={isCrossingDays(booking.start, booking.end) ? styles.crossingTime : ''}>
+          <span>
             {formatTimeDisplay(booking.start, booking.end)}
           </span>
         </div>
@@ -245,20 +241,6 @@ const BookingDetails: React.FC<BookingDetailsProps> = ({ bookingId, onClose, onE
           <span>Стоимость:</span>
           <span>{getServicePrice()} ₽</span>
         </div>
-        
-        {booking.telegramUserName && (
-          <div className={styles.detailItem}>
-            <span>Telegram:</span>
-            <span>{booking.telegramUserName}</span>
-          </div>
-        )}
-        
-        {booking.telegramUserId && (
-          <div className={styles.detailItem}>
-            <span>Telegram ID:</span>
-            <span>{booking.telegramUserId}</span>
-          </div>
-        )}
         
         <div className={styles.actionButtons}>
           {/* <button 
