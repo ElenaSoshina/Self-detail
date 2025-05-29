@@ -42,6 +42,13 @@ interface FormData {
   phone: string;
   email: string;
   telegramUserName: string;
+  car: CarData;
+}
+
+interface CarData {
+  brand: string;
+  color: string;
+  plate: string;
 }
 
 // Интерфейс для данных пользователя
@@ -147,12 +154,13 @@ const BookingModal: React.FC<BookingModalProps> = ({
     phone: prefilledData?.phone || '',
     email: prefilledData?.email || '',
     telegramUserName: prefilledData?.telegramUserName || '',
+    car: { brand: '', color: '', plate: '' },
   });
   const [showSuccess, setShowSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [chatId, setChatId] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<{ name?: string; phone?: string; email?: string; telegramUserName?: string }>({});
+  const [fieldErrors, setFieldErrors] = useState<{ name?: string; phone?: string; email?: string; telegramUserName?: string; carBrand?: string; carPlate?: string }>({});
   const { items } = useCart();
   const products = items.filter(item => item.type !== 'booking');
   const productsTotal = products.reduce((sum, p) => sum + p.price * p.quantity, 0);
@@ -223,6 +231,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
                 phone: formattedPhone,
                 email: userData.clientEmail || '',
                 telegramUserName: userData.telegramUserName || '',
+                car: { brand: '', color: '', plate: '' },
               });
             }
           } else {
@@ -339,7 +348,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
   const totalPrice = (hasService ? servicePrice : 0) + productsTotal;
 
   const validate = (): boolean => {
-    const newErrors: { name?: string; phone?: string; email?: string; telegramUserName?: string } = {};
+    const newErrors: { name?: string; phone?: string; email?: string; telegramUserName?: string; carBrand?: string; carPlate?: string } = {};
     if (!formData.name.trim()) {
       newErrors.name = 'Введите ваше имя';
     }
@@ -363,6 +372,12 @@ const BookingModal: React.FC<BookingModalProps> = ({
       newErrors.telegramUserName = 'Username должен начинаться с @';
     } else if (formData.telegramUserName.trim() === '@') {
       newErrors.telegramUserName = 'Введите имя пользователя после @';
+    }
+    if (!formData.car.brand.trim()) {
+      newErrors.carBrand = 'Введите марку автомобиля';
+    }
+    if (!formData.car.plate.trim()) {
+      newErrors.carPlate = 'Введите номер автомобиля';
     }
     setFieldErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -488,6 +503,11 @@ const BookingModal: React.FC<BookingModalProps> = ({
         start: startISO,
         end: endISO,
         service: hasService ? [{ serviceName: service!.serviceName, price: servicePrice }] : [],
+        car: {
+          brand: formData.car.brand,
+          color: formData.car.color,
+          plate: formData.car.plate
+        },
         notes: ''
       };
 
@@ -595,6 +615,21 @@ const BookingModal: React.FC<BookingModalProps> = ({
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+    
+    // Обработка полей автомобиля
+    if (name.startsWith('car.')) {
+      const carField = name.split('.')[1] as keyof CarData;
+      setFormData(prev => ({
+        ...prev,
+        car: {
+          ...prev.car,
+          [carField]: value
+        }
+      }));
+      setFieldErrors((prev) => ({ ...prev, [`car${carField.charAt(0).toUpperCase() + carField.slice(1)}`]: undefined }));
+      return;
+    }
+    
     // Авто-добавление @ для Telegram
     if (name === 'telegramUserName' && value && !value.startsWith('@') && value !== '@') {
       setFormData(prev => ({ ...prev, [name]: `@${value}` }));
@@ -888,6 +923,60 @@ const BookingModal: React.FC<BookingModalProps> = ({
               maxLength={32}
             />
             {fieldErrors.telegramUserName && <div className={styles.errorMessage}>{fieldErrors.telegramUserName}</div>}
+          </div>
+
+          <div className={styles.carSection}>
+            <div className={styles.carSectionTitle}>Данные автомобиля</div>
+            
+            <div className={styles.formGroup}>
+              <label className={styles.label} htmlFor="car.brand">
+                Марка автомобиля
+              </label>
+              <input
+                className={`${styles.input} ${fieldErrors.carBrand ? styles.inputError : ''}`}
+                type="text"
+                id="car.brand"
+                name="car.brand"
+                value={formData.car.brand}
+                onChange={handleChange}
+                placeholder="BMW, Mercedes, Toyota..."
+                maxLength={30}
+              />
+              {fieldErrors.carBrand && <div className={styles.errorMessage}>{fieldErrors.carBrand}</div>}
+            </div>
+
+            <div className={styles.formGroup}>
+              <label className={styles.label} htmlFor="car.color">
+                Цвет автомобиля
+              </label>
+              <input
+                className={styles.input}
+                type="text"
+                id="car.color"
+                name="car.color"
+                value={formData.car.color}
+                onChange={handleChange}
+                placeholder="Белый, черный, красный..."
+                maxLength={20}
+              />
+            </div>
+
+            <div className={styles.formGroup}>
+              <label className={styles.label} htmlFor="car.plate">
+                Номер автомобиля
+              </label>
+              <input
+                className={`${styles.input} ${fieldErrors.carPlate ? styles.inputError : ''}`}
+                type="text"
+                id="car.plate"
+                name="car.plate"
+                value={formData.car.plate}
+                onChange={handleChange}
+                placeholder="А777НЕ799"
+                maxLength={10}
+              />
+              {fieldErrors.carPlate && <div className={styles.errorMessage}>{fieldErrors.carPlate}</div>}
+            </div>
           </div>
 
           <button 
