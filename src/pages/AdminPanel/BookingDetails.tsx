@@ -9,6 +9,12 @@ interface BookingDetailsProps {
   onCancel?: (bookingId: number | string) => void;
 }
 
+interface CarData {
+  brand: string;
+  color: string;
+  plate: string;
+}
+
 interface BookingData {
   bookingId: number;
   telegramUserId?: number;
@@ -23,6 +29,7 @@ interface BookingData {
     serviceName: string;
     price: number;
   }>;
+  car?: CarData;
   notes?: string;
   products?: any[];
   status?: string;
@@ -149,6 +156,39 @@ const BookingDetails: React.FC<BookingDetailsProps> = ({ bookingId, onClose, onE
       </>
     );
   };
+
+  const renderCarInfo = () => {
+    if (!booking || !booking.car) return null;
+    
+    const { brand, color, plate } = booking.car;
+    
+    // Проверяем, есть ли хотя бы одно заполненное поле
+    if (!brand && !color && !plate) return null;
+    
+    return (
+      <div className={styles.carSection}>
+        <div className={styles.carSectionTitle}>Автомобиль</div>
+        {brand && (
+          <div className={styles.detailItem}>
+            <span>Марка:</span>
+            <span>{brand}</span>
+          </div>
+        )}
+        {color && (
+          <div className={styles.detailItem}>
+            <span>Цвет:</span>
+            <span>{color}</span>
+          </div>
+        )}
+        {plate && (
+          <div className={styles.detailItem}>
+            <span>Номер:</span>
+            <span>{plate}</span>
+          </div>
+        )}
+      </div>
+    );
+  };
   
   const getServicePrice = () => {
     if (!booking) return 0;
@@ -241,6 +281,8 @@ const BookingDetails: React.FC<BookingDetailsProps> = ({ bookingId, onClose, onE
           <span>Стоимость:</span>
           <span>{getServicePrice()} ₽</span>
         </div>
+        
+        {renderCarInfo()}
         
         <div className={styles.actionButtons}>
           {/* <button 

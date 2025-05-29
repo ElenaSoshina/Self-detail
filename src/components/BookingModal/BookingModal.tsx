@@ -373,11 +373,9 @@ const BookingModal: React.FC<BookingModalProps> = ({
     } else if (formData.telegramUserName.trim() === '@') {
       newErrors.telegramUserName = 'Введите имя пользователя после @';
     }
-    if (!formData.car.brand.trim()) {
-      newErrors.carBrand = 'Введите марку автомобиля';
-    }
-    if (!formData.car.plate.trim()) {
-      newErrors.carPlate = 'Введите номер автомобиля';
+    // Валидация формата номера автомобиля только если поле заполнено
+    if (formData.car.plate.trim() && !/^[А-Яа-я0-9\s]+$/.test(formData.car.plate.trim())) {
+      newErrors.carPlate = 'Номер должен содержать только кириллицу и цифры';
     }
     setFieldErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -619,13 +617,27 @@ const BookingModal: React.FC<BookingModalProps> = ({
     // Обработка полей автомобиля
     if (name.startsWith('car.')) {
       const carField = name.split('.')[1] as keyof CarData;
-      setFormData(prev => ({
-        ...prev,
-        car: {
-          ...prev.car,
-          [carField]: value
-        }
-      }));
+      
+      // Фильтрация для номера автомобиля - только кириллица и цифры
+      if (carField === 'plate') {
+        const filteredValue = value.replace(/[^А-Яа-я0-9\s]/g, '').toUpperCase();
+        setFormData(prev => ({
+          ...prev,
+          car: {
+            ...prev.car,
+            [carField]: filteredValue
+          }
+        }));
+      } else {
+        setFormData(prev => ({
+          ...prev,
+          car: {
+            ...prev.car,
+            [carField]: value
+          }
+        }));
+      }
+      
       setFieldErrors((prev) => ({ ...prev, [`car${carField.charAt(0).toUpperCase() + carField.slice(1)}`]: undefined }));
       return;
     }
