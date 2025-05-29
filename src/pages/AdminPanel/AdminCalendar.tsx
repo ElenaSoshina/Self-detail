@@ -5,6 +5,7 @@ import TimeSlots from '../CalendarPage/TimeSlots';
 import CalendarPage from '../CalendarPage/CalendarPage';
 import BookingDetails from './BookingDetails';
 import { fetchAvailableTimeSlotsApi, formatTimeSlots } from '../../pages/CalendarPage/calendarApiService';
+import { sendTelegramMessage, sendTelegramMessageToAllAdmins } from '../../api/telegram';
 
 const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
@@ -456,8 +457,91 @@ const AdminCalendar: React.FC<{ onUserSelect: (userId: string) => void }> = ({ o
   // Функция для удаления бронирования
   const deleteBooking = async (bookingId: number | string) => {
     try {
+      // Сначала получаем данные бронирования для уведомлений
+      let bookingData = null;
+      try {
+        const bookingResponse = await api.get(`/calendar/booking/${bookingId}`);
+        if (bookingResponse.data && bookingResponse.data.success && bookingResponse.data.data) {
+          bookingData = bookingResponse.data.data;
+        }
+      } catch (error) {
+        console.error('Ошибка при получении данных бронирования для уведомлений:', error);
+      }
+
+      // Удаляем бронирование
       await api.delete(`/calendar/booking/${bookingId}`);
       setDeleteSuccess(true);
+
+      // Отправляем уведомления, если данные бронирования получены
+      if (bookingData) {
+        const formatDate = (iso: string) => {
+          const date = new Date(iso);
+          return date.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        };
+        
+        const formatTime = (iso: string) => {
+          const timePart = iso.split('T')[1];
+          if (!timePart) return '00:00';
+          
+          const [hoursMinutes] = timePart.split(':');
+          if (!hoursMinutes) return '00:00';
+          
+          const hours = hoursMinutes.padStart(2, '0');
+          const minutes = (timePart.split(':')[1] || '00').padStart(2, '0');
+          
+          return `${hours}:${minutes}`;
+        };
+
+        const startDate = new Date(bookingData.start);
+        const endDate = new Date(bookingData.end);
+        const isCrossingDays = startDate.toDateString() !== endDate.toDateString();
+        
+        let dateTimeStr;
+        if (isCrossingDays) {
+          dateTimeStr = `📅 Дата: ${formatDate(bookingData.start)} — ${formatDate(bookingData.end)}\n🕒 Время: ${formatTime(bookingData.start)} — ${formatTime(bookingData.end)}`;
+        } else {
+          dateTimeStr = `📅 Дата: ${formatDate(bookingData.start)}\n🕒 Время: ${formatTime(bookingData.start)} — ${formatTime(bookingData.end)}`;
+        }
+
+        const serviceName = bookingData.services && bookingData.services.length > 0 
+          ? bookingData.services[0].serviceName 
+          : 'Услуга';
+
+        const servicePrice = bookingData.services && bookingData.services.length > 0 
+          ? bookingData.services[0].price 
+          : 0;
+
+        // Сообщение администраторам
+        const adminMessage = `❌ Бронирование отменено\n\n` +
+          `🆔 ID: #${bookingData.bookingId}\n` +
+          `👤 Клиент: ${bookingData.clientName}\n` +
+          `📱 Телефон: ${bookingData.clientPhone}\n` +
+          `${dateTimeStr}\n` +
+          `📋 Услуга: ${serviceName}\n` +
+          `💰 Стоимость: ${servicePrice}₽`;
+
+        // Сообщение пользователю
+        const userMessage = `❌ Ваше бронирование отменено\n\n` +
+          `${dateTimeStr}\n` +
+          `📋 Услуга: ${serviceName}\n` +
+          `💰 Стоимость: ${servicePrice}₽\n\n`
+
+        try {
+          // Отправляем уведомление администраторам
+          await sendTelegramMessageToAllAdmins(adminMessage);
+
+          // Отправляем уведомление пользователю, если есть telegramUserId
+          if (bookingData.telegramUserId) {
+            try {
+              await sendTelegramMessage(String(bookingData.telegramUserId), userMessage);
+            } catch (userError) {
+              console.error('Ошибка при отправке уведомления пользователю:', userError);
+            }
+          }
+        } catch (telegramError) {
+          console.error('Ошибка при отправке уведомлений об отмене:', telegramError);
+        }
+      }
       
       // Закрываем детали бронирования и обновляем список
       setTimeout(() => {

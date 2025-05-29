@@ -79,6 +79,16 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin, selectedDate: exte
     handlePlanClick,
   } = useBooking();
 
+  /** ——————————————————— Auto-select plan for non-admin users ——————————————————— */
+  useEffect(() => {
+    if (!isAdmin && !selectedPlan) {
+      const defaultPlan = pricingPlans.find(plan => plan.id === 'all-inclusive');
+      if (defaultPlan) {
+        handlePlanClick(defaultPlan);
+      }
+    }
+  }, [isAdmin, selectedPlan, pricingPlans, handlePlanClick]);
+
   /** ——————————————————— Init ——————————————————— */
   useEffect(() => {
     if (isInitialized) return;
