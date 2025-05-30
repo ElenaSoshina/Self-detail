@@ -59,6 +59,11 @@ interface UserData {
   clientName: string;
   clientPhone: string;
   clientEmail: string;
+  car?: {
+    brand: string;
+    color: string;
+    plate: string;
+  };
   createdAt: string;
 }
 
@@ -101,6 +106,11 @@ const saveUserData = async (userData: {
   clientName: string;
   clientPhone: string;
   clientEmail: string;
+  car?: {
+    brand: string;
+    color: string;
+    plate: string;
+  };
 }): Promise<boolean> => {
   try {
     console.log('💾 Сохраняем данные пользователя:', userData);
@@ -231,7 +241,11 @@ const BookingModal: React.FC<BookingModalProps> = ({
                 phone: formattedPhone,
                 email: userData.clientEmail || '',
                 telegramUserName: userData.telegramUserName || '',
-                car: { brand: '', color: '', plate: '' },
+                car: userData.car ? {
+                  brand: userData.car.brand || '',
+                  color: userData.car.color || '',
+                  plate: userData.car.plate || ''
+                } : { brand: '', color: '', plate: '' },
               });
             }
           } else {
@@ -595,7 +609,12 @@ const BookingModal: React.FC<BookingModalProps> = ({
               telegramUserName: formData.telegramUserName,
               clientName: formData.name,
               clientPhone: formData.phone.replace('+', ''),
-              clientEmail: formData.email
+              clientEmail: formData.email,
+              car: {
+                brand: formData.car.brand,
+                color: formData.car.color,
+                plate: formData.car.plate
+              }
             };
             
             await saveUserData(userDataToSave);
@@ -871,7 +890,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
         <form onSubmit={handleSubmit}>
           <div className={styles.formGroup}>
             <label className={styles.label} htmlFor="name">
-              Ваше имя
+              Ваше имя<span className={styles.required}>*</span>
             </label>
             <input
               className={`${styles.input} ${fieldErrors.name ? styles.inputError : ''}`}
@@ -888,7 +907,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
 
           <div className={styles.formGroup}>
             <label className={styles.label} htmlFor="phone">
-              Телефон
+              Телефон<span className={styles.required}>*</span>
             </label>
             <PhoneInput
               country="RU"
@@ -907,7 +926,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
 
           <div className={styles.formGroup}>
             <label className={styles.label} htmlFor="email">
-              Email
+              Email<span className={styles.required}>*</span>
             </label>
             <input
               className={styles.input}
@@ -926,7 +945,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
 
           <div className={styles.formGroup}>
             <label className={styles.label} htmlFor="telegramUserName">
-              Telegram Username
+              Telegram Username<span className={styles.required}>*</span>
             </label>
             <input
               className={`${styles.input} ${fieldErrors.telegramUserName ? styles.inputError : ''}`}
@@ -946,7 +965,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
             
             <div className={styles.formGroup}>
               <label className={styles.label} htmlFor="car.brand">
-                Марка автомобиля
+                Марка автомобиля<span className={styles.required}>*</span>
               </label>
               <input
                 className={`${styles.input} ${fieldErrors.carBrand ? styles.inputError : ''}`}

@@ -24,6 +24,11 @@ interface BookingSlot {
       price: number;
     };
     hours: number;
+    car?: {
+      brand: string;
+      color: string;
+      plate: string;
+    };
   };
 }
 
@@ -212,7 +217,12 @@ const AdminCalendar: React.FC<{ onUserSelect: (userId: string) => void }> = ({ o
                 title: serviceName,
                 price: servicePrice
               },
-              hours: calcHours(booking.start, booking.end)
+              hours: calcHours(booking.start, booking.end),
+              car: booking.car ? {
+                brand: booking.car.brand || '',
+                color: booking.car.color || '',
+                plate: booking.car.plate || ''
+              } : undefined
             }
           };
         });
@@ -636,7 +646,12 @@ const AdminCalendar: React.FC<{ onUserSelect: (userId: string) => void }> = ({ o
                     title: serviceName,
                     price: servicePrice
                   },
-                  hours: calcHours(booking.start, booking.end)
+                  hours: calcHours(booking.start, booking.end),
+                  car: booking.car ? {
+                    brand: booking.car.brand || '',
+                    color: booking.car.color || '',
+                    plate: booking.car.plate || ''
+                  } : undefined
                 }
               };
             });
@@ -751,7 +766,12 @@ const AdminCalendar: React.FC<{ onUserSelect: (userId: string) => void }> = ({ o
                   <div className={styles.bookingInfo}>
                     <b>{slot.bookingDetails?.userName}</b><br/>
                     {slot.bookingDetails?.plan.title}
-                    <div className={styles.bookingId}>ID: {slot.bookingId}</div>
+                    <div className={styles.bookingId}>
+                      {slot.bookingDetails?.car?.brand ? 
+                        `🚗 ${slot.bookingDetails.car.brand}` : 
+                        `ID: ${slot.bookingId}`
+                      }
+                    </div>
                   </div>
                 </div>
               ))}

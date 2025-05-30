@@ -134,6 +134,11 @@
   font-weight: 500;
 }
 
+.label .required {
+  color: #ff4d4f;
+  margin-left: 4px;
+}
+
 .input {
   width: 100%;
   padding: 12px 15px;
