@@ -86,15 +86,31 @@ const checkUserExists = async (telegramUserId: number): Promise<boolean> => {
 // Функция для получения данных пользователя по telegramUserId
 const getUserData = async (telegramUserId: number): Promise<UserData | null> => {
   try {
+    console.log('🔍 getUserData - Запрашиваем данные пользователя:', telegramUserId);
     const response = await api.get(`/users/${telegramUserId}`);
     const data = response.data;
     
+    console.log('📝 getUserData - Полный ответ сервера:', {
+      response: response,
+      data: data,
+      success: data.success,
+      userData: data.data
+    });
+    
     if (data.success && data.data) {
+      console.log('✅ getUserData - Данные пользователя получены:', {
+        clientName: data.data.clientName,
+        clientPhone: data.data.clientPhone,
+        clientEmail: data.data.clientEmail,
+        telegramUserName: data.data.telegramUserName,
+        car: data.data.car,
+        hasCarData: !!data.data.car
+      });
       return data.data;
     }
     return null;
   } catch (error) {
-    console.error('Ошибка при получении данных пользователя:', error);
+    console.error('❌ getUserData - Ошибка при получении данных пользователя:', error);
     return null;
   }
 };
@@ -113,19 +129,34 @@ const saveUserData = async (userData: {
   };
 }): Promise<boolean> => {
   try {
-    console.log('💾 Сохраняем данные пользователя:', userData);
+    console.log('💾 saveUserData - Сохраняем данные пользователя:', {
+      telegramUserId: userData.telegramUserId,
+      telegramUserName: userData.telegramUserName,
+      clientName: userData.clientName,
+      clientPhone: userData.clientPhone,
+      clientEmail: userData.clientEmail,
+      car: userData.car,
+      hasCarData: !!userData.car
+    });
     const response = await api.post('/users', userData);
     const data = response.data;
     
+    console.log('📝 saveUserData - Ответ сервера на сохранение:', {
+      response: response,
+      data: data,
+      success: data.success,
+      errorMessage: data.errorMessage
+    });
+    
     if (data.success) {
-      console.log('✅ Данные пользователя сохранены успешно');
+      console.log('✅ saveUserData - Данные пользователя сохранены успешно');
       return true;
     } else {
-      console.warn('⚠️ Не удалось сохранить данные пользователя:', data.errorMessage);
+      console.warn('⚠️ saveUserData - Не удалось сохранить данные пользователя:', data.errorMessage);
       return false;
     }
   } catch (error) {
-    console.error('❌ Ошибка при сохранении данных пользователя:', error);
+    console.error('❌ saveUserData - Ошибка при сохранении данных пользователя:', error);
     return false;
   }
 };
@@ -540,7 +571,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
       // собираем детали события
       setEventDetails({
         title: `ДетельСам: ${service?.serviceName ?? ''}`,
-        description: `Услуги: ${service?.serviceName ?? ''}\nКонтакт: ${formData.name}, тел: ${formData.phone}`,
+        description: 'Телефон: +7(995) 155-17-11',
         location: 'г. Москва, ул. Кантемировская 64с4, Детель Сам',
         start: new Date(startISO),
         end: new Date(endISO),
@@ -599,28 +630,22 @@ const BookingModal: React.FC<BookingModalProps> = ({
         if (tg?.initDataUnsafe?.user?.id) {
           const telegramUserId = tg.initDataUnsafe.user.id;
           
-          // Проверяем, нужно ли создавать или обновлять данные пользователя
-          const userExists = await checkUserExists(telegramUserId);
+          // Всегда обновляем данные пользователя при каждом бронировании
+          const userDataToSave = {
+            telegramUserId: telegramUserId,
+            telegramUserName: formData.telegramUserName,
+            clientName: formData.name,
+            clientPhone: formData.phone.replace('+', ''),
+            clientEmail: formData.email,
+            car: {
+              brand: formData.car.brand,
+              color: formData.car.color,
+              plate: formData.car.plate
+            }
+          };
           
-          if (!userExists) {
-            // Пользователь не существует, создаем новую запись
-            const userDataToSave = {
-              telegramUserId: telegramUserId,
-              telegramUserName: formData.telegramUserName,
-              clientName: formData.name,
-              clientPhone: formData.phone.replace('+', ''),
-              clientEmail: formData.email,
-              car: {
-                brand: formData.car.brand,
-                color: formData.car.color,
-                plate: formData.car.plate
-              }
-            };
-            
-            await saveUserData(userDataToSave);
-          } else {
-            console.log('ℹ️ Пользователь уже существует, пропускаем сохранение');
-          }
+          console.log('🔄 Сохраняем/обновляем данные пользователя при бронировании');
+          await saveUserData(userDataToSave);
         }
       } catch (userSaveError) {
         console.error('❌ Ошибка при сохранении данных пользователя:', userSaveError);
