@@ -539,9 +539,9 @@ const BookingModal: React.FC<BookingModalProps> = ({
 
       // собираем детали события
       setEventDetails({
-        title: `Бронирование: ${service?.serviceName ?? ''}`,
+        title: `ДетельСам: ${service?.serviceName ?? ''}`,
         description: `Услуги: ${service?.serviceName ?? ''}\nКонтакт: ${formData.name}, тел: ${formData.phone}`,
-        location: 'Self-Detailing Location',
+        location: 'г. Москва, ул. Кантемировская 64с4, Детель Сам',
         start: new Date(startISO),
         end: new Date(endISO),
       });
