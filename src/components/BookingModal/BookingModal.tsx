@@ -67,14 +67,14 @@ interface UserData {
   createdAt: string;
 }
 
-// Функция для проверки существования пользователя по telegramUserId
-const checkUserExists = async (telegramUserId: number): Promise<boolean> => {
+// Функция для проверки существования пользователя по номеру телефона
+const checkUserExists = async (phoneNumber: string): Promise<boolean> => {
   try {
     const response = await api.get('/users');
     const data = response.data;
     
     if (data.success && data.data && data.data.content) {
-      return data.data.content.some((user: UserData) => user.telegramUserId === telegramUserId);
+      return data.data.content.some((user: UserData) => user.clientPhone === phoneNumber);
     }
     return false;
   } catch (error) {
@@ -83,30 +83,37 @@ const checkUserExists = async (telegramUserId: number): Promise<boolean> => {
   }
 };
 
-// Функция для получения данных пользователя по telegramUserId
-const getUserData = async (telegramUserId: number): Promise<UserData | null> => {
+// Функция для получения данных пользователя по номеру телефона
+const getUserData = async (phoneNumber: string): Promise<UserData | null> => {
   try {
-    console.log('🔍 getUserData - Запрашиваем данные пользователя:', telegramUserId);
-    const response = await api.get(`/users/${telegramUserId}`);
+    console.log('🔍 getUserData - Запрашиваем данные пользователя по телефону:', phoneNumber);
+    // Получаем всех пользователей и ищем по номеру телефона
+    const response = await api.get('/users');
     const data = response.data;
     
     console.log('📝 getUserData - Полный ответ сервера:', {
       response: response,
       data: data,
       success: data.success,
-      userData: data.data
+      usersCount: data.data?.content?.length || 0
     });
     
-    if (data.success && data.data) {
-      console.log('✅ getUserData - Данные пользователя получены:', {
-        clientName: data.data.clientName,
-        clientPhone: data.data.clientPhone,
-        clientEmail: data.data.clientEmail,
-        telegramUserName: data.data.telegramUserName,
-        car: data.data.car,
-        hasCarData: !!data.data.car
-      });
-      return data.data;
+    if (data.success && data.data && data.data.content) {
+      const user = data.data.content.find((user: UserData) => user.clientPhone === phoneNumber);
+      
+      if (user) {
+        console.log('✅ getUserData - Данные пользователя получены:', {
+          clientName: user.clientName,
+          clientPhone: user.clientPhone,
+          clientEmail: user.clientEmail,
+          telegramUserName: user.telegramUserName,
+          car: user.car,
+          hasCarData: !!user.car
+        });
+        return user;
+      } else {
+        console.log('ℹ️ getUserData - Пользователь с таким номером телефона не найден');
+      }
     }
     return null;
   } catch (error) {
@@ -234,61 +241,23 @@ const BookingModal: React.FC<BookingModalProps> = ({
   // Автозаполнение формы данными пользователя
   useEffect(() => {
     const loadUserData = async () => {
-      // Если форма уже заполнена через prefilledData, не перезаписываем
+      // Если форма уже заполнена через prefilledData, автозаполняем ее
       if (prefilledData && (prefilledData.name || prefilledData.phone || prefilledData.email)) {
+        console.log('📋 Автозаполнение формы из prefilledData:', prefilledData);
+        setFormData(prev => ({
+          ...prev,
+          name: prefilledData.name || prev.name,
+          phone: prefilledData.phone || prev.phone,
+          email: prefilledData.email || prev.email,
+          telegramUserName: prefilledData.telegramUserName || prev.telegramUserName,
+        }));
         return;
-      }
-
-      const tg = (window as any).Telegram?.WebApp;
-      if (tg?.initDataUnsafe?.user?.id && isOpen) {
-        const telegramUserId = tg.initDataUnsafe.user.id;
-        
-        try {
-          console.log('🔍 Проверяем существование пользователя:', telegramUserId);
-          const userExists = await checkUserExists(telegramUserId);
-          
-          if (userExists) {
-            console.log('✅ Пользователь найден, загружаем данные...');
-            const userData = await getUserData(telegramUserId);
-            
-            if (userData) {
-              console.log('📋 Автозаполнение формы данными:', userData);
-              
-              // Форматируем номер телефона для валидации
-              let formattedPhone = userData.clientPhone || '';
-              if (formattedPhone && !formattedPhone.startsWith('+7')) {
-                // Если номер не начинается с +7, добавляем его
-                if (formattedPhone.startsWith('7')) {
-                  formattedPhone = '+' + formattedPhone;
-                } else if (formattedPhone.startsWith('8')) {
-                  formattedPhone = '+7' + formattedPhone.substring(1);
-                } else {
-                  formattedPhone = '+7' + formattedPhone;
-                }
-              }
-              
-              setFormData({
-                name: userData.clientName || '',
-                phone: formattedPhone,
-                email: userData.clientEmail || '',
-                telegramUserName: userData.telegramUserName || '',
-                car: userData.car ? {
-                  brand: userData.car.brand || '',
-                  color: userData.car.color || '',
-                  plate: userData.car.plate || ''
-                } : { brand: '', color: '', plate: '' },
-              });
-            }
-          } else {
-            console.log('ℹ️ Пользователь не найден, форма остается пустой');
-          }
-        } catch (error) {
-          console.error('❌ Ошибка при загрузке данных пользователя:', error);
-        }
       }
     };
 
-    loadUserData();
+    if (isOpen) {
+      loadUserData();
+    }
   }, [isOpen, prefilledData]);
 
   // Корректная обработка даты в useEffect без зависимости от selectedDate
@@ -627,26 +596,24 @@ const BookingModal: React.FC<BookingModalProps> = ({
       // Сохраняем данные пользователя для будущих бронирований
       try {
         const tg = (window as any).Telegram?.WebApp;
-        if (tg?.initDataUnsafe?.user?.id) {
-          const telegramUserId = tg.initDataUnsafe.user.id;
-          
-          // Всегда обновляем данные пользователя при каждом бронировании
-          const userDataToSave = {
-            telegramUserId: telegramUserId,
-            telegramUserName: formData.telegramUserName,
-            clientName: formData.name,
-            clientPhone: formData.phone.replace('+', ''),
-            clientEmail: formData.email,
-            car: {
-              brand: formData.car.brand,
-              color: formData.car.color,
-              plate: formData.car.plate
-            }
-          };
-          
-          console.log('🔄 Сохраняем/обновляем данные пользователя при бронировании');
-          await saveUserData(userDataToSave);
-        }
+        const telegramUserId = tg?.initDataUnsafe?.user?.id || 0;
+        
+        // Всегда обновляем данные пользователя при каждом бронировании
+        const userDataToSave = {
+          telegramUserId: telegramUserId,
+          telegramUserName: formData.telegramUserName,
+          clientName: formData.name,
+          clientPhone: formData.phone.replace('+', ''),
+          clientEmail: formData.email,
+          car: {
+            brand: formData.car.brand,
+            color: formData.car.color,
+            plate: formData.car.plate
+          }
+        };
+        
+        console.log('🔄 Сохраняем/обновляем данные пользователя при бронировании');
+        await saveUserData(userDataToSave);
       } catch (userSaveError) {
         console.error('❌ Ошибка при сохранении данных пользователя:', userSaveError);
         // Не прерываем выполнение, так как основное бронирование создано
@@ -706,6 +673,39 @@ const BookingModal: React.FC<BookingModalProps> = ({
     setFieldErrors((prev) => ({ ...prev, phone: undefined }));
   };
   
+  // Функция для загрузки данных пользователя при вводе номера телефона
+  const handlePhoneBlur = async () => {
+    if (formData.phone && formData.phone.length >= 12) { // +7 + 10 цифр
+      const phoneNumber = formData.phone.replace('+', ''); // Убираем + для поиска
+      
+      try {
+        console.log('📞 Проверяем данные для номера:', phoneNumber);
+        const userExists = await checkUserExists(phoneNumber);
+        
+        if (userExists) {
+          console.log('✅ Найдены сохраненные данные, автозаполняем форму');
+          const userData = await getUserData(phoneNumber);
+          
+          if (userData) {
+            setFormData(prev => ({
+              ...prev,
+              name: userData.clientName || prev.name,
+              email: userData.clientEmail || prev.email,
+              telegramUserName: userData.telegramUserName || prev.telegramUserName,
+              car: userData.car ? {
+                brand: userData.car.brand || prev.car.brand,
+                color: userData.car.color || prev.car.color,
+                plate: userData.car.plate || prev.car.plate
+              } : prev.car,
+            }));
+          }
+        }
+      } catch (error) {
+        console.error('❌ Ошибка при автозаполнении по номеру телефона:', error);
+      }
+    }
+  };
+
   // Обработчик добавления в календарь
   const handleAddToCalendar = async () => {
     if (!bookingId) {
@@ -942,6 +942,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
               name="phone"
               value={formData.phone}
               onChange={handlePhoneChange}
+              onBlur={handlePhoneBlur}
               className={`${styles.input} ${fieldErrors.phone ? styles.inputError : ''}`}
               placeholder="+7 (___) ___-__-__"
               disabled={isLoading}
