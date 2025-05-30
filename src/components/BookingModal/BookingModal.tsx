@@ -394,13 +394,16 @@ const BookingModal: React.FC<BookingModalProps> = ({
     } else if (!/^\S+@\S+\.\S+$/.test(formData.email)) {
       newErrors.email = 'Введите корректный email';
     }
-    if (!formData.telegramUserName.trim()) {
-      newErrors.telegramUserName = 'Введите ваш username в Telegram';
-    } else if (!formData.telegramUserName.trim().startsWith('@')) {
-      newErrors.telegramUserName = 'Username должен начинаться с @';
-    } else if (formData.telegramUserName.trim() === '@') {
-      newErrors.telegramUserName = 'Введите имя пользователя после @';
+    
+    // Валидация Telegram username - только если поле заполнено
+    if (formData.telegramUserName.trim()) {
+      if (!formData.telegramUserName.trim().startsWith('@')) {
+        newErrors.telegramUserName = 'Username должен начинаться с @';
+      } else if (formData.telegramUserName.trim() === '@') {
+        newErrors.telegramUserName = 'Введите имя пользователя после @';
+      }
     }
+    
     // Валидация формата номера автомобиля только если поле заполнено
     if (formData.car.plate.trim() && !/^[А-Яа-я0-9\s]+$/.test(formData.car.plate.trim())) {
       newErrors.carPlate = 'Номер должен содержать только кириллицу и цифры';
@@ -931,23 +934,6 @@ const BookingModal: React.FC<BookingModalProps> = ({
 
         <form onSubmit={handleSubmit}>
           <div className={styles.formGroup}>
-            <label className={styles.label} htmlFor="name">
-              Ваше имя<span className={styles.required}>*</span>
-            </label>
-            <input
-              className={`${styles.input} ${fieldErrors.name ? styles.inputError : ''}`}
-              type="text"
-              id="name"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              placeholder="Ваше имя"
-              maxLength={40}
-            />
-            {fieldErrors.name && <div className={styles.errorMessage}>{fieldErrors.name}</div>}
-          </div>
-
-          <div className={styles.formGroup}>
             <label className={styles.label} htmlFor="phone">
               Телефон<span className={styles.required}>*</span>
             </label>
@@ -965,6 +951,23 @@ const BookingModal: React.FC<BookingModalProps> = ({
               disabled={isLoading}
             />
             {fieldErrors.phone && <div className={styles.errorMessage}>{fieldErrors.phone}</div>}
+          </div>
+
+          <div className={styles.formGroup}>
+            <label className={styles.label} htmlFor="name">
+              Ваше имя<span className={styles.required}>*</span>
+            </label>
+            <input
+              className={`${styles.input} ${fieldErrors.name ? styles.inputError : ''}`}
+              type="text"
+              id="name"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              placeholder="Ваше имя"
+              maxLength={40}
+            />
+            {fieldErrors.name && <div className={styles.errorMessage}>{fieldErrors.name}</div>}
           </div>
 
           <div className={styles.formGroup}>
@@ -988,7 +991,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
 
           <div className={styles.formGroup}>
             <label className={styles.label} htmlFor="telegramUserName">
-              Telegram Username<span className={styles.required}>*</span>
+              Telegram Username
             </label>
             <input
               className={`${styles.input} ${fieldErrors.telegramUserName ? styles.inputError : ''}`}
