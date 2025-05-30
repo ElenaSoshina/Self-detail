@@ -377,6 +377,10 @@ const BookingModal: React.FC<BookingModalProps> = ({
     if (formData.car.plate.trim() && !/^[А-Яа-я0-9\s]+$/.test(formData.car.plate.trim())) {
       newErrors.carPlate = 'Номер должен содержать только кириллицу и цифры';
     }
+    // Валидация обязательности марки автомобиля
+    if (!formData.car.brand.trim()) {
+      newErrors.carBrand = 'Введите марку автомобиля';
+    }
     setFieldErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
