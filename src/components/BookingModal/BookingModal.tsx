@@ -59,26 +59,34 @@ interface UserData {
   clientName: string;
   clientPhone: string;
   clientEmail: string;
-  car?: {
+  cars?: Array<{
+    id: number;
     brand: string;
     color: string;
-    plate: string;
-  };
+    plate: string | null;
+    createdAt: string;
+  }>;
   createdAt: string;
 }
 
 // Функция для проверки существования пользователя по номеру телефона
 const checkUserExists = async (phoneNumber: string): Promise<boolean> => {
   try {
+    console.log('🔍 checkUserExists - Ищем пользователя по номеру:', phoneNumber);
     const response = await api.get('/users');
     const data = response.data;
     
     if (data.success && data.data && data.data.content) {
-      return data.data.content.some((user: UserData) => user.clientPhone === phoneNumber);
+      console.log('📊 checkUserExists - Всего пользователей в системе:', data.data.content.length);
+      console.log('📞 checkUserExists - Ищем среди номеров:', data.data.content.map((u: UserData) => u.clientPhone));
+      
+      const found = data.data.content.some((user: UserData) => user.clientPhone === phoneNumber);
+      console.log(found ? '✅ checkUserExists - Пользователь найден' : '❌ checkUserExists - Пользователь не найден');
+      return found;
     }
     return false;
   } catch (error) {
-    console.error('Ошибка при проверке существования пользователя:', error);
+    console.error('❌ checkUserExists - Ошибка при проверке существования пользователя:', error);
     return false;
   }
 };
@@ -87,18 +95,23 @@ const checkUserExists = async (phoneNumber: string): Promise<boolean> => {
 const getUserData = async (phoneNumber: string): Promise<UserData | null> => {
   try {
     console.log('🔍 getUserData - Запрашиваем данные пользователя по телефону:', phoneNumber);
-    // Получаем всех пользователей и ищем по номеру телефона
+    // Получаем всех пользователей из нового API endpoint
     const response = await api.get('/users');
     const data = response.data;
     
     console.log('📝 getUserData - Полный ответ сервера:', {
-      response: response,
-      data: data,
       success: data.success,
-      usersCount: data.data?.content?.length || 0
+      usersCount: data.data?.content?.length || 0,
+      searchPhone: phoneNumber
     });
     
     if (data.success && data.data && data.data.content) {
+      console.log('🔎 getUserData - Поиск среди пользователей:', data.data.content.map((u: UserData) => ({
+        clientName: u.clientName,
+        clientPhone: u.clientPhone,
+        match: u.clientPhone === phoneNumber
+      })));
+      
       const user = data.data.content.find((user: UserData) => user.clientPhone === phoneNumber);
       
       if (user) {
@@ -107,12 +120,13 @@ const getUserData = async (phoneNumber: string): Promise<UserData | null> => {
           clientPhone: user.clientPhone,
           clientEmail: user.clientEmail,
           telegramUserName: user.telegramUserName,
-          car: user.car,
-          hasCarData: !!user.car
+          cars: user.cars,
+          carsCount: user.cars?.length || 0,
+          hasCarData: !!(user.cars && user.cars.length > 0)
         });
         return user;
       } else {
-        console.log('ℹ️ getUserData - Пользователь с таким номером телефона не найден');
+        console.log('ℹ️ getUserData - Пользователь с номером телефона не найден:', phoneNumber);
       }
     }
     return null;
@@ -687,15 +701,18 @@ const BookingModal: React.FC<BookingModalProps> = ({
           const userData = await getUserData(phoneNumber);
           
           if (userData) {
+            // Берем данные первой машины из массива, если она есть
+            const firstCar = userData.cars && userData.cars.length > 0 ? userData.cars[0] : null;
+            
             setFormData(prev => ({
               ...prev,
               name: userData.clientName || prev.name,
               email: userData.clientEmail || prev.email,
               telegramUserName: userData.telegramUserName || prev.telegramUserName,
-              car: userData.car ? {
-                brand: userData.car.brand || prev.car.brand,
-                color: userData.car.color || prev.car.color,
-                plate: userData.car.plate || prev.car.plate
+              car: firstCar ? {
+                brand: firstCar.brand || prev.car.brand,
+                color: firstCar.color || prev.car.color,
+                plate: firstCar.plate || prev.car.plate
               } : prev.car,
             }));
           }

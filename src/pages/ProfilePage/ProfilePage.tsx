@@ -185,63 +185,132 @@ const ProfilePage: React.FC = () => {
       setIsLoading(true);
       setBookingsError(null);
       
-      const response = await api.get(`/calendar/user/${telegramUserId}/bookings`);
+      console.log('🔍 ProfilePage - Загружаем бронирования для telegramUserId:', telegramUserId);
       
-      const data = response.data;
+      // Сначала получаем данные пользователя через новый API /users
+      let phoneNumber: string | null = null;
       
-      if (!data.success) {
-        throw new Error(data.errorMessage || 'Ошибка при получении данных');
+      try {
+        console.log('📞 ProfilePage - Получаем данные пользователя...');
+        
+        const userResponse = await api.get('/users');
+        
+        console.log('📝 ProfilePage - Ответ /users API:', {
+          success: userResponse.data?.success,
+          usersCount: userResponse.data?.data?.content?.length || 0
+        });
+        
+        if (userResponse.data?.success && userResponse.data?.data?.content) {
+          // Ищем пользователя по telegramUserId
+          const user = userResponse.data.data.content.find((u: any) => u.telegramUserId === telegramUserId);
+          
+          if (user) {
+            phoneNumber = user.clientPhone;
+            console.log('✅ ProfilePage - Найден пользователь:', {
+              clientName: user.clientName,
+              clientPhone: user.clientPhone,
+              telegramUserId: user.telegramUserId
+            });
+          } else {
+            console.log('❌ ProfilePage - Пользователь с telegramUserId не найден:', telegramUserId);
+          }
+        }
+        
+        if (!phoneNumber) {
+          throw new Error('Пользователь не найден в системе');
+        }
+        
+        console.log('📱 ProfilePage - Используем номер телефона для запроса бронирований:', phoneNumber);
+        
+        // Теперь получаем бронирования по номеру телефона через новый endpoint
+        const response = await api.get(`/calendar/user/${phoneNumber}/bookings`);
+        
+        console.log('📝 ProfilePage - Ответ API для бронирований по номеру телефона:', {
+          status: response.status,
+          data: response.data,
+          phoneNumber: phoneNumber
+        });
+        
+        const data = response.data;
+        
+        if (!data.success || !data.data) {
+          console.error('❌ ProfilePage - API вернул ошибку или пустые данные:', data);
+          throw new Error(data.errorMessage || 'Ошибка при получении данных');
+        }
+        
+        const bookings = data.data.bookings || data.data; // На случай если структура разная
+        
+        console.log('✅ ProfilePage - Получены бронирования по номеру телефона:', {
+          bookingsCount: bookings?.length || 0,
+          bookings: bookings
+        });
+        
+        if (!bookings || bookings.length === 0) {
+          console.log('ℹ️ ProfilePage - У пользователя нет бронирований');
+          setBookings([]);
+          setTotalHours(0);
+          setDiscount(0);
+          setNextDiscountThreshold(10);
+          return;
+        }
+        
+        // Преобразуем данные из API в нужный формат
+        const formattedBookings = bookings.map((booking: any) => {
+          // Подсчет продолжительности в часах
+          const startTime = new Date(booking.start);
+          const endTime = new Date(booking.end);
+          const diffHours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
+          
+          // Получаем время в формате HH:MM
+          const startTimeStr = startTime.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+          const endTimeStr = endTime.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+          
+          // Определение стоимости и названия услуги
+          const serviceName = booking.services && booking.services.length > 0 
+            ? booking.services[0].serviceName 
+            : 'Услуга';
+            
+          const cost = booking.services && booking.services.length > 0 
+            ? booking.services[0].price 
+            : 0;
+            
+          return {
+            id: String(booking.bookingId),
+            date: booking.start,
+            timeStart: startTimeStr,
+            timeEnd: endTimeStr,
+            service: serviceName,
+            cost: cost,
+            durationHours: Math.round(diffHours * 10) / 10, // Округляем до 1 знака после запятой
+          };
+        });
+        
+        console.log('🎯 ProfilePage - Отформатированные бронирования:', formattedBookings);
+        
+        // Сортируем бронирования по дате (сначала самые новые)
+        formattedBookings.sort((a: Booking, b: Booking) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        
+        setBookings(formattedBookings);
+        
+        // Рассчитываем общее количество часов для скидки
+        const totalBookingHours = formattedBookings.reduce((sum: number, booking: Booking) => sum + booking.durationHours, 0);
+        setTotalHours(totalBookingHours);
+        
+        // Рассчитываем скидку на основе часов
+        const discountPercent = calculateDiscount(totalBookingHours);
+        setDiscount(discountPercent);
+        
+        // Рассчитываем порог следующей скидки
+        const nextThreshold = calculateNextDiscountThreshold(totalBookingHours);
+        setNextDiscountThreshold(nextThreshold);
+        
+      } catch (phoneError) {
+        console.error('❌ ProfilePage - Ошибка при получении данных пользователя:', phoneError);
+        throw new Error('Не удалось получить данные пользователя');
       }
       
-      // Преобразуем данные из API в нужный формат
-      const formattedBookings = data.data.bookings.map((booking: ApiBooking) => {
-        // Подсчет продолжительности в часах
-        const startTime = new Date(booking.start);
-        const endTime = new Date(booking.end);
-        const diffHours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
-        
-        // Получаем время в формате HH:MM
-        const startTimeStr = startTime.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-        const endTimeStr = endTime.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-        
-        // Определение стоимости и названия услуги
-        const serviceName = booking.services && booking.services.length > 0 
-          ? booking.services[0].serviceName 
-          : 'Услуга';
-          
-        const cost = booking.services && booking.services.length > 0 
-          ? booking.services[0].price 
-          : 0;
-          
-        return {
-          id: String(booking.bookingId),
-          date: booking.start,
-          timeStart: startTimeStr,
-          timeEnd: endTimeStr,
-          service: serviceName,
-          cost: cost,
-          durationHours: Math.round(diffHours * 10) / 10, // Округляем до 1 знака после запятой
-        };
-      });
-      
-      // Сортируем бронирования по дате (сначала самые новые)
-      formattedBookings.sort((a: Booking, b: Booking) => new Date(b.date).getTime() - new Date(a.date).getTime());
-      
-      setBookings(formattedBookings);
-      
-      // Рассчитываем общее количество часов для скидки
-      const totalBookingHours = formattedBookings.reduce((sum: number, booking: Booking) => sum + booking.durationHours, 0);
-      setTotalHours(totalBookingHours);
-      
-      // Рассчитываем скидку на основе часов
-      const discountPercent = calculateDiscount(totalBookingHours);
-      setDiscount(discountPercent);
-      
-      // Рассчитываем порог следующей скидки
-      const nextThreshold = calculateNextDiscountThreshold(totalBookingHours);
-      setNextDiscountThreshold(nextThreshold);
     } catch (error) {
-      console.error('Ошибка при загрузке бронирований:', error);
+      console.error('❌ ProfilePage - Ошибка при загрузке бронирований:', error);
       setBookingsError('Не удалось загрузить бронирования');
     } finally {
       setIsLoading(false);
