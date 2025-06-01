@@ -480,12 +480,19 @@ const AdminCalendar: React.FC<{ onUserSelect: (userId: string) => void }> = ({ o
 
       // Удаляем бронирование с query параметрами
       const userId = 'admin'; // Для админов используем идентификатор admin
-      await api.delete(`/calendar/booking/${bookingId}`, {
-        params: {
-          user: userId,
-          reason: 'удаление бронирования'
-        }
+      
+      console.log('🗑️ AdminCalendar - Удаление бронирования:', {
+        bookingId: bookingId,
+        userId: userId,
+        reason: 'удаление бронирования'
       });
+      
+      const deleteUrl = `/calendar/booking/${bookingId}?user=${encodeURIComponent(userId)}&reason=${encodeURIComponent('удаление бронирования')}`;
+      console.log('🔗 AdminCalendar - URL для удаления:', deleteUrl);
+      
+      await api.delete(deleteUrl);
+      
+      console.log('✅ AdminCalendar - Бронирование удалено успешно');
       setDeleteSuccess(true);
 
       // Отправляем уведомления, если данные бронирования получены
