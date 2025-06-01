@@ -197,7 +197,16 @@ const BookingDetails: React.FC<BookingDetailsProps> = ({ bookingId, onClose, onE
       return 0;
     }
     
-    return booking.services[0].price || 0;
+    const hourlyPrice = booking.services[0].price || 0;
+    
+    // Рассчитываем продолжительность в часах
+    const startTime = new Date(booking.start);
+    const endTime = new Date(booking.end);
+    const durationMs = endTime.getTime() - startTime.getTime();
+    const durationHours = Math.max(1, Math.round(durationMs / (1000 * 60 * 60)));
+    
+    // Возвращаем общую стоимость (цена за час * количество часов)
+    return hourlyPrice * durationHours;
   };
 
   if (loading) {
