@@ -478,8 +478,14 @@ const AdminCalendar: React.FC<{ onUserSelect: (userId: string) => void }> = ({ o
         console.error('Ошибка при получении данных бронирования для уведомлений:', error);
       }
 
-      // Удаляем бронирование
-      await api.delete(`/calendar/booking/${bookingId}`);
+      // Удаляем бронирование с query параметрами
+      const userId = 'admin'; // Для админов используем идентификатор admin
+      await api.delete(`/calendar/booking/${bookingId}`, {
+        params: {
+          user: userId,
+          reason: 'удаление бронирования'
+        }
+      });
       setDeleteSuccess(true);
 
       // Отправляем уведомления, если данные бронирования получены

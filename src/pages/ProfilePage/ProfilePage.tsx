@@ -343,8 +343,14 @@ const ProfilePage: React.FC = () => {
         console.error('Ошибка при получении данных бронирования для уведомлений:', error);
       }
 
-      // Удаляем бронирование
-      const response = await api.delete(`/calendar/booking/${bookingId}`);
+      // Удаляем бронирование с query параметрами
+      const userId = userInfo?.telegramUserId || '';
+      const response = await api.delete(`/calendar/booking/${bookingId}`, {
+        params: {
+          user: userId,
+          reason: 'удаление бронирования'
+        }
+      });
 
       const data = response.data;
       
