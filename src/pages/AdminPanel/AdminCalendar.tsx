@@ -466,35 +466,38 @@ const AdminCalendar: React.FC<{ onUserSelect: (userId: string) => void }> = ({ o
 
   // Функция для удаления бронирования
   const deleteBooking = async (bookingId: number | string) => {
+    console.log('🚀 AdminCalendar - deleteBooking вызвана с bookingId:', bookingId);
+    
     try {
       // Сначала получаем данные бронирования для уведомлений
       let bookingData = null;
       try {
+        console.log('📞 AdminCalendar - Получаем данные бронирования...');
         const bookingResponse = await api.get(`/calendar/booking/${bookingId}`);
         if (bookingResponse.data && bookingResponse.data.success && bookingResponse.data.data) {
           bookingData = bookingResponse.data.data;
+          console.log('✅ AdminCalendar - Данные бронирования получены:', bookingData);
+        } else {
+          console.log('⚠️ AdminCalendar - Данные бронирования не получены');
         }
       } catch (error) {
-        console.error('Ошибка при получении данных бронирования для уведомлений:', error);
+        console.error('❌ AdminCalendar - Ошибка при получении данных бронирования для уведомлений:', error);
       }
 
       // Удаляем бронирование с query параметрами
-      const userId = 'admin'; // Для админов используем идентификатор admin
+      const userId = 0; // Для админов используем числовой ID 0
       
       console.log('🗑️ AdminCalendar - Удаление бронирования:', {
         bookingId: bookingId,
         userId: userId,
-        reason: 'удаление бронирования'
+        reason: 'deletion'
       });
       
+      // Пробуем DELETE с параметрами в заголовках
       await api.delete(`/calendar/booking/${bookingId}`, {
         params: {
           user: userId,
-          reason: 'удаление бронирования'
-        },
-        data: {
-          user: userId,
-          reason: 'удаление бронирования'
+          reason: 'deletion'
         }
       });
       
@@ -689,7 +692,12 @@ const AdminCalendar: React.FC<{ onUserSelect: (userId: string) => void }> = ({ o
       
       return true;
     } catch (error: any) {
-      console.error('Ошибка при удалении бронирования:', error);
+      console.error('❌ AdminCalendar - Ошибка при удалении бронирования:', {
+        bookingId: bookingId,
+        error: error.message,
+        stack: error.stack,
+        response: error.response?.data
+      });
       return false;
     }
   };
@@ -842,8 +850,12 @@ const AdminCalendar: React.FC<{ onUserSelect: (userId: string) => void }> = ({ o
                 // Здесь будет логика редактирования бронирования
               }}
               onCancel={(bookingId) => {
+                console.log('⚠️ AdminCalendar - onCancel вызван с bookingId:', bookingId);
                 if (window.confirm(`Вы уверены, что хотите отменить бронирование #${bookingId}?`)) {
+                  console.log('✅ AdminCalendar - Подтверждение получено, вызываем deleteBooking');
                   deleteBooking(bookingId);
+                } else {
+                  console.log('❌ AdminCalendar - Отмена отклонена пользователем');
                 }
               }}
             />

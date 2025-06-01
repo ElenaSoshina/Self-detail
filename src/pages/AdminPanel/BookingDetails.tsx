@@ -292,7 +292,15 @@ const BookingDetails: React.FC<BookingDetailsProps> = ({ bookingId, onClose, onE
             Изменить
           </button> */}
           <button 
-            onClick={() => onCancel ? onCancel(booking.bookingId) : undefined}
+            onClick={() => {
+              console.log('🔴 BookingDetails - Кнопка отмены нажата для bookingId:', booking.bookingId);
+              console.log('🔴 BookingDetails - onCancel функция:', typeof onCancel);
+              if (onCancel) {
+                onCancel(booking.bookingId);
+              } else {
+                console.error('❌ BookingDetails - onCancel функция не передана!');
+              }
+            }}
             className={styles.cancelButton}
           >
             Отменить

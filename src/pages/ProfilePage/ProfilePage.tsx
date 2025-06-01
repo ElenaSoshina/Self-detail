@@ -344,23 +344,20 @@ const ProfilePage: React.FC = () => {
       }
 
       // Удаляем бронирование с query параметрами
-      const userId = String(userInfo?.telegramUserId || userInfo?.username || 'user');
+      const userId = Number(userInfo?.telegramUserId) || 0;
       
       console.log('🗑️ ProfilePage - Удаление бронирования:', {
         bookingId: bookingId,
         userId: userId,
         telegramUserId: userInfo?.telegramUserId,
-        username: userInfo?.username
+        username: userInfo?.username,
+        reason: 'deletion'
       });
       
       const response = await api.delete(`/calendar/booking/${bookingId}`, {
         params: {
           user: userId,
-          reason: 'удаление бронирования'
-        },
-        data: {
-          user: userId,
-          reason: 'удаление бронирования'
+          reason: 'deletion'
         }
       });
 
