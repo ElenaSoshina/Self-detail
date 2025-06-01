@@ -353,10 +353,16 @@ const ProfilePage: React.FC = () => {
         username: userInfo?.username
       });
       
-      const deleteUrl = `/calendar/booking/${bookingId}?user=${encodeURIComponent(userId)}&reason=${encodeURIComponent('удаление бронирования')}`;
-      console.log('🔗 ProfilePage - URL для удаления:', deleteUrl);
-      
-      const response = await api.delete(deleteUrl);
+      const response = await api.delete(`/calendar/booking/${bookingId}`, {
+        params: {
+          user: userId,
+          reason: 'удаление бронирования'
+        },
+        data: {
+          user: userId,
+          reason: 'удаление бронирования'
+        }
+      });
 
       console.log('✅ ProfilePage - Ответ на удаление:', response.data);
 
