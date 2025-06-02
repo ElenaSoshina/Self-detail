@@ -1,13 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import styles from './BookingModal.module.css';
 import SuccessPopup from '../SuccessPopup/SuccessPopup';
-import {
-  sendTelegramMessage,
-  sendTelegramMessageByUsername,
-  formatUserMessage,
-  formatAdminMessage,
-  sendTelegramMessageToAllAdmins
-} from '../../api/telegram';
 import PhoneInput from 'react-phone-number-input/input';
 import 'react-phone-number-input/style.css';
 import { useCart } from '../../context/CartContex';
@@ -566,49 +559,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
       // открываем наше модальное окно
       setShowCalendarModal(true);
       
-      const adminMsg = formatAdminMessage(payload, { price: servicePrice }, service?.serviceName ?? '');
-      const userMsg  = formatUserMessage(payload, { price: servicePrice }, service?.serviceName ?? '');
-      
-      console.log('📲 BookingModal - Данные для отправки в Telegram:', {
-        payload: payload,
-        servicePrice: servicePrice,
-        serviceName: service?.serviceName ?? '',
-        adminMsg: adminMsg,
-        userMsg: userMsg,
-        isAdmin: isAdmin,
-        chatId: chatId,
-        timestamp: new Date().toISOString()
-      });
-      
-      console.log('📤 BookingModal - Начинаем отправку уведомлений...');
-      
-      try {
-        if (isAdmin) {
-          console.log('👤 Режим администратора - отправляем только админам');
-          await sendTelegramMessageToAllAdmins(adminMsg);
-        } else {
-          console.log('👥 Режим пользователя - отправляем пользователю и админам');
-          if (chatId) {
-            console.log('📱 Отправляем сообщение пользователю в чат:', chatId);
-            await sendTelegramMessage(chatId, userMsg);
-          } else {
-            console.log('⚠️ ChatId пользователя не найден, пропускаем отправку пользователю');
-          }
-          console.log('📢 Отправляем уведомление администраторам');
-          await sendTelegramMessageToAllAdmins(adminMsg);
-        }
-        
-        console.log('✅ Все уведомления отправлены успешно');
-      } catch (telegramError: any) {
-        console.error('❌ Ошибка при отправке Telegram уведомлений:', {
-          error: telegramError.message,
-          stack: telegramError.stack,
-          isAdmin: isAdmin,
-          chatId: chatId
-        });
-        // Не прерываем выполнение из-за ошибок Telegram, но логируем их
-        console.warn('⚠️ Бронирование создано, но возникла проблема с уведомлениями');
-      }
+      console.log('✅ BookingModal - Бронирование создано успешно, уведомления отправляются автоматически с бэкенда');
 
       // Сохраняем данные пользователя для будущих бронирований
       try {

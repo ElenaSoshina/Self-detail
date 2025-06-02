@@ -8,8 +8,9 @@ import { CartItem } from '../../types';
 import BookingModal from '../../components/BookingModal/BookingModal';
 import BookingSuccess from '../BookingSuccess/BookingSuccess';
 import { BookingDetails } from '../CalendarPage/calendarTypes';
-import { sendTelegramMessage, formatAdminMessage, ADMIN_CHAT_ID, sendTelegramMessageToAllAdmins } from '../../api/telegram';
 import api from '../../api/apiService';
+import PhoneInput from 'react-phone-number-input/input';
+import 'react-phone-number-input/style.css';
 
 // Функция для получения изображения продукта по ID
 const getProductImage = (id: string | number): string => {
@@ -130,33 +131,6 @@ const CartPage: React.FC = () => {
       
       // Получаем результат
       const result = response.data;
-      
-      // Отправляем сообщения в Telegram
-      const isTech = (formData.service?.serviceName || '').toLowerCase().includes('техничес');
-      
-      console.log('📲 CartPage - Данные для отправки в Telegram:', {
-        apiData: apiData,
-        serviceData: formData.service || { price: 0 },
-        serviceName: formData.service?.serviceName || '',
-        isTech: isTech,
-        timestamp: new Date().toISOString()
-      });
-      
-      console.log('📤 CartPage - Начинаем отправку уведомлений администраторам...');
-      
-      try {
-        // Отправляем сообщение всем администраторам
-        await sendTelegramMessageToAllAdmins(
-          formatAdminMessage(apiData, formData.service || { price: 0 }, formData.service?.serviceName || '')
-        );
-        console.log('✅ CartPage - Уведомления администраторам отправлены успешно');
-      } catch (telegramError: any) {
-        console.error('❌ CartPage - Ошибка при отправке уведомлений в Telegram:', {
-          error: telegramError.message,
-          stack: telegramError.stack
-        });
-        console.warn('⚠️ CartPage - Бронирование создано, но возникла проблема с уведомлениями');
-      }
       
       // После успешного запроса устанавливаем данные
       setSuccessBookingDetails(bookingDetails);
