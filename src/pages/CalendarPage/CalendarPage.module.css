@@ -1270,12 +1270,105 @@
 }
 
 @keyframes slideInWarning {
-  from {
+  0% {
     opacity: 0;
     transform: translateY(-10px);
   }
-  to {
+  100% {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* Стили для информации о текущем бронировании */
+.currentBookingInfo {
+  background: rgba(40, 40, 70, 0.8);
+  border-radius: 20px;
+  padding: 24px;
+  margin-bottom: 30px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3),
+              inset 0 0 0 1px rgba(138, 110, 255, 0.2);
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(255, 193, 7, 0.3);
+}
+
+.currentBookingInfo h3 {
+  margin: 0 0 20px 0;
+  color: #FFC107;
+  font-size: 20px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.currentBookingInfo h3::before {
+  content: '✏️';
+  font-size: 24px;
+}
+
+.bookingInfoGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.infoItem {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.infoLabel {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 500;
+}
+
+.infoValue {
+  font-size: 16px;
+  color: #fff;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+@media (max-width: 768px) {
+  .currentBookingInfo {
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  
+  .bookingInfoGrid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .currentBookingInfo h3 {
+    font-size: 18px;
+  }
+}
+
+/* Стиль для предвыбранных слотов текущего бронирования */
+.timeSlotPreSelected {
+  background: linear-gradient(135deg, #667eea, #764ba2) !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  border: 2px solid #667eea !important;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4) !important;
+  animation: pulseGlow 2s infinite;
+}
+
+@keyframes pulseGlow {
+  0% {
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  }
+  50% {
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.7);
+  }
+  100% {
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
   }
 } 

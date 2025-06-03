@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import styles from './ProfilePage.module.css';
 import { useCart } from '../../context/CartContex';
 import BookingDetails from '../AdminPanel/BookingDetails';
+import CalendarPage from '../CalendarPage/CalendarPage';
 import { formatDate } from '../../utils/dateUtils';
 import api from '../../api/apiService';
 
@@ -133,6 +134,11 @@ const ProfilePage: React.FC = () => {
   const [showBookingDetails, setShowBookingDetails] = useState(false);
   const [deleteSuccess, setDeleteSuccess] = useState(false);
   const { addToCart } = useCart();
+  
+  // Состояние для редактирования бронирования
+  const [showEditCalendar, setShowEditCalendar] = useState(false);
+  const [editBookingId, setEditBookingId] = useState<string | null>(null);
+  const [editSuccess, setEditSuccess] = useState(false);
 
   useEffect(() => {
     // Загружаем данные пользователя и бронирования
@@ -387,6 +393,38 @@ const ProfilePage: React.FC = () => {
     }
   };
 
+  // Функция для открытия календаря редактирования
+  const handleEditBooking = (bookingId: number | string) => {
+    console.log('📝 ProfilePage - Открываем редактирование для bookingId:', bookingId);
+    setEditBookingId(String(bookingId));
+    setShowEditCalendar(true);
+    setShowBookingDetails(false); // Закрываем детали
+  };
+
+  // Функция для закрытия календаря редактирования
+  const handleCloseEditCalendar = () => {
+    setShowEditCalendar(false);
+    setEditBookingId(null);
+  };
+
+  // Функция для обработки успешного редактирования
+  const handleEditSuccess = () => {
+    console.log('✅ ProfilePage - Бронирование успешно отредактировано');
+    setEditSuccess(true);
+    setShowEditCalendar(false);
+    setEditBookingId(null);
+    
+    // Обновляем список бронирований
+    if (userInfo?.telegramUserId) {
+      fetchUserBookings(userInfo.telegramUserId);
+    }
+    
+    // Скрываем сообщение об успехе через 3 секунды
+    setTimeout(() => {
+      setEditSuccess(false);
+    }, 3000);
+  };
+
   if (isLoading) {
     return (
       <div className={styles.loadingContainer}>
@@ -512,14 +550,32 @@ const ProfilePage: React.FC = () => {
             <BookingDetails 
               bookingId={selectedBookingId} 
               onClose={handleCloseBookingDetails}
-              onEdit={(bookingId) => {
-                // Здесь будет логика редактирования бронирования
-              }}
+              onEdit={handleEditBooking}
               onCancel={(bookingId) => {
                 if (window.confirm(`Вы уверены, что хотите отменить бронирование #${bookingId}?`)) {
                   deleteBooking(bookingId);
                 }
               }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Модальное окно редактирования бронирования */}
+      {showEditCalendar && editBookingId && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.calendarModalContent}>
+            <div className={styles.editHeader}>
+              <h3>Редактирование бронирования #{editBookingId}</h3>
+              <button className={styles.closeButton} onClick={handleCloseEditCalendar}>×</button>
+            </div>
+            <CalendarPage 
+              isAdmin={false} 
+              selectedDate={new Date()}
+              excludeBookingId={editBookingId}
+              editMode={true}
+              editBookingId={editBookingId}
+              onSubmit={handleEditSuccess}
             />
           </div>
         </div>
@@ -531,6 +587,16 @@ const ProfilePage: React.FC = () => {
           <div className={styles.successPopupContent}>
             <div className={styles.successIcon}>✓</div>
             <p>Бронирование успешно удалено</p>
+          </div>
+        </div>
+      )}
+
+      {/* Сообщение об успешном редактировании */}
+      {editSuccess && (
+        <div className={styles.successPopup}>
+          <div className={styles.successPopupContent}>
+            <div className={styles.successIcon}>✓</div>
+            <p>Бронирование успешно изменено</p>
           </div>
         </div>
       )}

@@ -31,9 +31,10 @@ function toMoscowISOString(date: Date): string {
 /**
  * Получение доступных временных слотов от API
  * @param date Дата для запроса слотов
+ * @param excludeBookingId ID бронирования, которое нужно исключить (для редактирования)
  * @returns Promise с массивом данных слотов из API
  */
-export async function fetchAvailableTimeSlotsApi(date: Date) {
+export async function fetchAvailableTimeSlotsApi(date: Date, excludeBookingId?: number | string) {
   const requestId = Math.random().toString(36).substring(2, 8);
   
   try {
@@ -86,10 +87,15 @@ export async function fetchAvailableTimeSlotsApi(date: Date) {
   try {
     const fullApiUrl = `${API_BASE_URL}${API_PATH}`;
     
-    const params = {
+    const params: any = {
       start: toMoscowISOString(startDate),
       end: toMoscowISOString(endDate),
     };
+    
+    // Добавляем excludeBookingId если передан
+    if (excludeBookingId) {
+      params.excludeBookingId = excludeBookingId;
+    }
     
     const response = await api.get('/calendar/available', { params });
     
@@ -104,11 +110,17 @@ export async function fetchAvailableTimeSlotsApi(date: Date) {
         const newToken = await login();
         
         if (newToken) {
+          const retryParams: any = { 
+            start: startDateISO, 
+            end: endDateISO 
+          };
+          
+          if (excludeBookingId) {
+            retryParams.excludeBookingId = excludeBookingId;
+          }
+          
           const retryResponse = await api.get('/calendar/available', {
-            params: { 
-              start: startDateISO, 
-              end: endDateISO 
-            }
+            params: retryParams
           });
           
           return retryResponse.data.data || [];

@@ -10,6 +10,7 @@ interface BookingSummaryProps {
   onBook: () => void;
   formatDate: (date: Date) => string;
   getDateRange: () => string;
+  editMode?: boolean;
 }
 
 const BookingSummary: React.FC<BookingSummaryProps> = ({
@@ -19,7 +20,8 @@ const BookingSummary: React.FC<BookingSummaryProps> = ({
   selectedPlan,
   onBook,
   formatDate,
-  getDateRange
+  getDateRange,
+  editMode = false
 }) => {
   if (!duration) return null;
   
@@ -44,7 +46,7 @@ const BookingSummary: React.FC<BookingSummaryProps> = ({
         <span className={styles.priceValue}>{selectedPlan.price * duration} ₽</span>
       </div>
       <button className={styles.bookButton} onClick={onBook}>
-        Забронировать
+        {editMode ? 'Изменить бронирование' : 'Забронировать'}
       </button>
     </div>
   );

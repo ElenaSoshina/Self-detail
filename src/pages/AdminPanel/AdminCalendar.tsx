@@ -82,6 +82,11 @@ const AdminCalendar: React.FC<{ onUserSelect: (userId: string) => void }> = ({ o
   const [slotsError, setSlotsError] = useState<string | null>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
   const [showCalendarPage, setShowCalendarPage] = useState(false);
+  
+  // Состояние для редактирования бронирования
+  const [showEditCalendar, setShowEditCalendar] = useState(false);
+  const [editBookingId, setEditBookingId] = useState<number | string | null>(null);
+  const [editSuccess, setEditSuccess] = useState<boolean>(false);
 
   const fetchAvailableSlots = async () => {
     setLoadingSlots(true);
@@ -403,12 +408,15 @@ const AdminCalendar: React.FC<{ onUserSelect: (userId: string) => void }> = ({ o
     }
   };
 
-  // Генерация всех слотов за сутки (00:00-01:00 ... 23:00-00:00)
-  const allDaySlots = Array.from({ length: 24 }, (_, h) => {
-    const start = `${h < 10 ? '0' + h : h}:00`;
-    const end = `${(h + 1) < 10 ? '0' + (h + 1) : (h + 1 === 24 ? '00' : h + 1)}:00`;
-    return { formattedTime: start, start, end };
-  });
+  // Генерируем все возможные слоты для дня (24 часа)
+  const allDaySlots = Array.from({ length: 24 }, (_, h) => ({
+    formattedTime: `${h.toString().padStart(2, '0')}:00`,
+    originalData: null,
+    sortKey: h * 60,
+    start: new Date(),
+    end: new Date(),
+    available: false
+  }));
 
   // Проверка, занят ли слот
   const isSlotBooked = (slotTime: string) => {
@@ -630,6 +638,142 @@ const AdminCalendar: React.FC<{ onUserSelect: (userId: string) => void }> = ({ o
     }
   };
 
+  // Функция для открытия модального окна редактирования
+  const handleEditBooking = (bookingId: number | string) => {
+    console.log('📝 AdminCalendar - Открываем редактирование для bookingId:', bookingId);
+    setEditBookingId(bookingId);
+    setShowEditCalendar(true);
+    setShowBookingDetails(false); // Закрываем детали
+  };
+
+  // Функция для закрытия календаря редактирования
+  const handleCloseEditCalendar = () => {
+    setShowEditCalendar(false);
+    setEditBookingId(null);
+  };
+
+  // Функция для обработки успешного редактирования
+  const handleEditSuccess = () => {
+    console.log('✅ AdminCalendar - Бронирование успешно отредактировано');
+    setEditSuccess(true);
+    setShowEditCalendar(false);
+    setEditBookingId(null);
+    
+    // Обновляем список бронирований
+    const fetchSlots = async () => {
+      setLoading(true);
+      try {
+        // Форматирование даты для API запроса
+        const year = currentDate.getFullYear();
+        const month = (currentDate.getMonth() + 1).toString().padStart(2, '0');
+        const day = currentDate.getDate().toString().padStart(2, '0');
+        
+        // Начинаем с предыдущего дня чтобы захватить межсуточные бронирования
+        const prevDay = new Date(currentDate);
+        prevDay.setDate(prevDay.getDate() - 1);
+        const prevYear = prevDay.getFullYear();
+        const prevMonth = (prevDay.getMonth() + 1).toString().padStart(2, '0');
+        const prevDayNum = prevDay.getDate().toString().padStart(2, '0');
+        const startDate = `${prevYear}-${prevMonth}-${prevDayNum}T00:00:00`;
+        
+        // Следующий день для запроса (до конца следующего дня)
+        const nextDay = new Date(currentDate);
+        nextDay.setDate(nextDay.getDate() + 2);
+        const nextYear = nextDay.getFullYear();
+        const nextMonth = (nextDay.getMonth() + 1).toString().padStart(2, '0');
+        const nextDayNum = nextDay.getDate().toString().padStart(2, '0');
+        const endDate = `${nextYear}-${nextMonth}-${nextDayNum}T00:00:00`;
+        
+        // Запрос к API для получения бронирований
+        const response = await api.get('/calendar/booking', {
+          params: { start: startDate, end: endDate }
+        });
+        
+        const data = response.data;
+        
+        if (!data || !data.data) {
+          throw new Error('Неверный формат данных');
+        }
+        
+        // Начало и конец текущего дня для фильтрации
+        const currentDayStart = new Date(currentDate);
+        currentDayStart.setHours(0, 0, 0, 0);
+        const currentDayEnd = new Date(currentDate);
+        currentDayEnd.setHours(23, 59, 59, 999);
+        
+        // Фильтруем и маппим бронирования для текущего дня
+        const relevantBookings = data.data.filter((booking: any) => {
+          const bookingStart = new Date(booking.start);
+          const bookingEnd = new Date(booking.end);
+          
+          // Проверяем пересечение с текущим днем
+          return bookingStart <= currentDayEnd && bookingEnd >= currentDayStart;
+        });
+        
+        // Маппинг бронирований
+        const bookedSlots = relevantBookings.map((booking: any) => {
+          // Получаем информацию об услуге
+          const serviceName = booking.services && booking.services.length > 0 
+            ? booking.services[0].serviceName 
+            : 'Услуга';
+          
+          const servicePrice = booking.services && booking.services.length > 0 
+            ? booking.services[0].price 
+            : 0;
+            
+          // Очень важно: bookingId должен быть числом для API
+          const numericBookingId = Number(booking.bookingId);
+          
+          // Вспомогательная функция для расчета часов
+          const calcHours = (start: string, end: string) => {
+            const startDate = new Date(start);
+            const endDate = new Date(end);
+            const diffMs = endDate.getTime() - startDate.getTime();
+            const diffHours = diffMs / (1000 * 60 * 60);
+            return Math.max(1, Math.round(diffHours));
+          };
+          
+          return {
+            id: String(booking.bookingId), // id для React key
+            bookingId: numericBookingId, // числовой bookingId для API
+            start: booking.start,
+            end: booking.end,
+            isBooked: true,
+            bookingDetails: {
+              userId: String(booking.telegramUserId || ''),
+              userName: booking.clientName || 'Клиент',
+              phone: booking.clientPhone || 'Телефон не указан',
+              plan: { 
+                title: serviceName,
+                price: servicePrice
+              },
+              hours: calcHours(booking.start, booking.end),
+              car: booking.car ? {
+                brand: booking.car.brand || '',
+                color: booking.car.color || '',
+                plate: booking.car.plate || ''
+              } : undefined
+            }
+          };
+        });
+        
+        setSlots(bookedSlots);
+      } catch (error) {
+        console.error('Ошибка при загрузке бронирований:', error);
+        setSlots([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchSlots();
+    
+    // Скрываем сообщение об успехе через 3 секунды
+    setTimeout(() => {
+      setEditSuccess(false);
+    }, 3000);
+  };
+
   return (
     <div className={styles.container}>
       <div className={styles.calendar}>
@@ -774,9 +918,7 @@ const AdminCalendar: React.FC<{ onUserSelect: (userId: string) => void }> = ({ o
             <BookingDetails 
               bookingId={selectedBookingId} 
               onClose={handleCloseBookingDetails} 
-              onEdit={(bookingId) => {
-                // Здесь будет логика редактирования бронирования
-              }}
+              onEdit={handleEditBooking}
               onCancel={(bookingId) => {
                 console.log('⚠️ AdminCalendar - onCancel вызван с bookingId:', bookingId);
                 if (window.confirm(`Вы уверены, что хотите отменить бронирование #${bookingId}?`)) {
@@ -791,11 +933,40 @@ const AdminCalendar: React.FC<{ onUserSelect: (userId: string) => void }> = ({ o
         </div>
       )}
       
+      {/* Модальное окно редактирования бронирования */}
+      {showEditCalendar && editBookingId !== null && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.calendarModalContent}>
+            <div className={styles.editHeader}>
+              <h3>Редактирование бронирования #{editBookingId}</h3>
+              <button className={styles.closeButton} onClick={handleCloseEditCalendar}>×</button>
+            </div>
+            <CalendarPage 
+              isAdmin={true} 
+              selectedDate={currentDate}
+              excludeBookingId={editBookingId}
+              editMode={true}
+              editBookingId={editBookingId}
+              onSubmit={handleEditSuccess}
+            />
+          </div>
+        </div>
+      )}
+      
       {deleteSuccess && (
         <div className={styles.successPopup}>
           <div className={styles.successPopupContent}>
             <div className={styles.successIcon}>✓</div>
             <p>Бронирование успешно удалено</p>
+          </div>
+        </div>
+      )}
+      
+      {editSuccess && (
+        <div className={styles.successPopup}>
+          <div className={styles.successPopupContent}>
+            <div className={styles.successIcon}>✓</div>
+            <p>Бронирование успешно изменено</p>
           </div>
         </div>
       )}

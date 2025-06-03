@@ -294,12 +294,12 @@ const BookingDetails: React.FC<BookingDetailsProps> = ({ bookingId, onClose, onE
         {renderCarInfo()}
         
         <div className={styles.actionButtons}>
-          {/* <button 
+          <button 
             onClick={() => onEdit ? onEdit(booking.bookingId) : undefined}
             className={styles.editButton}
           >
             Изменить
-          </button> */}
+          </button>
           <button 
             onClick={() => {
               console.log('🔴 BookingDetails - Кнопка отмены нажата для bookingId:', booking.bookingId);

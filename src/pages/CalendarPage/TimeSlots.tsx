@@ -17,6 +17,8 @@ interface TimeSlotsProps {
   endTime: string | null;
   startTimeContext?: 'current' | 'next' | null;
   endTimeContext?: 'current' | 'next' | null;
+  preSelectedSlots?: string[];
+  editMode?: boolean;
 }
 
 const TimeSlots: React.FC<TimeSlotsProps> = ({
@@ -33,7 +35,9 @@ const TimeSlots: React.FC<TimeSlotsProps> = ({
   startTime: externalStartTime,
   endTime: externalEndTime,
   startTimeContext,
-  endTimeContext
+  endTimeContext,
+  preSelectedSlots,
+  editMode
 }) => {
   const [startTime, setStartTime] = useState<string | null>(externalStartTime);
   const [endTime, setEndTime] = useState<string | null>(externalEndTime);
@@ -109,6 +113,11 @@ const TimeSlots: React.FC<TimeSlotsProps> = ({
 
   // Проверка, доступен ли слот (явно указан в ответе API как доступный)
   const isSlotAvailable = (slotTime: string, isNextDay: boolean = false): boolean => {
+    // Предвыбранные слоты всегда считаются доступными
+    if (isPreSelectedSlot(slotTime)) {
+      return true;
+    }
+    
     if (isNextDay) {
       // Для следующего дня проверяем доступность через nextDayTimeSlotData
       const slotData = nextDayTimeSlotData.find(data => data.formattedTime === slotTime);
@@ -246,6 +255,9 @@ const TimeSlots: React.FC<TimeSlotsProps> = ({
         // Пропускаем слот 24:00 если он есть (мы его не отображаем)
         if (checkSlot === '24:00') continue;
         
+        // В режиме редактирования пропускаем предвыбранные слоты при проверке доступности
+        if (editMode && isPreSelectedSlot(checkSlot)) continue;
+        
         if (isSlotUnavailable(checkSlot)) {
           // Если есть недоступный слот после startTime в текущем дне - 
           // нельзя переходить на следующий день, так как будет наложение
@@ -285,6 +297,10 @@ const TimeSlots: React.FC<TimeSlotsProps> = ({
     // Проверяем все промежуточные слоты - если есть недоступные, блокируем выбор
     for (let i = startIdx + 1; i < endIdx; i++) {
       const intermediateSlot = allDaySlots[i].formattedTime;
+      
+      // В режиме редактирования пропускаем предвыбранные слоты при проверке доступности
+      if (editMode && isPreSelectedSlot(intermediateSlot)) continue;
+      
       // Если промежуточный слот недоступен (нет в данных или помечен как недоступный)
       if (isSlotUnavailable(intermediateSlot)) {
         return false;
@@ -370,8 +386,12 @@ const TimeSlots: React.FC<TimeSlotsProps> = ({
         
         for (let i = startIdx + 1; i < allDaySlots.length; i++) {
           const checkSlot = allDaySlots[i].formattedTime;
-          // Слот недоступен если он не в availableTimeSlots (разрыв в расписании) 
-          // или помечен как занятый в API
+          // Пропускаем слот 24:00 если он есть (мы его не отображаем)
+          if (checkSlot === '24:00') continue;
+          
+          // В режиме редактирования пропускаем предвыбранные слоты при проверке недоступности
+          if (editMode && isPreSelectedSlot(checkSlot)) continue;
+          
           if (isSlotUnavailable(checkSlot)) {
             firstUnavailableIdx = i;
             break;
@@ -403,6 +423,9 @@ const TimeSlots: React.FC<TimeSlotsProps> = ({
           const checkSlot = allDaySlots[i].formattedTime;
           // Пропускаем слот 24:00 если он есть (мы его не отображаем)
           if (checkSlot === '24:00') continue;
+          
+          // В режиме редактирования пропускаем предвыбранные слоты при проверке недоступности
+          if (editMode && isPreSelectedSlot(checkSlot)) continue;
           
           // Слот недоступен если он не в availableTimeSlots (разрыв в расписании) 
           // или помечен как занятый в API
@@ -512,6 +535,11 @@ const TimeSlots: React.FC<TimeSlotsProps> = ({
     return false;
   };
 
+  // Проверка, является ли слот предвыбранным (текущее редактируемое бронирование)
+  const isPreSelectedSlot = (slotTime: string): boolean => {
+    return editMode && preSelectedSlots ? preSelectedSlots.includes(slotTime) : false;
+  };
+
   // Обработчик клика по слоту
   const handleSlotClick = (time: string, isNextDay: boolean = false) => {
     console.log('🕐 TimeSlots - Клик по слоту:', {
@@ -613,6 +641,10 @@ const TimeSlots: React.FC<TimeSlotsProps> = ({
             let allIntermediateSlotsAvailable = true;
             for (let i = startIdx + 1; i < endIdx; i++) {
               const intermediateSlot = allDaySlots[i].formattedTime;
+              
+              // В режиме редактирования пропускаем предвыбранные слоты при проверке доступности
+              if (editMode && isPreSelectedSlot(intermediateSlot)) continue;
+              
               const isIntermediateAvailable = availableTimeSlots.includes(intermediateSlot);
               if (!isIntermediateAvailable) {
                 allIntermediateSlotsAvailable = false;
@@ -705,7 +737,7 @@ const TimeSlots: React.FC<TimeSlotsProps> = ({
             <div className={styles.loadingMessage}>Загрузка доступных слотов...</div>
           ) : slotsError ? (
             <div className={styles.errorMessage}>{slotsError}</div>
-          ) : availableTimeSlots.length > 0 || startTime || endTime ? (
+          ) : availableTimeSlots.length > 0 || startTime || endTime || (editMode && preSelectedSlots?.length) ? (
             <>
               <div className={styles.timeSlots}>
                 {allDaySlots.map(slot => {
@@ -729,6 +761,7 @@ const TimeSlots: React.FC<TimeSlotsProps> = ({
                   const isSelectableAsBoundary = canBeSelectedAsBoundary(slot.formattedTime);
                   const isBefore = isBeforeStart(slot.formattedTime, false);
                   const isAfterBooked = isAfterFirstBooked(slot.formattedTime, false);
+                  const isPreSelected = isPreSelectedSlot(slot.formattedTime);
 
                   return (
                     <button
@@ -738,16 +771,16 @@ const TimeSlots: React.FC<TimeSlotsProps> = ({
                         ${isSelected ? styles.timeSlotActive : ''}
                         ${isEdge ? styles.timeSlotSelectedEdge : ''}
                         ${hasBoundary ? styles.timeSlotBoundary : ''}
-                        ${isUnavailable && !hasBoundary ? styles.timeSlotUnavailableRed : ''}
+                        ${isUnavailable && !hasBoundary && !isPreSelected ? styles.timeSlotUnavailableRed : ''}
                         ${isBefore ? styles.timeSlotBeforeStart : ''}
                         ${isAfterBooked ? styles.timeSlotAfterBooked : ''}
                       `}
                       onClick={() => {
-                        // Разрешаем клик если слот не прошедший, не до начала, не после занятого и (доступен ИЛИ может быть границей)
-                        const allowClick = !past && !isBefore && !isAfterBooked && (isAvailable || isSelectableAsBoundary || hasBoundary);
+                        // Разрешаем клик если слот не прошедший, не до начала, не после занятого и (доступен ИЛИ может быть границей ИЛИ предвыбран)
+                        const allowClick = !past && !isBefore && !isAfterBooked && (isAvailable || isSelectableAsBoundary || hasBoundary || isPreSelected);
                         allowClick && handleSlotClick(slot.formattedTime);
                       }}
-                      disabled={past || isBefore || isAfterBooked || (!isAvailable && !isSelectableAsBoundary && !hasBoundary)}
+                      disabled={past || isBefore || isAfterBooked || (!isAvailable && !isSelectableAsBoundary && !hasBoundary && !isPreSelected)}
                     >
                       {slot.formattedTime}
                     </button>

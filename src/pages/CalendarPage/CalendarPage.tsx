@@ -28,9 +28,13 @@ import api from '../../api/apiService';
 interface CalendarPageProps {
   isAdmin?: boolean;
   selectedDate?: Date | null;
+  excludeBookingId?: number | string;
+  onSubmit?: (formData: any) => void;
+  editMode?: boolean;
+  editBookingId?: number | string;
 }
 
-const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin, selectedDate: externalSelectedDate }) => {
+const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin, selectedDate: externalSelectedDate, excludeBookingId, onSubmit, editMode = false, editBookingId }) => {
   const navigate = useNavigate();
   const { addToCart } = useCart();
 
@@ -53,6 +57,8 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin, selectedDate: exte
   const [isInitialized, setIsInitialized] = useState(false);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [forcedAvailableSlot, setForcedAvailableSlot] = useState<string | null>(null);
+  const [currentBookingData, setCurrentBookingData] = useState<any>(null);
+  const [preSelectedSlots, setPreSelectedSlots] = useState<string[]>([]);
 
   /** ——————————————————— Pricing ——————————————————— */
   const pricingPlans: PricingPlan[] = [
@@ -89,44 +95,6 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin, selectedDate: exte
     }
   }, [isAdmin, selectedPlan, pricingPlans, handlePlanClick]);
 
-  /** ——————————————————— Init ——————————————————— */
-  useEffect(() => {
-    if (isInitialized) return;
-
-    const init = async () => {
-      const daysArray = generateDaysForMonth(currentDate.getFullYear(), currentDate.getMonth());
-      setDays(daysArray);
-
-      let initialDay: Day | undefined;
-      if (externalSelectedDate) {
-        initialDay = daysArray.find(d => d.date.toDateString() === externalSelectedDate.toDateString());
-      } else {
-        initialDay = daysArray.find(d => d.isToday && d.isAvailable);
-      }
-      setIsInitialized(true);
-
-      if (!initialDay) {
-        setLoadingSlots(false);
-        return;
-      }
-
-      setSelectedDate(initialDay.date);
-      setLoadingSlots(true);
-      try {
-        const { formattedTimeSlots, timeSlotsWithData } = await fetchAvailableTimeSlots(initialDay.date);
-        setAvailableTimeSlots(formattedTimeSlots);
-        setTimeSlotData(timeSlotsWithData);
-      } catch {
-        setSlotsError('Ошибка загрузки слотов.');
-      } finally {
-        setLoadingSlots(false);
-      }
-    };
-
-    init();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   /** ——————————————————— Load slots on date change ——————————————————— */
   useEffect(() => {
     if (!selectedDate || !isInitialized) return;
@@ -136,7 +104,7 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin, selectedDate: exte
       setLoadingSlots(true);
       try {
         // Получаем слоты текущего дня
-        const { formattedTimeSlots, timeSlotsWithData } = await fetchAvailableTimeSlots(selectedDate);
+        const { formattedTimeSlots, timeSlotsWithData } = await fetchAvailableTimeSlots(selectedDate, excludeBookingId);
         if (cancelled) return;
         setAvailableTimeSlots(formattedTimeSlots);
         setTimeSlotData(timeSlotsWithData);
@@ -144,7 +112,7 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin, selectedDate: exte
         // Получаем слоты следующего дня
         const nextDay = new Date(selectedDate);
         nextDay.setDate(nextDay.getDate() + 1);
-        const { formattedTimeSlots: nextDaySlots, timeSlotsWithData: nextDayData } = await fetchAvailableTimeSlots(nextDay);
+        const { formattedTimeSlots: nextDaySlots, timeSlotsWithData: nextDayData } = await fetchAvailableTimeSlots(nextDay, excludeBookingId);
         if (cancelled) return;
 
         // Создаем первые 4 слота следующего дня (00:00, 01:00, 02:00, 03:00) независимо от доступности
@@ -194,7 +162,7 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin, selectedDate: exte
     })();
 
     return () => { cancelled = true; };
-  }, [selectedDate, isInitialized, fetchAvailableTimeSlots]);
+  }, [selectedDate, isInitialized, fetchAvailableTimeSlots, excludeBookingId]);
 
   /** ——————————————————— Month navigation ——————————————————— */
   const goToPreviousMonth = () => {
@@ -385,6 +353,12 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin, selectedDate: exte
     if (!selectedDate || !duration || !selectedPlan || !startTime || !endTime) return;
     const totalPrice = selectedPlan.price * duration;
     
+    // В режиме редактирования сразу отправляем PUT запрос без формы
+    if (editMode) {
+      updateBooking({ notes: currentBookingData?.notes || '' });
+      return;
+    }
+    
     // Если выбраны технические работы и пользователь - администратор, показываем модальное окно с предзаполненными полями
     if (isAdmin && selectedPlan.id === 'tech') {
       setBookingDetails({
@@ -418,11 +392,94 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin, selectedDate: exte
     setStartTimeContext(null);
     setEndTimeContext(null);
     
-    // Если мы находимся на странице администратора, перезагружаем страницу
-    if (isAdmin) {
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
+    // Если это режим редактирования - используем PUT запрос
+    if (editMode && editBookingId) {
+      updateBooking(formData);
+    } else {
+      // Если мы находимся на странице администратора, перезагружаем страницу
+      if (isAdmin) {
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      }
+      
+      // Если передан внешний колбэк - вызываем его
+      if (onSubmit) {
+        onSubmit(formData);
+      }
+    }
+  };
+
+  // Функция для обновления бронирования
+  const updateBooking = async (formData: any) => {
+    if (!editBookingId || !startTime || !endTime || !selectedDate || !selectedPlan) {
+      console.error('❌ Не хватает данных для обновления бронирования');
+      return;
+    }
+
+    try {
+      console.log('🔄 CalendarPage - Обновляем бронирование:', editBookingId);
+
+      // Создаем даты
+      const [startHour, startMinute] = startTime.split(':').map(Number);
+      const [endHour, endMinute] = endTime.split(':').map(Number);
+
+      let startDate = new Date(selectedDate);
+      let endDate = new Date(selectedDate);
+      
+      // Если startTime в следующем дне
+      if (startTimeContext === 'next') {
+        startDate.setDate(startDate.getDate() + 1);
+      }
+      
+      // Если endTime в следующем дне
+      if (endTimeContext === 'next') {
+        endDate.setDate(endDate.getDate() + 1);
+      }
+      
+      startDate.setHours(startHour, startMinute, 0, 0);
+      endDate.setHours(endHour, endMinute, 0, 0);
+
+      // Форматируем даты в ISO строки с московским временем
+      const formatToMoscowISO = (date: Date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const seconds = String(date.getSeconds()).padStart(2, '0');
+        
+        return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+      };
+      
+      const payload = {
+        start: formatToMoscowISO(startDate),
+        end: formatToMoscowISO(endDate),
+        services: [{
+          serviceName: selectedPlan.title,
+          price: selectedPlan.price
+        }],
+        notes: formData.notes || ''
+      };
+      
+      console.log('🔄 CalendarPage - Отправляем PUT запрос:', payload);
+      
+      const response = await api.put(`/calendar/booking/${editBookingId}`, payload);
+      
+      if (!response.data?.success) {
+        throw new Error(response.data?.message || 'Ошибка при обновлении бронирования');
+      }
+      
+      console.log('✅ CalendarPage - Бронирование обновлено успешно');
+      
+      // Вызываем колбэк успеха
+      if (onSubmit) {
+        onSubmit(formData);
+      }
+      
+    } catch (error: any) {
+      console.error('❌ CalendarPage - Ошибка при обновлении:', error);
+      alert('Ошибка при обновлении бронирования: ' + error.message);
     }
   };
 
@@ -470,12 +527,154 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin, selectedDate: exte
     setDays(daysArray);
   }, [currentDate]);
 
+  // Функция для загрузки данных редактируемого бронирования
+  const loadCurrentBookingData = async (bookingId: number | string) => {
+    try {
+      console.log('🔄 CalendarPage - Загружаем данные бронирования:', bookingId);
+      const response = await api.get(`/calendar/booking/${bookingId}`);
+      
+      if (!response.data?.success || !response.data?.data) {
+        throw new Error('Не удалось загрузить данные бронирования');
+      }
+      
+      const booking = response.data.data;
+      setCurrentBookingData(booking);
+      
+      // Устанавливаем дату бронирования
+      const bookingStartDate = new Date(booking.start);
+      const bookingEndDate = new Date(booking.end);
+      
+      // Устанавливаем месяц и дату для календаря
+      setCurrentDate(new Date(bookingStartDate.getFullYear(), bookingStartDate.getMonth(), 1));
+      setSelectedDate(bookingStartDate);
+      
+      // Форматируем время
+      const startTimeStr = bookingStartDate.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+      const endTimeStr = bookingEndDate.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+      
+      // Проверяем, переходит ли бронирование на следующий день
+      const isSameDay = bookingStartDate.toDateString() === bookingEndDate.toDateString();
+      
+      setStartTime(startTimeStr);
+      setEndTime(endTimeStr);
+      setStartTimeContext('current');
+      setEndTimeContext(isSameDay ? 'current' : 'next');
+      
+      // Создаем массив всех слотов бронирования для предварительного выбора
+      const preSelected: string[] = [];
+      const currentSlot = new Date(bookingStartDate);
+      
+      // Включаем все слоты от начала до конца (включая конечный слот)
+      while (currentSlot <= bookingEndDate) {
+        const slotTime = currentSlot.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+        preSelected.push(slotTime);
+        currentSlot.setHours(currentSlot.getHours() + 1);
+        
+        // Защита от бесконечного цикла - если уже добавили конечное время, выходим
+        if (slotTime === endTimeStr) break;
+      }
+      
+      setPreSelectedSlots(preSelected);
+      console.log('✅ CalendarPage - Предвыбранные слоты:', preSelected);
+      
+      // Автоматически выбираем план на основе данных бронирования
+      if (booking.services && booking.services.length > 0) {
+        const service = booking.services[0];
+        const matchingPlan = pricingPlans.find(plan => 
+          plan.title === service.serviceName || 
+          (service.price === 0 && plan.id === 'tech') ||
+          (service.price > 0 && plan.id === 'all-inclusive')
+        );
+        
+        if (matchingPlan) {
+          handlePlanClick(matchingPlan);
+          console.log('✅ CalendarPage - Автоматически выбран план:', matchingPlan.title);
+        }
+      }
+      
+      console.log('✅ CalendarPage - Данные бронирования загружены:', {
+        start: startTimeStr,
+        end: endTimeStr,
+        date: bookingStartDate.toDateString(),
+        isSameDay,
+        service: booking.services?.[0]?.serviceName,
+        preSelectedSlots: preSelected
+      });
+      
+      return booking;
+    } catch (error) {
+      console.error('❌ CalendarPage - Ошибка загрузки данных бронирования:', error);
+      throw error;
+    }
+  };
+
+  /** ——————————————————— Init ——————————————————— */
+  useEffect(() => {
+    if (isInitialized) return;
+
+    const init = async () => {
+      let targetDate = new Date();
+      
+      // Если это режим редактирования, загружаем данные бронирования
+      if (editMode && editBookingId) {
+        try {
+          const booking = await loadCurrentBookingData(editBookingId);
+          targetDate = new Date(booking.start);
+        } catch (error) {
+          console.error('Ошибка загрузки данных бронирования:', error);
+        }
+      } else if (externalSelectedDate) {
+        targetDate = externalSelectedDate;
+      }
+
+      const daysArray = generateDaysForMonth(targetDate.getFullYear(), targetDate.getMonth());
+      setDays(daysArray);
+
+      let initialDay: Day | undefined;
+      if (editMode && editBookingId) {
+        // В режиме редактирования устанавливаем дату бронирования
+        initialDay = daysArray.find(d => d.date.toDateString() === targetDate.toDateString());
+      } else if (externalSelectedDate) {
+        initialDay = daysArray.find(d => d.date.toDateString() === externalSelectedDate.toDateString());
+      } else {
+        initialDay = daysArray.find(d => d.isToday && d.isAvailable);
+      }
+      
+      setIsInitialized(true);
+
+      if (!initialDay) {
+        setLoadingSlots(false);
+        return;
+      }
+
+      if (!selectedDate) {
+        setSelectedDate(initialDay.date);
+      }
+      
+      setLoadingSlots(true);
+      try {
+        const { formattedTimeSlots, timeSlotsWithData } = await fetchAvailableTimeSlots(initialDay.date, excludeBookingId);
+        setAvailableTimeSlots(formattedTimeSlots);
+        setTimeSlotData(timeSlotsWithData);
+      } catch {
+        setSlotsError('Ошибка загрузки слотов.');
+      } finally {
+        setLoadingSlots(false);
+      }
+    };
+
+    init();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <div className={isAdmin ? `${styles.calendarContainer} ${styles.admin}` : styles.calendarContainer}>
       {/* ——— header ——— */}
       {!bookingCompleted && (
         <div className={styles.calendarHeader}>
-          <h1 className={styles.title}>Выберите дату и время</h1>
+          <h1 className={styles.title}>
+            {editMode ? `Изменить бронирование #${editBookingId}` : 'Выберите дату и время'}
+          </h1>
           {!isAdmin && (
             <button className={styles.backButton} onClick={() => navigate('/')}>Назад</button>
           )}
@@ -520,6 +719,8 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin, selectedDate: exte
               endTime={endTime}
               startTimeContext={startTimeContext}
               endTimeContext={endTimeContext}
+              preSelectedSlots={preSelectedSlots}
+              editMode={editMode}
             />
 
             {duration && (
@@ -538,6 +739,7 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin, selectedDate: exte
                     onBook={onBook}
                     formatDate={formatDate}
                     getDateRange={getDateRange}
+                    editMode={editMode}
                   />
                 )}
               </>

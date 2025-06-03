@@ -28,17 +28,19 @@ export function useCalendarApi() {
   const pendingRequests = useRef<{[key: string]: Promise<CalendarApiResult>}>({});
   
   // Форматирование даты для использования в качестве ключа кеша
-  const getDateKey = (date: Date): string => {
-    return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+  const getDateKey = (date: Date, excludeBookingId?: number | string): string => {
+    const baseKey = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+    return excludeBookingId ? `${baseKey}-exclude-${excludeBookingId}` : baseKey;
   };
 
   /**
    * Получение и форматирование доступных временных слотов с кешированием
    * @param date Дата для запроса слотов
+   * @param excludeBookingId ID бронирования, которое нужно исключить (для редактирования)
    * @returns Форматированные данные слотов
    */
-  const fetchAvailableTimeSlots = useCallback(async (date: Date): Promise<CalendarApiResult> => {
-    const dateKey = getDateKey(date);
+  const fetchAvailableTimeSlots = useCallback(async (date: Date, excludeBookingId?: number | string): Promise<CalendarApiResult> => {
+    const dateKey = getDateKey(date, excludeBookingId);
     const now = Date.now();
     
     // console.log(`[Cache] Проверка кеша для даты ${dateKey}`);
@@ -75,7 +77,7 @@ export function useCalendarApi() {
     
     const requestPromise = (async () => {
       try {
-        const slots = await fetchAvailableTimeSlotsApi(date);
+        const slots = await fetchAvailableTimeSlotsApi(date, excludeBookingId);
         let formattedData = formatTimeSlots(slots);
         
         // Если это текущий день, фильтруем прошедшие слоты
