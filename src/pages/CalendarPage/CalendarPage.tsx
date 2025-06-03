@@ -55,7 +55,6 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin, selectedDate: exte
   const [loadingSlots, setLoadingSlots] = useState(true);
   const [slotsError, setSlotsError] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
-  const [showBookingModal, setShowBookingModal] = useState(false);
   const [forcedAvailableSlot, setForcedAvailableSlot] = useState<string | null>(null);
   const [currentBookingData, setCurrentBookingData] = useState<any>(null);
   const [preSelectedSlots, setPreSelectedSlots] = useState<string[]>([]);
@@ -359,32 +358,117 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin, selectedDate: exte
       return;
     }
     
-    // Если выбраны технические работы и пользователь - администратор, показываем модальное окно с предзаполненными полями
+    // Если выбраны технические работы и пользователь - администратор, создаем бронирование автоматически
     if (isAdmin && selectedPlan.id === 'tech') {
-      setBookingDetails({
-        date: selectedDate,
-        timeRange,
-        duration,
-        plan: selectedPlan,
-        totalPrice,
-      });
-      setShowBookingModal(true);
-    } else {
-      // Для всех остальных случаев используем стандартный поток
-      setBookingDetails({
-        date: selectedDate,
-        timeRange,
-        duration,
-        plan: selectedPlan,
-        totalPrice,
-      });
-      setBookingCompleted(true);
+      createTechnicalWorkBooking();
+      return;
+    }
+    
+    // Для всех остальных случаев используем стандартный поток
+    setBookingDetails({
+      date: selectedDate,
+      timeRange,
+      duration,
+      plan: selectedPlan,
+      totalPrice,
+    });
+    setBookingCompleted(true);
+  };
+
+  // Функция для автоматического создания бронирования технических работ
+  const createTechnicalWorkBooking = async () => {
+    if (!selectedDate || !startTime || !endTime || !selectedPlan) return;
+
+    try {
+      console.log('🔧 CalendarPage - Создаем бронирование технических работ автоматически');
+      
+      // Парсим время
+      const [startHour, startMinute] = startTime.split(':').map(Number);
+      const [endHour, endMinute] = endTime.split(':').map(Number);
+      
+      // Создаем даты для начала и конца
+      let startDate = new Date(selectedDate);
+      let endDate = new Date(selectedDate);
+      
+      // Если startTime из секции "следующего дня"
+      if (startTimeContext === 'next') {
+        startDate.setDate(startDate.getDate() + 1);
+      }
+      
+      // Если endTime из секции "следующего дня"
+      if (endTimeContext === 'next') {
+        endDate.setDate(endDate.getDate() + 1);
+      }
+      
+      startDate.setHours(startHour, startMinute, 0, 0);
+      endDate.setHours(endHour, endMinute, 0, 0);
+      
+      // Форматируем даты в ISO строки с московским временем
+      const formatToMoscowISO = (date: Date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const seconds = String(date.getSeconds()).padStart(2, '0');
+        
+        return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+      };
+      
+      const startISO = formatToMoscowISO(startDate);
+      const endISO = formatToMoscowISO(endDate);
+      
+      // Предустановленные данные для технических работ
+      const payload = {
+        telegramUserId: "0", // Системный пользователь
+        telegramUserName: "@admin",
+        clientName: "Администратор",
+        clientPhone: "79951551711", // Основной номер сервиса
+        clientEmail: "admin@detelcam.ru",
+        start: startISO,
+        end: endISO,
+        service: [{
+          serviceName: 'Технические работы',
+          price: 0
+        }],
+        car: {
+          brand: "Служебная",
+          color: "Серый",
+          plate: ""
+        },
+        notes: 'Технические работы администратора'
+      };
+
+      console.log('🚀 CalendarPage - Данные для создания технических работ:', payload);
+      
+      const response = await api.post('/calendar/booking', payload);
+      
+      if (!response.data?.success) {
+        throw new Error(response.data?.message || 'Ошибка при создании бронирования');
+      }
+      
+      console.log('✅ CalendarPage - Технические работы созданы успешно');
+      
+      // Сбрасываем выбранное время
+      setStartTime(null);
+      setEndTime(null);
+      setStartTimeContext(null);
+      setEndTimeContext(null);
+      
+      // Перезагружаем страницу для обновления календаря
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
+      
+    } catch (error: any) {
+      console.error('❌ CalendarPage - Ошибка при создании технических работ:', error);
+      alert('Ошибка при создании технических работ: ' + error.message);
     }
   };
 
-  // Обработчик завершения бронирования из модального окна
+  // Обработчик завершения бронирования из модального окна (используется только в BookingSuccess)
   const handleBookingComplete = (formData: any) => {
-    setShowBookingModal(false);
+    setBookingCompleted(false);
     
     // Сбрасываем выбранное время
     setStartTime(null);
@@ -759,31 +843,7 @@ const CalendarPage: React.FC<CalendarPageProps> = ({ isAdmin, selectedDate: exte
         )
       )}
       
-      {/* Модальное окно для технических работ с предзаполненными полями */}
-      {showBookingModal && bookingDetails && (
-        <BookingModal
-          isOpen={showBookingModal}
-          onClose={() => setShowBookingModal(false)}
-          startTime={startTime || ''}
-          endTime={endTime || ''}
-          duration={duration || undefined}
-          service={{
-            serviceName: 'Технические работы',
-            price: 0
-          }}
-          onSubmit={handleBookingComplete}
-          selectedDate={selectedDate}
-          isAdmin={true}
-          prefilledData={{
-            name: 'Администратор',
-            phone: '+79999999999',
-            email: 'admin@admin.com',
-            telegramUserName: '@admin'
-          }}
-          startTimeContext={startTimeContext}
-          endTimeContext={endTimeContext}
-        />
-      )}
+      {/* Модальное окно больше не нужно для технических работ - они создаются автоматически */}
     </div>
   );
 };
